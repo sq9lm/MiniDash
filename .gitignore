@@ -1,5 +1,7 @@
 # Secrets
 .env
+data/.encryption_key
+data/minidash.db
 
 # Runtime data with sensitive info
 data/*
