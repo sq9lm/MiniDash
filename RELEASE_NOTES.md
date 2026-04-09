@@ -1,42 +1,80 @@
-# 🚀 UniFi MiniDash Update v1.5.0
+# UniFi MiniDash — Release Notes
 
-Major update focusing on system observability and UniFi Protect dashboard flexibility.
+## v2.0.0 (2026-04-10)
 
-## 📋 Changelog
+Duza aktualizacja: migracja na SQLite, Wi-Fi Stalker, ulepszenia Threat Watch, nowe kanaly powiadomien, szyfrowanie danych.
 
-### 🛡️ System Logs (`logs.php`)
+### Baza danych SQLite
+- Migracja z plikow JSON na SQLite jako centralny storage
+- Automatyczny system migracji (`migrations/`) — nowe wersje schematu aplikowane przy starcie
+- Auto-purge starych danych (konfigurowalne progi dni per tabela)
+- Skrypt `migrate_json.php` do jednorazowej migracji istniejacych danych
 
-Replaced legacy file-based log parsing with a robust **API-driven Event System**.
+### Wi-Fi Stalker (nowe)
+- Sledzenie aktywnych sesji WiFi w czasie rzeczywistym
+- Wykrywanie roamingu miedzy Access Pointami
+- Historia roamingu z RSSI, kanałem i czasem
+- Watchlist urzadzen z powiadomieniami przy roamingu
+- Eksport CSV
+- Filtry: czas (1h/24h/7d/30d), pasmo (2.4/5/6 GHz), wyszukiwarka
+- Widget na dashboardzie z liczba aktywnych sesji
+- Polling co 30s z automatycznym wykrywaniem zmian
 
-- **Direct API Integration**: Fetches events and alarms directly from the UniFi Controller API (`/proxy/network/api/s/default/stat/event`).
-- **Unified Timeline**: Merges standard Events and Security Alarms into a single chronological view.
-- **Smart Severity Detection**: Automatically categorizes events as `INFO`, `WARNING`, `ERROR`, or `CRITICAL` based on event keys (e.g., Firewall Blocks, Threat Detections, Device Disconnections).
-- **Advanced Filtering**: Added a dropdown filter to view logs by severity level.
-- **Dynamic Pagination**:
-  - Persists filter state across pages.
-  - Added manageable page sizes: 25, 50, 100, and **500** entries per page.
-- **UI Enhancements**:
-  - New glassmorphism table design.
-  - Color-coded badges for severity (Red/Rose for Critical, Amber for Warning, etc.).
-  - Detailed modal view for inspecting raw event JSON and properties.
+### Threat Watch ulepszenia
+- IP Ignore List — whitelist adresow IP pomijanych w analizie zagrozen
+- Filtry zakresu czasu (1h/24h/7d/30d) na zdarzeniach bezpieczenstwa
+- Auto-purge starych zdarzen (30 dni)
 
-### 🎥 UniFi Protect Dashboard (`protect.php`)
+### Drilldown AP -> klienci
+- Klikniecie na urzadzenie w panelu infrastruktury rozwija liste klientow
+- Obsluga klientow WiFi (po ap_mac) i wired (po sw_mac z numerem portu)
+- Dane z UniFi Traditional API (RSSI, siec, predkosc, IP)
 
-Complete overhaul of the camera grid system to support custom layouts.
+### Nowe kanaly powiadomien
+- Discord — webhook z rich embeds
+- n8n — generic webhook do automatyzacji
+- Panele konfiguracji w ustawieniach powiadomien
+- Endpoint testowy `api_test_alert.php`
 
-- **Dynamic Grid Layout**: New toolbar allows switching between 1, 2, 4, 9, and 12 camera views instantly.
-- **Interactive Slots**: Click any empty slot to select a camera source from the available list.
-- **Status Tiles**:
-  - **NVR Status**: Shows storage usage, uptime, and healthy/recording indicators.
-  - **Traffic/Bandwidth**: Real-time camera bandwidth usage.
-  - **Connections**: Counter for online/offline cameras.
+### Szyfrowanie credentials
+- Wrazliwe pola w config.json szyfrowane sodium_crypto_secretbox
+- Automatyczne szyfrowanie przy zapisie, deszyfrowanie przy odczycie
+- Klucz generowany automatycznie (`data/.encryption_key`)
+- Prefix `ENC:` na zaszyfrowanych wartosciach
 
-### 🔧 General Improvements
+### Bezpieczenstwo i struktura
+- Sekrety przeniesione z hardcoded do `.env`
+- Git zainicjalizowany z `.gitignore` blokujacym dane wrazliwe
+- Usunieto UTF-8 BOM z wszystkich plikow PHP
+- Pliki debug/test przeniesione do `_old/`
 
-- **Layout Standardization**: Aligned main dashboards to `max-w-7xl` for consistent visual weight on large screens.
-- **Cleanups**: Removed direct file access references configuration in `logs.php` (security/stability improvement).
-- **Navigation**: Added "Logs" to the global navigation menu.
+### Footer
+- Wersja aplikacji + git hash (klikalny changelog)
+- Branding LM-Networks z linkami (lm-ads.com, dev.lm-ads.com)
+- Copyright 2025-2026
+
+### Favicon
+- SVG favicon na wszystkich stronach
 
 ---
 
-_Created by Antigravity Assistant_
+## v1.5.0 (2026-02-06)
+
+### System Logs (`logs.php`)
+- API-driven Event System zamiast parsowania plikow
+- Filtry severity (INFO/WARNING/ERROR/CRITICAL)
+- Paginacja: 25, 50, 100, 500 na strone
+- Modal z podgladem raw JSON zdarzenia
+
+### UniFi Protect Dashboard (`protect.php`)
+- Dynamiczny grid kamer: 1, 2, 4, 9, 12 widokow
+- Interaktywne sloty do wyboru zrodla kamery
+- Status NVR, bandwidth kamer, online/offline
+
+### Ogolne
+- Standaryzacja layoutu na max-w-7xl
+- Ikona Logs w nawigacji
+
+---
+
+Created by Lukasz Misiura | dev.lm-ads.com
