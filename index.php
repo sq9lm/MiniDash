@@ -260,6 +260,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UniFi Dash Mini</title>
+    <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="dashboard.css">
@@ -370,7 +371,20 @@ try {
                 </div>
             </div>
 
-            <!-- 6. WAN Status (Dynamic Loop) -->
+            <!-- 6. Stalker Widget -->
+            <div onclick="window.location='stalker.php'" class="glass-card rounded-3xl p-6 cursor-pointer hover:bg-white/[0.04] transition group">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20 group-hover:scale-110 transition-transform">
+                        <i data-lucide="radar" class="w-5 h-5 text-purple-400"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Roaming</span>
+                </div>
+                <div class="text-3xl font-black text-white tracking-tight" id="stalker-widget-count">-</div>
+                <div class="text-xs text-slate-500 mt-1">Zdarzenia (24h)</div>
+                <div class="text-[10px] text-slate-600 mt-2 truncate" id="stalker-widget-last">Ladowanie...</div>
+            </div>
+
+            <!-- 7. WAN Status (Dynamic Loop) -->
             <?php if (empty($wans)): ?>
             <div class="glass-card p-5 stat-glow-red cursor-pointer" onclick="openWanModal()">
                 <div class="flex justify-between items-center mb-4">
@@ -1704,14 +1718,14 @@ try {
         document.addEventListener('DOMContentLoaded', function() {
             const wifiCard = document.getElementById('wifi-card');
             const infrCard = document.getElementById('infr-card');
-            
+
             if (wifiCard) {
                 wifiCard.addEventListener('click', function(e) {
                     console.log('WiFi card clicked');
                     openWifiModal();
                 });
             }
-            
+
             if (infrCard) {
                 infrCard.addEventListener('click', function(e) {
                     console.log('Infr card clicked');
@@ -1719,6 +1733,23 @@ try {
                 });
             }
         });
+
+        // Stalker Widget: Load roaming event count
+        fetch('api_stalker.php?action=roaming_count')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('stalker-widget-count').textContent = data.count || 0;
+                if (data.last) {
+                    document.getElementById('stalker-widget-last').textContent =
+                        (data.last.hostname || 'Unknown') + ': ' + data.last.from_ap + ' \u2192 ' + data.last.to_ap;
+                } else {
+                    document.getElementById('stalker-widget-last').textContent = 'Brak zdarzen';
+                }
+            })
+            .catch(() => {
+                document.getElementById('stalker-widget-count').textContent = '0';
+                document.getElementById('stalker-widget-last').textContent = 'Brak danych';
+            });
     </script>
     <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>

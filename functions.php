@@ -1364,6 +1364,9 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                     <a href="logs.php" class="p-2.5 rounded-xl transition-all <?= $current_page == 'logs.php' ? 'bg-amber-600/10 text-amber-400' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' ?>" title="Logs">
                         <i data-lucide="file-text" class="w-5 h-5"></i>
                     </a>
+                    <a href="stalker.php" class="nav-icon p-2 rounded-xl hover:bg-white/5 transition" title="Wi-Fi Stalker">
+                        <i data-lucide="radar" class="w-6 h-6 text-slate-400 hover:text-purple-400 transition"></i>
+                    </a>
                 </div>
             </div>
 
@@ -1451,6 +1454,9 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                                  </a>
                                  <a href="logs.php" class="aspect-square rounded-xl flex flex-col items-center justify-center gap-1 border border-white/5 <?= $current_page == 'logs.php' ? 'bg-amber-600/20 text-amber-400 ring-1 ring-amber-500/50' : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-white' ?>" title="Logs">
                                     <i data-lucide="file-text" class="w-5 h-5"></i>
+                                 </a>
+                                 <a href="stalker.php" class="aspect-square rounded-xl flex flex-col items-center justify-center gap-1 border border-white/5 <?= $current_page == 'stalker.php' ? 'bg-purple-600/20 text-purple-400 ring-1 ring-purple-500/50' : 'bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-white' ?>" title="Wi-Fi Stalker">
+                                    <i data-lucide="radar" class="w-5 h-5"></i>
                                  </a>
                             </div>
                         </div>
