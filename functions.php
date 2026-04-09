@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 // functions.php - Clean Version
 ini_set('memory_limit', '512M');
@@ -1916,7 +1916,7 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                     </button>
                 </div>
 
-                <div class="modal-body overflow-y-auto custom-scrollbar p-8 space-y-10">
+                <div class="modal-body overflow-y-auto custom-scrollbar p-8 space-y-10 flex-1 min-h-0">
                     <!-- Email SMTP -->
                     <div class="space-y-6">
                         <div class="flex items-center justify-between border-b border-white/5 pb-4">
@@ -1932,30 +1932,32 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                                 <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 after:border-none"></div>
                             </label>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <div class="md:col-span-3">
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Host SMTP</label>
-                                <input type="text" name="email_host" value="<?= htmlspecialchars($config['email_notifications']['smtp_host'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50" placeholder="e.g. smtp.gmail.com">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Port</label>
-                                <input type="number" name="email_port" value="<?= htmlspecialchars($config['email_notifications']['smtp_port'] ?? 587) ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Użytkownik</label>
-                                <input type="text" name="email_user" value="<?= htmlspecialchars($config['email_notifications']['smtp_username'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Hasło / App Password</label>
-                                <input type="password" name="email_pass" value="<?= htmlspecialchars($config['email_notifications']['smtp_password'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Email nadawcy</label>
-                                <input type="text" name="email_from" value="<?= htmlspecialchars($config['email_notifications']['from_email'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Odbiorca Alertów</label>
-                                <input type="text" name="email_to" value="<?= htmlspecialchars($config['email_notifications']['to_email'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
+                        <div class="notif-fields <?= !($config['email_notifications']['enabled'] ?? false) ? 'collapsed' : '' ?>">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <div class="md:col-span-3">
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Host SMTP</label>
+                                    <input type="text" name="email_host" value="<?= htmlspecialchars($config['email_notifications']['smtp_host'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50" placeholder="e.g. smtp.gmail.com">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Port</label>
+                                    <input type="number" name="email_port" value="<?= htmlspecialchars($config['email_notifications']['smtp_port'] ?? 587) ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Użytkownik</label>
+                                    <input type="text" name="email_user" value="<?= htmlspecialchars($config['email_notifications']['smtp_username'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Hasło / App Password</label>
+                                    <input type="password" name="email_pass" value="<?= htmlspecialchars($config['email_notifications']['smtp_password'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Email nadawcy</label>
+                                    <input type="text" name="email_from" value="<?= htmlspecialchars($config['email_notifications']['from_email'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Odbiorca Alertów</label>
+                                    <input type="text" name="email_to" value="<?= htmlspecialchars($config['email_notifications']['to_email'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1975,14 +1977,16 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                                 <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500 after:border-none"></div>
                             </label>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="md:col-span-2">
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Bot Token</label>
-                                <input type="text" name="tg_token" value="<?= htmlspecialchars($config['telegram_notifications']['bot_token'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50" placeholder="123456789:ABCDEF...">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Chat ID</label>
-                                <input type="text" name="tg_chatid" value="<?= htmlspecialchars($config['telegram_notifications']['chat_id'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
+                        <div class="notif-fields <?= !($config['telegram_notifications']['enabled'] ?? false) ? 'collapsed' : '' ?>">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="md:col-span-2">
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Bot Token</label>
+                                    <input type="text" name="tg_token" value="<?= htmlspecialchars($config['telegram_notifications']['bot_token'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50" placeholder="123456789:ABCDEF...">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Chat ID</label>
+                                    <input type="text" name="tg_chatid" value="<?= htmlspecialchars($config['telegram_notifications']['chat_id'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2004,18 +2008,20 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                                     <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 after:border-none"></div>
                                 </label>
                             </div>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Gateway URL</label>
-                                    <input type="text" name="wa_url" value="<?= htmlspecialchars($config['whatsapp_notifications']['api_url'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="https://api.gateway.com">
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer docelowy</label>
-                                    <input type="text" name="wa_phone" value="<?= htmlspecialchars($config['whatsapp_notifications']['phone_number'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="+48 123 456 789">
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Key (Opcjonalnie)</label>
-                                    <input type="password" name="wa_key" value="<?= htmlspecialchars($config['whatsapp_notifications']['api_key'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="••••••••">
+                            <div class="notif-fields <?= !($config['whatsapp_notifications']['enabled'] ?? false) ? 'collapsed' : '' ?>">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Gateway URL</label>
+                                        <input type="text" name="wa_url" value="<?= htmlspecialchars($config['whatsapp_notifications']['api_url'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="https://api.gateway.com">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer docelowy</label>
+                                        <input type="text" name="wa_phone" value="<?= htmlspecialchars($config['whatsapp_notifications']['phone_number'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="+48 123 456 789">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Key (Opcjonalnie)</label>
+                                        <input type="password" name="wa_key" value="<?= htmlspecialchars($config['whatsapp_notifications']['api_key'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50" placeholder="••••••••">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2035,9 +2041,11 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                                     <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600 after:border-none"></div>
                                 </label>
                             </div>
-                            <div>
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
-                                <input type="text" name="slack_url" value="<?= htmlspecialchars($config['slack_notifications']['webhook_url'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500/50" placeholder="https://hooks.slack.com/services/...">
+                            <div class="notif-fields <?= !($config['slack_notifications']['enabled'] ?? false) ? 'collapsed' : '' ?>">
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
+                                    <input type="text" name="slack_url" value="<?= htmlspecialchars($config['slack_notifications']['webhook_url'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500/50" placeholder="https://hooks.slack.com/services/...">
+                                </div>
                             </div>
                         </div>
                     </div>

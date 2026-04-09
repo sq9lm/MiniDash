@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 require_once 'config.php';
 require_once 'db.php';
@@ -107,6 +107,17 @@ foreach ($notif_keys as $key => $defaults) {
         .toggle-switch {
             cursor: pointer;
         }
+        .notif-fields {
+            overflow: hidden;
+            max-height: 600px;
+            opacity: 1;
+            transition: max-height 0.35s ease, opacity 0.25s ease, margin 0.3s ease;
+        }
+        .notif-fields.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0 !important;
+        }
     </style>
 </head>
 <body class="pt-24 pb-20 antialiased min-h-screen">
@@ -119,11 +130,6 @@ foreach ($notif_keys as $key => $defaults) {
                 <p class="text-slate-500 mt-2 font-medium">Zarządzaj kanałami alertów o statusie urządzeń</p>
             </div>
             <div class="flex gap-4">
-                <?php if ($status === "success"): ?>
-                    <div class="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20 flex items-center gap-2 animate-bounce">
-                        <i data-lucide="check-circle" class="w-5 h-5"></i> Ustawienia zapisane
-                    </div>
-                <?php endif; ?>
                 <button onclick="location.href='index.php'" class="p-3 bg-white/5 border border-white/10 rounded-2xl text-slate-400 hover:text-white transition group">
                    <i data-lucide="x" class="w-6 h-6 group-hover:rotate-90 transition-transform"></i>
                 </button>
@@ -133,7 +139,7 @@ foreach ($notif_keys as $key => $defaults) {
         <form method="POST" class="space-y-8">
             <!-- Email / SMTP -->
             <div class="setting-card rounded-3xl p-8 border border-white/5">
-                <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center justify-between">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
                             <i data-lucide="mail" class="w-6 h-6"></i>
@@ -149,37 +155,39 @@ foreach ($notif_keys as $key => $defaults) {
                     </label>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="lg:col-span-3">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Host SMTP</label>
-                        <input type="text" name="email_host" value="<?= htmlspecialchars($config['email_notifications']['smtp_host']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="e.g. smtp.gmail.com">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Port</label>
-                        <input type="number" name="email_port" value="<?= htmlspecialchars($config['email_notifications']['smtp_port']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="587">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Użytkownik / Login</label>
-                        <input type="text" name="email_user" value="<?= htmlspecialchars($config['email_notifications']['smtp_username']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="user@gmail.com">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Hasło (lub hasło aplikacji)</label>
-                        <input type="password" name="email_pass" value="<?= htmlspecialchars($config['email_notifications']['smtp_password']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="••••••••••••">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Email nadawcy</label>
-                        <input type="text" name="email_from" value="<?= htmlspecialchars($config['email_notifications']['from_email']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="alert@domena.pl">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Gdzie wysłać alerty?</label>
-                        <input type="text" name="email_to" value="<?= htmlspecialchars($config['email_notifications']['to_email']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="twoj@email.com">
+                <div class="notif-fields mt-8 <?= !$config['email_notifications']['enabled'] ? 'collapsed' : '' ?>">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="lg:col-span-3">
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Host SMTP</label>
+                            <input type="text" name="email_host" value="<?= htmlspecialchars($config['email_notifications']['smtp_host']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="e.g. smtp.gmail.com">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Port</label>
+                            <input type="number" name="email_port" value="<?= htmlspecialchars($config['email_notifications']['smtp_port']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="587">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Użytkownik / Login</label>
+                            <input type="text" name="email_user" value="<?= htmlspecialchars($config['email_notifications']['smtp_username']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="user@gmail.com">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Hasło (lub hasło aplikacji)</label>
+                            <input type="password" name="email_pass" value="<?= htmlspecialchars($config['email_notifications']['smtp_password']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="••••••••••••">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Email nadawcy</label>
+                            <input type="text" name="email_from" value="<?= htmlspecialchars($config['email_notifications']['from_email']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="alert@domena.pl">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Gdzie wysłać alerty?</label>
+                            <input type="text" name="email_to" value="<?= htmlspecialchars($config['email_notifications']['to_email']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="twoj@email.com">
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Telegram -->
             <div class="setting-card rounded-3xl p-8 border border-white/5">
-                <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center justify-between">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
                             <i data-lucide="send" class="w-6 h-6"></i>
@@ -195,14 +203,16 @@ foreach ($notif_keys as $key => $defaults) {
                     </label>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Bot Token</label>
-                        <input type="text" name="tg_token" value="<?= htmlspecialchars($config['telegram_notifications']['bot_token']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="123456789:ABCDEF....">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Chat ID</label>
-                        <input type="text" name="tg_chatid" value="<?= htmlspecialchars($config['telegram_notifications']['chat_id']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="12345678">
+                <div class="notif-fields mt-8 <?= !$config['telegram_notifications']['enabled'] ? 'collapsed' : '' ?>">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Bot Token</label>
+                            <input type="text" name="tg_token" value="<?= htmlspecialchars($config['telegram_notifications']['bot_token']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="123456789:ABCDEF....">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Chat ID</label>
+                            <input type="text" name="tg_chatid" value="<?= htmlspecialchars($config['telegram_notifications']['chat_id']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="12345678">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -210,7 +220,7 @@ foreach ($notif_keys as $key => $defaults) {
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- WhatsApp -->
                 <div class="setting-card rounded-3xl p-8 border border-white/5">
-                    <div class="flex items-center justify-between mb-8">
+                    <div class="flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
                                 <i data-lucide="message-square" class="w-6 h-6"></i>
@@ -224,25 +234,27 @@ foreach ($notif_keys as $key => $defaults) {
                             <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                         </label>
                     </div>
-                    <div class="space-y-6">
-                        <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">WhatsApp API URL</label>
-                            <input type="text" name="wa_url" value="<?= htmlspecialchars($config['whatsapp_notifications']['api_url']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://api.whatsapp.com/...">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Key / Token</label>
-                            <input type="password" name="wa_key" value="<?= htmlspecialchars($config['whatsapp_notifications']['api_key']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="WA_SECRET_TOKEN">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer Telefonu Docelowy</label>
-                            <input type="text" name="wa_phone" value="<?= htmlspecialchars($config['whatsapp_notifications']['phone_number']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="+48123456789">
+                    <div class="notif-fields mt-8 <?= !$config['whatsapp_notifications']['enabled'] ? 'collapsed' : '' ?>">
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">WhatsApp API URL</label>
+                                <input type="text" name="wa_url" value="<?= htmlspecialchars($config['whatsapp_notifications']['api_url']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://api.whatsapp.com/...">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Key / Token</label>
+                                <input type="password" name="wa_key" value="<?= htmlspecialchars($config['whatsapp_notifications']['api_key']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="WA_SECRET_TOKEN">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer Telefonu Docelowy</label>
+                                <input type="text" name="wa_phone" value="<?= htmlspecialchars($config['whatsapp_notifications']['phone_number']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="+48123456789">
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Slack -->
                 <div class="setting-card rounded-3xl p-8 border border-white/5">
-                    <div class="flex items-center justify-between mb-8">
+                    <div class="flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
                                 <i data-lucide="hash" class="w-6 h-6"></i>
@@ -256,10 +268,12 @@ foreach ($notif_keys as $key => $defaults) {
                             <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                         </label>
                     </div>
-                    <div class="space-y-6">
-                        <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
-                            <input type="text" name="slack_url" value="<?= htmlspecialchars($config['slack_notifications']['webhook_url']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://hooks.slack.com/services/...">
+                    <div class="notif-fields mt-8 <?= !$config['slack_notifications']['enabled'] ? 'collapsed' : '' ?>">
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
+                                <input type="text" name="slack_url" value="<?= htmlspecialchars($config['slack_notifications']['webhook_url']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://hooks.slack.com/services/...">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -267,7 +281,7 @@ foreach ($notif_keys as $key => $defaults) {
 
             <!-- SMS -->
             <div class="setting-card rounded-3xl p-8 border border-white/5">
-                <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center justify-between">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
                             <i data-lucide="smartphone" class="w-6 h-6"></i>
@@ -283,25 +297,27 @@ foreach ($notif_keys as $key => $defaults) {
                     </label>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Gateway URL</label>
-                        <input type="text" name="sms_url" value="<?= htmlspecialchars($config['sms_notifications']['api_url']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://api.sms-gateway.com/send">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Key</label>
-                        <input type="password" name="sms_key" value="<?= htmlspecialchars($config['sms_notifications']['api_key']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="SMS_API_SECRET">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer Telefonu Docelowy</label>
-                        <input type="text" name="sms_phone" value="<?= htmlspecialchars($config['sms_notifications']['to_number']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="+48999888777">
+                <div class="notif-fields mt-8 <?= !$config['sms_notifications']['enabled'] ? 'collapsed' : '' ?>">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Gateway URL</label>
+                            <input type="text" name="sms_url" value="<?= htmlspecialchars($config['sms_notifications']['api_url']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://api.sms-gateway.com/send">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Key</label>
+                            <input type="password" name="sms_key" value="<?= htmlspecialchars($config['sms_notifications']['api_key']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="SMS_API_SECRET">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer Telefonu Docelowy</label>
+                            <input type="text" name="sms_phone" value="<?= htmlspecialchars($config['sms_notifications']['to_number']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="+48999888777">
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Discord -->
             <div class="setting-card rounded-3xl p-8 border border-white/5">
-                <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center justify-between">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
                             <i data-lucide="message-circle" class="w-6 h-6"></i>
@@ -317,21 +333,23 @@ foreach ($notif_keys as $key => $defaults) {
                     </label>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
-                        <input type="text" name="discord_webhook_url" value="<?= htmlspecialchars($config['discord_notifications']['webhook_url'] ?? '') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://discord.com/api/webhooks/...">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nazwa bota</label>
-                        <input type="text" name="discord_username" value="<?= htmlspecialchars($config['discord_notifications']['username'] ?? 'MiniDash') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="MiniDash">
+                <div class="notif-fields mt-8 <?= empty($config['discord_notifications']['enabled']) ? 'collapsed' : '' ?>">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
+                            <input type="text" name="discord_webhook_url" value="<?= htmlspecialchars($config['discord_notifications']['webhook_url'] ?? '') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://discord.com/api/webhooks/...">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nazwa bota</label>
+                            <input type="text" name="discord_username" value="<?= htmlspecialchars($config['discord_notifications']['username'] ?? 'MiniDash') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="MiniDash">
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- n8n -->
             <div class="setting-card rounded-3xl p-8 border border-white/5">
-                <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center justify-between">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-400 flex items-center justify-center">
                             <i data-lucide="webhook" class="w-6 h-6"></i>
@@ -347,16 +365,18 @@ foreach ($notif_keys as $key => $defaults) {
                     </label>
                 </div>
 
-                <div class="grid grid-cols-1 gap-6">
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
-                        <input type="text" name="n8n_webhook_url" value="<?= htmlspecialchars($config['n8n_notifications']['webhook_url'] ?? '') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://n8n.example.com/webhook/...">
+                <div class="notif-fields mt-8 <?= empty($config['n8n_notifications']['enabled']) ? 'collapsed' : '' ?>">
+                    <div class="grid grid-cols-1 gap-6">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
+                            <input type="text" name="n8n_webhook_url" value="<?= htmlspecialchars($config['n8n_notifications']['webhook_url'] ?? '') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://n8n.example.com/webhook/...">
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="fixed bottom-0 left-0 right-0 p-6 bg-slate-900/80 backdrop-blur-xl border-t border-white/5 z-50">
-                <div class="max-w-5xl mx-auto flex justify-end gap-4">
+            <div class="sticky bottom-0 mt-8 p-6 bg-slate-900/95 backdrop-blur-xl border-t border-white/5 z-50 -mx-8 px-8 rounded-b-3xl">
+                <div class="flex justify-end gap-4">
                     <button type="button" onclick="location.href='index.php'" class="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold transition">
                         Anuluj
                     </button>
@@ -368,7 +388,50 @@ foreach ($notif_keys as $key => $defaults) {
         </form>
     </div>
 
-    <script>lucide.createIcons();</script>
+    <!-- Toast container -->
+    <div id="toast-container" class="fixed top-6 left-6 z-[9999] flex flex-col gap-3" style="pointer-events:none;"></div>
+
+    <script>
+    lucide.createIcons();
+
+    // Toast system
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        const colors = {
+            success: { bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)', text: '#34d399', icon: 'check-circle' },
+            error:   { bg: 'rgba(239,68,68,0.15)',  border: 'rgba(239,68,68,0.3)',  text: '#f87171', icon: 'x-circle' },
+            warning: { bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)', text: '#fbbf24', icon: 'alert-triangle' }
+        };
+        const c = colors[type] || colors.success;
+        toast.style.cssText = `pointer-events:auto; background:${c.bg}; border:1px solid ${c.border}; color:${c.text}; padding:14px 20px; border-radius:16px; display:flex; align-items:center; gap:10px; font-weight:600; font-size:14px; backdrop-filter:blur(12px); transform:translateX(-120%); opacity:0; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease;`;
+        toast.innerHTML = `<i data-lucide="${c.icon}" style="width:20px;height:20px;flex-shrink:0;"></i><span>${message}</span>`;
+        container.appendChild(toast);
+        lucide.createIcons({nodes: [toast]});
+        requestAnimationFrame(() => { toast.style.transform = 'translateX(0)'; toast.style.opacity = '1'; });
+        setTimeout(() => {
+            toast.style.transform = 'translateX(-120%)'; toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 400);
+        }, 4000);
+    }
+
+    // Toggle collapse
+    document.querySelectorAll('.setting-card').forEach(card => {
+        const cb = card.querySelector('input[type="checkbox"]');
+        const fields = card.querySelector('.notif-fields');
+        if (!cb || !fields) return;
+        cb.addEventListener('change', () => {
+            fields.classList.toggle('collapsed', !cb.checked);
+        });
+    });
+
+    // Show toast on page load if status set
+    <?php if ($status === 'success'): ?>
+        showToast('Konfiguracja zapisana', 'success');
+    <?php elseif ($status === 'error'): ?>
+        showToast('Błąd zapisu konfiguracji', 'error');
+    <?php endif; ?>
+    </script>
     <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
 </html>

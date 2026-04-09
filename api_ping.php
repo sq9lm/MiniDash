@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 header('Content-Type: application/json');
 

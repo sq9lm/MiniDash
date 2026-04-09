@@ -217,6 +217,24 @@ body {
   transform: scale(1);
 }
 
+.modal-footer {
+  flex-shrink: 0;
+}
+
+.notif-fields {
+  overflow: hidden;
+  max-height: 600px;
+  opacity: 1;
+  transition: max-height 0.35s ease, opacity 0.25s ease, margin 0.3s ease, padding 0.3s ease;
+}
+.notif-fields.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
 .modal-header {
   padding: 1.5rem 2rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);

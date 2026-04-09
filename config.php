@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 define('MINIDASH_VERSION', '2.0.0');
 error_reporting(E_ALL & ~E_NOTICE);
