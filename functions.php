@@ -6,11 +6,27 @@ ini_set('max_execution_time', 60);
 
 function loadDevices()
 {
-    $devicesFile = __DIR__ . '/data/devices.json';
-    if (file_exists($devicesFile)) {
-        return json_decode(file_get_contents($devicesFile), true) ?? [];
+    global $db;
+    if (!isset($db)) {
+        // JSON fallback
+        $devicesFile = __DIR__ . '/data/devices.json';
+        if (file_exists($devicesFile)) {
+            return json_decode(file_get_contents($devicesFile), true) ?? [];
+        }
+        return [];
     }
-    return [];
+
+    $stmt = $db->query("SELECT mac, name, vlan, added_at FROM device_monitors ORDER BY added_at ASC");
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $devices = [];
+    foreach ($rows as $row) {
+        $devices[$row['mac']] = [
+            'name'     => $row['name'],
+            'vlan'     => $row['vlan'],
+            'added_at' => $row['added_at'],
+        ];
+    }
+    return $devices;
 }
 
 function normalize_mac($mac)
@@ -167,19 +183,14 @@ function get_ip_location($ip) {
 }
 
 /**
- * Loguje zdarzenie logowania do pliku data/login_history.json
+ * Loguje zdarzenie logowania do bazy SQLite (lub pliku data/login_history.json jako fallback)
  */
 function log_login_event($username) {
-    $dataFile = __DIR__ . '/data/login_history.json';
-    $history = [];
-    
-    if (file_exists($dataFile)) {
-        $history = json_decode(file_get_contents($dataFile), true) ?: [];
-    }
-    
+    global $db;
+
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
     $ua = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
-    
+
     // Parse UA for display
     $os = 'Unknown OS';
     if (preg_match('/windows|win32/i', $ua)) $os = 'Windows';
@@ -195,29 +206,49 @@ function log_login_event($username) {
     elseif (preg_match('/edge/i', $ua)) $browser = 'Edge';
     elseif (preg_match('/opera|opr/i', $ua)) $browser = 'Opera';
 
-    $newEntry = [
-        'timestamp' => time(),
-        'username' => $username,
-        'ip' => $ip,
-        'location' => get_ip_location($ip),
-        'os' => $os,
-        'browser' => $browser,
-        'ua' => $ua
-    ];
-    
-    array_unshift($history, $newEntry);
-    $history = array_slice($history, 0, 100); // Trzymaj ostatnie 100 logowań
-    
-    if (!is_dir(__DIR__ . '/data')) {
-        @mkdir(__DIR__ . '/data', 0777, true);
+    $location  = get_ip_location($ip);
+    $logged_at = date('Y-m-d H:i:s');
+
+    if (!isset($db)) {
+        // JSON fallback
+        $dataFile = __DIR__ . '/data/login_history.json';
+        $history  = [];
+        if (file_exists($dataFile)) {
+            $history = json_decode(file_get_contents($dataFile), true) ?: [];
+        }
+        $newEntry = [
+            'timestamp' => time(),
+            'username'  => $username,
+            'ip'        => $ip,
+            'location'  => $location,
+            'os'        => $os,
+            'browser'   => $browser,
+            'ua'        => $ua,
+        ];
+        array_unshift($history, $newEntry);
+        $history = array_slice($history, 0, 100);
+        if (!is_dir(__DIR__ . '/data')) @mkdir(__DIR__ . '/data', 0777, true);
+        file_put_contents($dataFile, json_encode($history, JSON_PRETTY_PRINT));
+    } else {
+        $stmt = $db->prepare("
+            INSERT INTO login_history (username, ip, location, os, browser, user_agent, logged_at)
+            VALUES (:username, :ip, :location, :os, :browser, :user_agent, :logged_at)
+        ");
+        $stmt->execute([
+            ':username'   => $username,
+            ':ip'         => $ip,
+            ':location'   => $location,
+            ':os'         => $os,
+            ':browser'    => $browser,
+            ':user_agent' => $ua,
+            ':logged_at'  => $logged_at,
+        ]);
     }
-    
-    file_put_contents($dataFile, json_encode($history, JSON_PRETTY_PRINT));
-    
-    // Dodatkowo wpis do tekstowego loga systemowego
+
+    // Always write to the plain-text access log as well
     $txtLog = __DIR__ . '/logs/access.log';
     if (!is_dir(__DIR__ . '/logs')) @mkdir(__DIR__ . '/logs', 0777, true);
-    $logLine = "[" . date('Y-m-d H:i:s') . "] LOGIN: $username from $ip ($newEntry[location]) - $ua\n";
+    $logLine = "[$logged_at] LOGIN: $username from $ip ($location) - $ua\n";
     file_put_contents($txtLog, $logLine, FILE_APPEND);
 }
 
@@ -707,18 +738,65 @@ function group_devices_by_vlan(array $devices, array $clients): array
 
 function saveDevices(array $devices)
 {
-    $devicesFile = __DIR__ . '/data/devices.json';
-    file_put_contents($devicesFile, json_encode($devices, JSON_PRETTY_PRINT));
+    global $db;
+    if (!isset($db)) {
+        // JSON fallback
+        $devicesFile = __DIR__ . '/data/devices.json';
+        file_put_contents($devicesFile, json_encode($devices, JSON_PRETTY_PRINT));
+        return;
+    }
+
+    // Upsert every device in the new set
+    $upsert = $db->prepare("
+        INSERT INTO device_monitors (mac, name, vlan, added_at)
+        VALUES (:mac, :name, :vlan, :added_at)
+        ON CONFLICT(mac) DO UPDATE SET
+            name     = excluded.name,
+            vlan     = excluded.vlan,
+            added_at = excluded.added_at
+    ");
+
+    foreach ($devices as $mac => $info) {
+        $upsert->execute([
+            ':mac'      => $mac,
+            ':name'     => $info['name']     ?? $mac,
+            ':vlan'     => $info['vlan']     ?? null,
+            ':added_at' => $info['added_at'] ?? date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    // Delete devices that were removed from the set
+    if (!empty($devices)) {
+        $placeholders = implode(',', array_fill(0, count($devices), '?'));
+        $macs = array_keys($devices);
+        $db->prepare("DELETE FROM device_monitors WHERE mac NOT IN ($placeholders)")
+           ->execute($macs);
+    } else {
+        $db->exec("DELETE FROM device_monitors");
+    }
 }
 
 function loadDeviceHistory($mac)
 {
-    $historyFile = __DIR__ . '/data/history.json';
-    if (!file_exists($historyFile)) return [];
-    
-    $history = json_decode(file_get_contents($historyFile), true) ?? [];
+    global $db;
     $norm = normalize_mac($mac);
-    return $history[$norm] ?? [];
+
+    if (!isset($db)) {
+        // JSON fallback
+        $historyFile = __DIR__ . '/data/history.json';
+        if (!file_exists($historyFile)) return [];
+        $history = json_decode(file_get_contents($historyFile), true) ?? [];
+        return $history[$norm] ?? [];
+    }
+
+    $stmt = $db->prepare("
+        SELECT status, duration, timestamp
+        FROM device_status_history
+        WHERE mac = :mac
+        ORDER BY timestamp ASC
+    ");
+    $stmt->execute([':mac' => $norm]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 
@@ -744,52 +822,95 @@ function format_bytes($bytes, $decimals = 2) {
 // Funkcja zapisująca historię ZMIAN statusu
 function saveDeviceHistory($mac, $status)
 {
-    $historyFile = __DIR__ . '/data/history.json';
-    $dir = dirname($historyFile);
-    if (!file_exists($dir)) mkdir($dir, 0777, true);
-    
-    $allHistory = file_exists($historyFile) ? json_decode(file_get_contents($historyFile), true) : [];
-    $norm = normalize_mac($mac);
-
-    if (!isset($allHistory[$norm])) {
-        $allHistory[$norm] = [];
-    }
-
-    $history = &$allHistory[$norm];
+    global $db;
+    $norm      = normalize_mac($mac);
     $timestamp = date('Y-m-d H:i:s');
 
-    // Sprawdzamy czy ostatni status był taki sam - jeśli tak, nic nie robimy
-    if (!empty($history)) {
-        $last = end($history);
-        if ($last['status'] === $status) {
-            return;
+    if (!isset($db)) {
+        // JSON fallback
+        $historyFile = __DIR__ . '/data/history.json';
+        $dir = dirname($historyFile);
+        if (!file_exists($dir)) mkdir($dir, 0777, true);
+
+        $allHistory = file_exists($historyFile) ? json_decode(file_get_contents($historyFile), true) : [];
+        if (!isset($allHistory[$norm])) {
+            $allHistory[$norm] = [];
+        }
+        $history = &$allHistory[$norm];
+
+        // Do nothing if status unchanged
+        if (!empty($history)) {
+            $last = end($history);
+            if ($last['status'] === $status) return;
+
+            // Update duration on the previous entry
+            $last_key = array_key_last($history);
+            $history[$last_key]['duration'] = strtotime($timestamp) - strtotime($history[$last_key]['timestamp']);
         }
 
-        // Jeśli zmieniamy status na inny, obliczamy czas trwania poprzedniego stanu
-        $last_key = array_key_last($history);
-        $last_time = strtotime($history[$last_key]['timestamp']);
-        $current_time = strtotime($timestamp);
-        $history[$last_key]['duration'] = $current_time - $last_time;
+        // Send alert
+        $devices    = loadDevices();
+        $deviceName = $devices[$norm]['name'] ?? $mac;
+        $statusText = ($status === 'on') ? "🟢 ONLINE" : "🔴 OFFLINE";
+        sendAlert("Zmiana statusu: $deviceName", "Urządzenie **$deviceName** ($mac) jest teraz **$statusText**.");
+
+        $history[] = ['status' => $status, 'timestamp' => $timestamp];
+        if (count($history) > 50) {
+            $history = array_slice($history, -50);
+        }
+        file_put_contents($historyFile, json_encode($allHistory, JSON_PRETTY_PRINT));
+        return;
     }
 
-    // Wyślij alert o zmianie statusu
-    $devices = loadDevices();
+    // ── SQLite path ────────────────────────────────────────────────────────────
+
+    // Fetch the last entry for this device
+    $lastStmt = $db->prepare("
+        SELECT id, status, timestamp
+        FROM device_status_history
+        WHERE mac = :mac
+        ORDER BY timestamp DESC
+        LIMIT 1
+    ");
+    $lastStmt->execute([':mac' => $norm]);
+    $last = $lastStmt->fetch(PDO::FETCH_ASSOC);
+
+    // Do nothing if status unchanged
+    if ($last && $last['status'] === $status) {
+        return;
+    }
+
+    // Update duration of the previous entry
+    if ($last) {
+        $duration = strtotime($timestamp) - strtotime($last['timestamp']);
+        $upd = $db->prepare("UPDATE device_status_history SET duration = :duration WHERE id = :id");
+        $upd->execute([':duration' => $duration, ':id' => $last['id']]);
+    }
+
+    // Send alert on status change
+    $devices    = loadDevices();
     $deviceName = $devices[$norm]['name'] ?? $mac;
     $statusText = ($status === 'on') ? "🟢 ONLINE" : "🔴 OFFLINE";
     sendAlert("Zmiana statusu: $deviceName", "Urządzenie **$deviceName** ($mac) jest teraz **$statusText**.");
 
-    // Dodajemy nowy wpis o zmianie statusu
-    $history[] = [
-        'status' => $status,
-        'timestamp' => $timestamp
-    ];
+    // Insert new status entry
+    $ins = $db->prepare("
+        INSERT INTO device_status_history (mac, status, duration, timestamp)
+        VALUES (:mac, :status, NULL, :timestamp)
+    ");
+    $ins->execute([':mac' => $norm, ':status' => $status, ':timestamp' => $timestamp]);
 
-    // Limitujemy historię do 50 ostatnich zmian
-    if (count($history) > 50) {
-        $history = array_slice($history, -50);
-    }
-
-    file_put_contents($historyFile, json_encode($allHistory, JSON_PRETTY_PRINT));
+    // Trim to 50 most recent entries per device
+    $db->prepare("
+        DELETE FROM device_status_history
+        WHERE mac = :mac
+          AND id NOT IN (
+              SELECT id FROM device_status_history
+              WHERE mac = :mac2
+              ORDER BY timestamp DESC
+              LIMIT 50
+          )
+    ")->execute([':mac' => $norm, ':mac2' => $norm]);
 }
 
 /**
