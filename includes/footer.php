@@ -14,12 +14,11 @@ if (is_dir($git_dir)) {
     }
 }
 
-// Get git tags for changelog (read log via packed-refs or exec fallback)
-$git_tags = [];
-$tags_raw = [];
-@exec('git -C "' . realpath(__DIR__ . '/..') . '" log --oneline --decorate=short -50 2>/dev/null', $tags_raw);
-foreach ($tags_raw as $line) {
-    $git_tags[] = htmlspecialchars($line);
+// Read changelog from RELEASE_NOTES.md
+$changelog_lines = [];
+$release_file = __DIR__ . '/../RELEASE_NOTES.md';
+if (file_exists($release_file)) {
+    $changelog_lines = file($release_file, FILE_IGNORE_NEW_LINES);
 }
 ?>
 <footer class="mt-12 border-t border-white/5">
@@ -51,13 +50,30 @@ foreach ($tags_raw as $line) {
         <div class="mb-4">
             <div class="text-sm text-slate-400">Wersja <span class="text-white font-bold">v<?= MINIDASH_VERSION ?></span><?php if ($git_hash): ?> &middot; <span class="font-mono text-purple-400">#<?= $git_hash ?></span><?php endif; ?></div>
         </div>
-        <div class="space-y-1 font-mono text-xs">
-            <?php if (!empty($git_tags)): ?>
-                <?php foreach ($git_tags as $line): ?>
-                    <div class="py-1.5 px-3 rounded-lg hover:bg-white/[0.02] text-slate-400 border-l-2 <?= str_contains($line, 'tag:') ? 'border-purple-500 text-white bg-purple-500/5' : 'border-transparent' ?>"><?= $line ?></div>
-                <?php endforeach; ?>
+        <div class="space-y-1 text-sm max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+            <?php if (!empty($changelog_lines)): ?>
+                <?php foreach ($changelog_lines as $line):
+                    $line = htmlspecialchars($line);
+                    // Style markdown headings
+                    if (str_starts_with($line, '## ')) {
+                        $text = substr($line, 3);
+                        echo '<div class="pt-6 pb-2 text-lg font-bold text-white border-b border-white/10 mb-2">' . $text . '</div>';
+                    } elseif (str_starts_with($line, '### ')) {
+                        $text = substr($line, 4);
+                        echo '<div class="pt-4 pb-1 text-sm font-bold text-purple-400">' . $text . '</div>';
+                    } elseif (str_starts_with($line, '# ')) {
+                        // Skip main title
+                    } elseif (str_starts_with($line, '- ')) {
+                        $text = substr($line, 2);
+                        echo '<div class="py-0.5 pl-4 text-xs text-slate-400 before:content-[\'•\'] before:text-purple-500 before:mr-2">' . $text . '</div>';
+                    } elseif (str_starts_with($line, '---')) {
+                        echo '<div class="my-4 h-px bg-white/5"></div>';
+                    } elseif (trim($line) !== '') {
+                        echo '<div class="py-0.5 text-xs text-slate-500">' . $line . '</div>';
+                    }
+                endforeach; ?>
             <?php else: ?>
-                <div class="text-slate-500 py-4 text-center">Brak historii git</div>
+                <div class="text-slate-500 py-4 text-center">Brak pliku RELEASE_NOTES.md</div>
             <?php endif; ?>
         </div>
     </div>
@@ -74,3 +90,4 @@ function closeChangelogModal() {
     document.getElementById('changelogModal').classList.remove('flex');
 }
 </script>
+<?php if (function_exists('render_personal_modal')) render_personal_modal(); ?>
