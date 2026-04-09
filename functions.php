@@ -312,6 +312,7 @@ function get_unifi_security_events() {
         
         $events[] = [
             'time' => $time,
+            'timestamp' => isset($e['time']) ? intval($e['time'] / 1000) : time(),
             'type' => strtolower($e['inner_alert_category'] ?? 'intrusion'),
             'severity' => $severity,
             'source' => 'IPS Engine',

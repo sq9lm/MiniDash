@@ -18,6 +18,20 @@ $security_settings = get_unifi_security_settings();
 $security_events = get_unifi_security_events() ?: [];
 $blocked_ips_list = get_unifi_blocked_ips() ?: [];
 
+// Load threat ignore list from SQLite
+$ignore_ips = [];
+if (isset($db)) {
+    $stmt = $db->query("SELECT ip FROM threat_ignore");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $ignore_ips[] = $row['ip'];
+    }
+}
+// Filter out ignored IPs
+$blocked_ips_list = array_filter($blocked_ips_list, function($item) use ($ignore_ips) {
+    $ip = $item['src_ip'] ?? $item['ip'] ?? '';
+    return !in_array($ip, $ignore_ips);
+});
+
 // Calculate security score dynamically based on multiple factors
 $security_score = 100; // Start with perfect score
 
@@ -144,6 +158,10 @@ $stats = [
                     </h1>
                     <p class="text-slate-500 text-sm">Zaawansowany system wykrywania zagrożeń i ochrony sieci</p>
                 </div>
+                <div class="flex items-center gap-3">
+                <button onclick="openIgnoreModal()" class="px-4 py-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 rounded-xl text-xs font-bold transition border border-amber-500/20">
+                    <i data-lucide="shield-off" class="w-4 h-4 inline mr-1"></i> Ignorowane IP
+                </button>
                 <div class="relative group">
                     <button class="px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl font-bold uppercase tracking-widest transition flex items-center gap-3 shadow-xl shadow-rose-600/20">
                         <i data-lucide="shield-alert" class="w-5 h-5"></i>
@@ -251,6 +269,7 @@ $stats = [
                         </div>
                     </div>
                 </div>
+                </div>
             </div>
         </div>
 
@@ -345,16 +364,16 @@ $stats = [
                 <!-- Time Range Selector -->
                 <div class="flex items-center gap-2 p-3 bg-slate-900/50 rounded-2xl border border-white/5">
                     <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest mr-2">Zakres czasowy:</span>
-                    <button onclick="selectTimeRange('1h')" class="time-range-btn px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="1h">
+                    <button onclick="setThreatTimeRange('1h', this)" class="time-range-btn px-4 py-2 bg-slate-800 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="1h">
                         1h
                     </button>
-                    <button onclick="selectTimeRange('1d')" class="time-range-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold transition border border-blue-500/50 shadow-lg shadow-blue-600/20" data-range="1d">
+                    <button onclick="setThreatTimeRange('24h', this)" class="time-range-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold transition border border-blue-500/50 shadow-lg shadow-blue-600/20" data-range="24h">
                         1D
                     </button>
-                    <button onclick="selectTimeRange('1w')" class="time-range-btn px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="1w">
+                    <button onclick="setThreatTimeRange('7d', this)" class="time-range-btn px-4 py-2 bg-slate-800 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="7d">
                         1W
                     </button>
-                    <button onclick="selectTimeRange('1m')" class="time-range-btn px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="1m">
+                    <button onclick="setThreatTimeRange('30d', this)" class="time-range-btn px-4 py-2 bg-slate-800 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="30d">
                         1M
                     </button>
                     <div class="h-6 w-px bg-white/10 mx-1"></div>
@@ -375,7 +394,7 @@ $stats = [
                     ];
                     $colors = $severity_colors[$event['severity']];
                 ?>
-                <div class="bg-slate-900/50 rounded-2xl border border-white/5 p-4 hover:border-rose-500/30 transition-all group">
+                <div class="threat-event-row bg-slate-900/50 rounded-2xl border border-white/5 p-4 hover:border-rose-500/30 transition-all group" data-timestamp="<?= $event['timestamp'] ?? 0 ?>">
                     <div class="flex items-start gap-4">
                         <div class="p-2.5 <?= $colors['bg'] ?> rounded-xl <?= $colors['text'] ?> shrink-0">
                             <i data-lucide="<?= $colors['icon'] ?>" class="w-5 h-5"></i>
@@ -1541,6 +1560,93 @@ $stats = [
         }
     </script>
     <?php include __DIR__ . '/includes/footer.php'; ?>
+
+<!-- Threat Ignore List Modal -->
+<div id="ignoreListModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center" onclick="if(event.target===this)closeIgnoreModal()">
+    <div class="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-2xl">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                <i data-lucide="shield-off" class="w-6 h-6 text-amber-400"></i>
+                Ignorowane adresy IP
+            </h2>
+            <button onclick="closeIgnoreModal()" class="text-slate-500 hover:text-white transition">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+        <div class="flex gap-3 mb-6">
+            <input type="text" id="ignore-ip" placeholder="Adres IP" class="flex-1 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50">
+            <input type="text" id="ignore-label" placeholder="Etykieta (opcjonalnie)" class="flex-1 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50">
+            <button onclick="addIgnoreIP()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-bold transition">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <div id="ignore-list-body"><div class="text-center text-slate-500 py-4">Ladowanie...</div></div>
+    </div>
+</div>
+
+<script>
+function openIgnoreModal() {
+    document.getElementById('ignoreListModal').classList.remove('hidden');
+    document.getElementById('ignoreListModal').classList.add('flex');
+    loadIgnoreList();
+    lucide.createIcons();
+}
+function closeIgnoreModal() {
+    document.getElementById('ignoreListModal').classList.add('hidden');
+    document.getElementById('ignoreListModal').classList.remove('flex');
+}
+async function loadIgnoreList() {
+    const resp = await fetch('api_threat_ignore.php');
+    const json = await resp.json();
+    const list = json.data || [];
+    const body = document.getElementById('ignore-list-body');
+    if (list.length === 0) {
+        body.innerHTML = '<div class="text-center text-slate-500 py-4">Brak ignorowanych adresow IP</div>';
+        return;
+    }
+    body.innerHTML = '<table class="w-full"><thead><tr class="text-xs text-slate-500 uppercase"><th class="text-left py-2 px-3">IP</th><th class="text-left py-2 px-3">Etykieta</th><th class="text-left py-2 px-3">Dodano</th><th class="py-2 px-3"></th></tr></thead><tbody>' +
+        list.map(item => `<tr class="border-t border-white/5 hover:bg-white/[0.02]">
+            <td class="py-3 px-3 text-sm font-mono text-white">${item.ip}</td>
+            <td class="py-3 px-3 text-sm text-slate-400">${item.label || '-'}</td>
+            <td class="py-3 px-3 text-xs text-slate-500">${item.added_at}</td>
+            <td class="py-3 px-3 text-right"><button onclick="removeIgnoreIP(${item.id})" class="text-red-400 hover:text-red-300 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+        </tr>`).join('') + '</tbody></table>';
+    lucide.createIcons();
+}
+async function addIgnoreIP() {
+    const ip = document.getElementById('ignore-ip').value.trim();
+    const label = document.getElementById('ignore-label').value.trim();
+    if (!ip) return;
+    await fetch('api_threat_ignore.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ip, label})});
+    document.getElementById('ignore-ip').value = '';
+    document.getElementById('ignore-label').value = '';
+    loadIgnoreList();
+}
+async function removeIgnoreIP(id) {
+    await fetch('api_threat_ignore.php', {method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})});
+    loadIgnoreList();
+}
+
+let threatTimeRange = '24h';
+function setThreatTimeRange(range, btn) {
+    threatTimeRange = range;
+    document.querySelectorAll('.time-range-btn').forEach(b => {
+        b.classList.remove('bg-blue-600', 'text-white');
+        b.classList.add('bg-slate-800', 'text-slate-400');
+    });
+    btn.classList.remove('bg-slate-800', 'text-slate-400');
+    btn.classList.add('bg-blue-600', 'text-white');
+
+    const now = Date.now();
+    const ranges = {'1h':3600000, '24h':86400000, '7d':604800000, '30d':2592000000};
+    const cutoff = ranges[range] ? now - ranges[range] : 0;
+
+    document.querySelectorAll('.threat-event-row').forEach(row => {
+        const ts = parseInt(row.dataset.timestamp || 0) * 1000;
+        row.style.display = (cutoff === 0 || ts >= cutoff) ? '' : 'none';
+    });
+}
+</script>
 </body>
 </html>
 
