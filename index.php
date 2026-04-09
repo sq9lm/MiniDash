@@ -961,7 +961,7 @@ try {
                                                 $uplink_name = 'Standalone / Root';
                                             }
                                         ?>
-                                             <tr class="hover:bg-white/[0.02] transition-colors group">
+                                             <tr class="hover:bg-white/[0.02] transition-colors group cursor-pointer" onclick="toggleAPClients(this, '<?= htmlspecialchars($d['mac'] ?? '') ?>')">
                                                 <td class="py-6 px-4">
                                                     <div class="flex items-center justify-center">
                                                         <div class="w-3.5 h-3.5 rounded-full <?= $status_color ?> shadow-[0_0_12px_rgba(0,0,0,0.3)]"></div>
@@ -1733,6 +1733,43 @@ try {
                 });
             }
         });
+
+        // AP Client Drilldown: Toggle WiFi clients connected to an AP
+        async function toggleAPClients(row, apMac) {
+            const existingDetail = row.nextElementSibling;
+            if (existingDetail && existingDetail.classList.contains('ap-detail-row')) {
+                existingDetail.remove();
+                return;
+            }
+            document.querySelectorAll('.ap-detail-row').forEach(r => r.remove());
+
+            const detailRow = document.createElement('tr');
+            detailRow.className = 'ap-detail-row';
+            detailRow.innerHTML = '<td colspan="6" class="p-0"><div class="bg-slate-800/30 border-t border-b border-white/5 px-8 py-4"><div class="text-xs text-slate-500">Ladowanie klientow...</div></div></td>';
+            row.after(detailRow);
+
+            try {
+                const resp = await fetch('api_stalker.php?action=sessions');
+                const json = await resp.json();
+                const clients = (json.data || []).filter(c => c.ap_mac === apMac.toLowerCase());
+
+                if (clients.length === 0) {
+                    detailRow.innerHTML = '<td colspan="6" class="p-0"><div class="bg-slate-800/30 border-t border-b border-white/5 px-8 py-4"><div class="text-xs text-slate-500">Brak klientow WiFi na tym urzadzeniu</div></div></td>';
+                    return;
+                }
+
+                let html = '<td colspan="6" class="p-0"><div class="bg-slate-800/30 border-t border-b border-white/5 px-6 py-3">';
+                html += '<table class="w-full"><thead><tr class="text-[10px] text-slate-500 uppercase"><th class="text-left py-1 px-2">Klient</th><th class="text-left py-1 px-2">Pasmo</th><th class="text-left py-1 px-2">RSSI</th><th class="text-left py-1 px-2">Predkosc</th><th class="text-left py-1 px-2">Siec</th></tr></thead><tbody>';
+                clients.forEach(c => {
+                    const rssiClass = c.rssi > -50 ? 'text-emerald-400' : (c.rssi > -70 ? 'text-amber-400' : 'text-red-400');
+                    html += '<tr class="border-t border-white/5"><td class="py-2 px-2 text-xs text-white">' + (c.hostname || c.mac) + '</td><td class="py-2 px-2 text-[10px] text-purple-400">' + c.band + ' Ch' + c.channel + '</td><td class="py-2 px-2 text-xs font-mono ' + rssiClass + '">' + c.rssi + 'dBm</td><td class="py-2 px-2 text-[10px] text-slate-400">' + c.rx_rate + '/' + c.tx_rate + ' Mbps</td><td class="py-2 px-2 text-[10px] text-slate-500">' + (c.ssid || '') + '</td></tr>';
+                });
+                html += '</tbody></table></div></td>';
+                detailRow.innerHTML = html;
+            } catch(e) {
+                detailRow.innerHTML = '<td colspan="6" class="p-0"><div class="bg-slate-800/30 border-t border-b border-white/5 px-8 py-4"><div class="text-xs text-red-400">Blad ladowania</div></div></td>';
+            }
+        }
 
         // Stalker Widget: Load roaming event count
         fetch('api_stalker.php?action=roaming_count')
