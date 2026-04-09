@@ -580,6 +580,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
         
         lucide.createIcons();
     </script>
+    <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
 </html>
 

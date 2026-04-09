@@ -310,6 +310,7 @@ foreach ($notif_keys as $key => $defaults) {
     </div>
 
     <script>lucide.createIcons();</script>
+    <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
 </html>
 

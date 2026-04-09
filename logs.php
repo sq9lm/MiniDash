@@ -343,5 +343,6 @@ $log_lines = array_slice($processed_logs, 0, $limit);
             document.getElementById(id).classList.remove('active');
         }
     </script>
+    <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
 </html>

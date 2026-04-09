@@ -1540,6 +1540,7 @@ $stats = [
             document.body.style.overflow = '';
         }
     </script>
+    <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
 </html>
 
