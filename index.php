@@ -1749,9 +1749,13 @@ try {
             row.after(detailRow);
 
             try {
-                const resp = await fetch('api_stalker.php?action=sessions');
-                const json = await resp.json();
-                const clients = (json.data || []).filter(c => c.ap_mac === apMac.toLowerCase());
+                // Use existing client data from PHP (already loaded on page)
+                const apMacLower = apMac.toLowerCase().replace(/[^a-f0-9]/g, '');
+                const allClients = <?= json_encode(array_values(array_filter($clients, function($c) { return !($c['is_wired'] ?? false); }))) ?>;
+                const clients = allClients.filter(c => {
+                    const clientAp = (c.ap_mac || '').toLowerCase().replace(/[^a-f0-9]/g, '');
+                    return clientAp === apMacLower;
+                });
 
                 if (clients.length === 0) {
                     detailRow.innerHTML = '<td colspan="6" class="p-0"><div class="bg-slate-800/30 border-t border-b border-white/5 px-8 py-4"><div class="text-xs text-slate-500">Brak klientow WiFi na tym urzadzeniu</div></div></td>';
@@ -1759,15 +1763,21 @@ try {
                 }
 
                 let html = '<td colspan="6" class="p-0"><div class="bg-slate-800/30 border-t border-b border-white/5 px-6 py-3">';
-                html += '<table class="w-full"><thead><tr class="text-[10px] text-slate-500 uppercase"><th class="text-left py-1 px-2">Klient</th><th class="text-left py-1 px-2">Pasmo</th><th class="text-left py-1 px-2">RSSI</th><th class="text-left py-1 px-2">Predkosc</th><th class="text-left py-1 px-2">Siec</th></tr></thead><tbody>';
+                html += '<table class="w-full"><thead><tr class="text-[10px] text-slate-500 uppercase"><th class="text-left py-1 px-2">Klient</th><th class="text-left py-1 px-2">Siec</th><th class="text-left py-1 px-2">RSSI</th><th class="text-left py-1 px-2">Predkosc</th><th class="text-left py-1 px-2">IP</th></tr></thead><tbody>';
                 clients.forEach(c => {
-                    const rssiClass = c.rssi > -50 ? 'text-emerald-400' : (c.rssi > -70 ? 'text-amber-400' : 'text-red-400');
-                    html += '<tr class="border-t border-white/5"><td class="py-2 px-2 text-xs text-white">' + (c.hostname || c.mac) + '</td><td class="py-2 px-2 text-[10px] text-purple-400">' + c.band + ' Ch' + c.channel + '</td><td class="py-2 px-2 text-xs font-mono ' + rssiClass + '">' + c.rssi + 'dBm</td><td class="py-2 px-2 text-[10px] text-slate-400">' + c.rx_rate + '/' + c.tx_rate + ' Mbps</td><td class="py-2 px-2 text-[10px] text-slate-500">' + (c.ssid || '') + '</td></tr>';
+                    const signal = c.signal || 0;
+                    const rssiClass = signal > -50 ? 'text-emerald-400' : (signal > -70 ? 'text-amber-400' : 'text-red-400');
+                    const name = c.name || c.hostname || c.mac || c.macAddress || '—';
+                    const essid = c.essid || '—';
+                    const rx = c.rx_rate ? (c.rx_rate / 1000).toFixed(0) : '0';
+                    const tx = c.tx_rate ? (c.tx_rate / 1000).toFixed(0) : '0';
+                    const ip = c.ipAddress || c.ip || '—';
+                    html += '<tr class="border-t border-white/5"><td class="py-2 px-2 text-xs text-white">' + name + '</td><td class="py-2 px-2 text-[10px] text-purple-400">' + essid + '</td><td class="py-2 px-2 text-xs font-mono ' + rssiClass + '">' + (signal ? signal + 'dBm' : '—') + '</td><td class="py-2 px-2 text-[10px] text-slate-400">' + rx + '/' + tx + ' Mbps</td><td class="py-2 px-2 text-[10px] text-slate-500 font-mono">' + ip + '</td></tr>';
                 });
                 html += '</tbody></table></div></td>';
                 detailRow.innerHTML = html;
             } catch(e) {
-                detailRow.innerHTML = '<td colspan="6" class="p-0"><div class="bg-slate-800/30 border-t border-b border-white/5 px-8 py-4"><div class="text-xs text-red-400">Blad ladowania</div></div></td>';
+                detailRow.innerHTML = '<td colspan="6" class="p-0"><div class="bg-slate-800/30 border-t border-b border-white/5 px-8 py-4"><div class="text-xs text-red-400">Blad ladowania: ' + e.message + '</div></div></td>';
             }
         }
 
