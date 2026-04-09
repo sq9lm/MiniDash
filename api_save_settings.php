@@ -56,6 +56,9 @@ if (!is_array($existing)) $existing = [];
 
 $finalConfig = array_replace_recursive($existing, $newConfig);
 
+require_once __DIR__ . '/crypto.php';
+encrypt_config($finalConfig);
+
 if (file_put_contents($configFile, json_encode($finalConfig, JSON_PRETTY_PRINT))) {
     echo json_encode(['success' => true]);
 } else {

@@ -20,6 +20,8 @@ if (file_exists($envFile)) {
     }
 }
 
+require_once __DIR__ . '/crypto.php';
+
 // Konfiguracja UniFi - wartości z .env, fallback na puste
 $config = [
     'controller_url' => $_ENV['UNIFI_CONTROLLER_URL'] ?? 'https://192.168.1.1',
@@ -80,7 +82,9 @@ function load_app_config($defaults) {
     if (file_exists($configFile)) {
         $dynamic = json_decode(file_get_contents($configFile), true);
         if (is_array($dynamic)) {
-            return array_replace_recursive($defaults, $dynamic);
+            $merged = array_replace_recursive($defaults, $dynamic);
+            decrypt_config($merged);
+            return $merged;
         }
     }
     return $defaults;

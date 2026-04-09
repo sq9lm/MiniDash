@@ -91,6 +91,8 @@ if ($action === 'update_profile') {
     }
 
     // Save to config.json
+    require_once __DIR__ . '/crypto.php';
+    encrypt_config($newConfig);
     $jsonContent = json_encode($newConfig, JSON_PRETTY_PRINT);
     if ($jsonContent === false) {
         log_settings_debug("JSON encode error: " . json_last_error_msg());
