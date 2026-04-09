@@ -1,0 +1,30 @@
+# Secrets
+.env
+
+# Runtime data with sensitive info
+data/*
+!data/.gitkeep
+!data/avatars/
+data/avatars/*
+!data/avatars/.gitkeep
+
+# Root-level data dumps
+*.json
+!package.json
+!composer.json
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Backup copy
+KOPIA/
+
+# IDE
+.vscode/
+*.code-workspace
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
