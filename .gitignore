@@ -19,6 +19,9 @@ data/avatars/*
 logs/*
 !logs/.gitkeep
 
+# Old/unused files
+_old/
+
 # Backup copy
 KOPIA/
 
