@@ -61,7 +61,9 @@ $notif_keys = [
     'telegram_notifications' => ['enabled' => false, 'bot_token' => '', 'chat_id' => ''],
     'whatsapp_notifications' => ['enabled' => false, 'api_url' => '', 'api_key' => '', 'phone_number' => ''],
     'slack_notifications' => ['enabled' => false, 'webhook_url' => ''],
-    'sms_notifications' => ['enabled' => false, 'api_url' => '', 'api_key' => '', 'to_number' => '']
+    'sms_notifications' => ['enabled' => false, 'api_url' => '', 'api_key' => '', 'to_number' => ''],
+    'discord_notifications' => ['enabled' => false, 'webhook_url' => '', 'username' => 'MiniDash'],
+    'n8n_notifications' => ['enabled' => false, 'webhook_url' => '']
 ];
 
 foreach ($notif_keys as $key => $defaults) {
@@ -292,6 +294,62 @@ foreach ($notif_keys as $key => $defaults) {
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer Telefonu Docelowy</label>
                         <input type="text" name="sms_phone" value="<?= htmlspecialchars($config['sms_notifications']['to_number']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="+48999888777">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Discord -->
+            <div class="setting-card rounded-3xl p-8 border border-white/5">
+                <div class="flex items-center justify-between mb-8">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                            <i data-lucide="message-circle" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Discord</h3>
+                            <p class="text-sm text-slate-500">Powiadomienia przez Discord Webhook</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="discord_enabled" class="sr-only peer" <?= !empty($config['discord_notifications']['enabled']) ? 'checked' : '' ?>>
+                        <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
+                        <input type="text" name="discord_webhook_url" value="<?= htmlspecialchars($config['discord_notifications']['webhook_url'] ?? '') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://discord.com/api/webhooks/...">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nazwa bota</label>
+                        <input type="text" name="discord_username" value="<?= htmlspecialchars($config['discord_notifications']['username'] ?? 'MiniDash') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="MiniDash">
+                    </div>
+                </div>
+            </div>
+
+            <!-- n8n -->
+            <div class="setting-card rounded-3xl p-8 border border-white/5">
+                <div class="flex items-center justify-between mb-8">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-400 flex items-center justify-center">
+                            <i data-lucide="webhook" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-white">n8n</h3>
+                            <p class="text-sm text-slate-500">Generic webhook do automatyzacji n8n</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="n8n_enabled" class="sr-only peer" <?= !empty($config['n8n_notifications']['enabled']) ? 'checked' : '' ?>>
+                        <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
+                        <input type="text" name="n8n_webhook_url" value="<?= htmlspecialchars($config['n8n_notifications']['webhook_url'] ?? '') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://n8n.example.com/webhook/...">
                     </div>
                 </div>
             </div>

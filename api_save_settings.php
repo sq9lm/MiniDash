@@ -44,6 +44,15 @@ $newConfig = [
         'topic' => $_POST['ntfy_topic'] ?? '',
         'server' => $_POST['ntfy_server'] ?? 'https://ntfy.sh'
     ],
+    'discord_notifications' => [
+        'enabled' => isset($_POST['discord_enabled']),
+        'webhook_url' => $_POST['discord_webhook_url'] ?? '',
+        'username' => $_POST['discord_username'] ?? 'MiniDash'
+    ],
+    'n8n_notifications' => [
+        'enabled' => isset($_POST['n8n_enabled']),
+        'webhook_url' => $_POST['n8n_webhook_url'] ?? ''
+    ],
     'triggers' => [
         'speed_alert_enabled' => isset($_POST['speed_alert_enabled']) && ($_POST['speed_alert_enabled'] === 'true' || $_POST['speed_alert_enabled'] === 'on'),
         'speed_threshold_mbps' => (int)($_POST['speed_threshold_mbps'] ?? 100)

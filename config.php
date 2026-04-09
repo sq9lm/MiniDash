@@ -65,8 +65,17 @@ $config = [
     ],
     'ntfy_notifications' => [
         'enabled' => false,
-        'topic' => '', 
+        'topic' => '',
         'server' => 'https://ntfy.sh'
+    ],
+    'discord_notifications' => [
+        'enabled' => false,
+        'webhook_url' => '',
+        'username' => 'MiniDash'
+    ],
+    'n8n_notifications' => [
+        'enabled' => false,
+        'webhook_url' => ''
     ],
     'triggers' => [
         'speed_alert_enabled' => false,
@@ -124,6 +133,14 @@ function sendAlert($subject, $message) {
 
     if ($config['ntfy_notifications'] && $config['ntfy_notifications']['enabled']) {
         sendPushNotification($subject, $message);
+    }
+
+    if ($config['discord_notifications'] && $config['discord_notifications']['enabled']) {
+        sendDiscordNotification($message);
+    }
+
+    if ($config['n8n_notifications'] && $config['n8n_notifications']['enabled']) {
+        sendN8nNotification($message);
     }
 }
 
@@ -237,7 +254,7 @@ function sendSmsNotification($message) {
     $url = $config['sms_notifications']['api_url'];
     $key = $config['sms_notifications']['api_key'];
     $phone = $config['sms_notifications']['to_number'];
-    
+
     if (empty($url) || empty($phone)) return;
 
     $data = [
@@ -249,6 +266,53 @@ function sendSmsNotification($message) {
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    @curl_exec($ch);
+    curl_close($ch);
+}
+
+function sendDiscordNotification($message) {
+    global $config;
+    $url = $config['discord_notifications']['webhook_url'];
+    if (empty($url)) return;
+
+    $data = json_encode([
+        'username' => $config['discord_notifications']['username'] ?? 'MiniDash',
+        'embeds' => [[
+            'title' => 'MiniDash Alert',
+            'description' => strip_tags($message),
+            'color' => 3447003,
+            'timestamp' => date('c'),
+            'footer' => ['text' => 'MiniDash v' . MINIDASH_VERSION]
+        ]]
+    ]);
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    @curl_exec($ch);
+    curl_close($ch);
+}
+
+function sendN8nNotification($message) {
+    global $config;
+    $url = $config['n8n_notifications']['webhook_url'];
+    if (empty($url)) return;
+
+    $data = json_encode([
+        'source' => 'MiniDash',
+        'version' => MINIDASH_VERSION,
+        'message' => strip_tags($message),
+        'severity' => 'alert',
+        'timestamp' => date('c')
+    ]);
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     @curl_exec($ch);
     curl_close($ch);
