@@ -1796,23 +1796,22 @@ try {
             }
         }
 
-        // Stalker Widget: Load active sessions count + last roaming
-        Promise.all([
-            fetch('api_stalker.php?action=sessions&time=24h&band=&search=').then(r => r.json()),
-            fetch('api_stalker.php?action=roaming_count').then(r => r.json())
-        ]).then(([sessions, roaming]) => {
-            const count = sessions.data ? sessions.data.length : 0;
-            document.getElementById('stalker-widget-count').textContent = count;
-            if (roaming.last) {
-                document.getElementById('stalker-widget-last').textContent =
-                    roaming.last.hostname + ': ' + roaming.last.from_ap + ' \u2192 ' + roaming.last.to_ap;
-            } else {
-                document.getElementById('stalker-widget-last').textContent = count > 0 ? 'Brak roamingu' : 'Brak sesji';
-            }
-        }).catch(() => {
-            document.getElementById('stalker-widget-count').textContent = '?';
-            document.getElementById('stalker-widget-last').textContent = 'Blad polaczenia';
-        });
+        // Stalker Widget: Load active sessions count
+        fetch('api_stalker.php?action=sessions&time=24h&band=&search=')
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(data => {
+                const count = data.data ? data.data.length : 0;
+                document.getElementById('stalker-widget-count').textContent = count;
+                document.getElementById('stalker-widget-last').textContent = count > 0 ? 'Aktywnych polaczen' : 'Brak sesji WiFi';
+            })
+            .catch(e => {
+                console.log('Stalker widget error:', e.message);
+                document.getElementById('stalker-widget-count').textContent = '-';
+                document.getElementById('stalker-widget-last').textContent = '';
+            });
     </script>
     <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
