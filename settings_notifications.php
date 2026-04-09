@@ -245,7 +245,7 @@ foreach ($notif_keys as $key => $defaults) {
                     <div class="flex items-center justify-between mb-8">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
-                                <i data-lucide="slack" class="w-6 h-6"></i>
+                                <i data-lucide="hash" class="w-6 h-6"></i>
                             </div>
                             <div>
                                 <h3 class="text-lg font-bold text-white">Slack Webhook</h3>

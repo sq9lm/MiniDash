@@ -961,7 +961,7 @@ try {
                                                 $uplink_name = 'Standalone / Root';
                                             }
                                         ?>
-                                             <tr class="hover:bg-white/[0.02] transition-colors group cursor-pointer" onclick="toggleAPClients(this, '<?= htmlspecialchars($d['mac'] ?? '') ?>')">
+                                             <tr class="hover:bg-white/[0.02] transition-colors group cursor-pointer" onclick="toggleAPClients(this, '<?= htmlspecialchars($d['mac'] ?? '') ?>', '<?= htmlspecialchars($d['device_id'] ?? $d['_id'] ?? '') ?>')">
                                                 <td class="py-6 px-4">
                                                     <div class="flex items-center justify-center">
                                                         <div class="w-3.5 h-3.5 rounded-full <?= $status_color ?> shadow-[0_0_12px_rgba(0,0,0,0.3)]"></div>
@@ -1735,7 +1735,7 @@ try {
         });
 
         // AP Client Drilldown: Toggle WiFi clients connected to an AP
-        async function toggleAPClients(row, apMac) {
+        async function toggleAPClients(row, apMac, deviceId) {
             const existingDetail = row.nextElementSibling;
             if (existingDetail && existingDetail.classList.contains('ap-detail-row')) {
                 existingDetail.remove();
@@ -1750,11 +1750,13 @@ try {
 
             try {
                 // Use existing client data from PHP (already loaded on page)
-                const apMacLower = apMac.toLowerCase().replace(/[^a-f0-9]/g, '');
+                const apMacNorm = apMac.toLowerCase().replace(/[^a-f0-9]/g, '');
+                const devId = (deviceId || '').toLowerCase();
                 const allClients = <?= json_encode(array_values(array_filter($clients, function($c) { return !($c['is_wired'] ?? false); }))) ?>;
                 const clients = allClients.filter(c => {
-                    const clientAp = (c.ap_mac || '').toLowerCase().replace(/[^a-f0-9]/g, '');
-                    return clientAp === apMacLower;
+                    const clientApMac = (c.ap_mac || c.last_uplink_mac || '').toLowerCase().replace(/[^a-f0-9]/g, '');
+                    const clientUplink = (c.uplinkDeviceId || '').toLowerCase();
+                    return clientApMac === apMacNorm || (devId && clientUplink === devId);
                 });
 
                 if (clients.length === 0) {

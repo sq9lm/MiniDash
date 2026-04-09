@@ -2024,7 +2024,7 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                         <div class="space-y-6">
                             <div class="flex items-center justify-between border-b border-white/5 pb-4">
                                 <div class="flex items-center gap-3">
-                                    <div class="p-2.5 bg-purple-500/10 text-purple-400 rounded-xl"><i data-lucide="slack" class="w-5 h-5"></i></div>
+                                    <div class="p-2.5 bg-purple-500/10 text-purple-400 rounded-xl"><i data-lucide="hash" class="w-5 h-5"></i></div>
                                     <div>
                                         <h4 class="font-bold text-slate-200">Slack Webhook</h4>
                                         <span class="text-[10px] text-slate-500 uppercase tracking-widest font-black">Kanały Slack</span>
