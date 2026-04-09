@@ -1751,12 +1751,25 @@ try {
             try {
                 // Use existing client data from PHP (already loaded on page)
                 const apMacNorm = apMac.toLowerCase().replace(/[^a-f0-9]/g, '');
-                const devId = (deviceId || '').toLowerCase();
-                const allClients = <?= json_encode(array_values(array_filter($clients, function($c) { return !($c['is_wired'] ?? false); }))) ?>;
+                // Use traditional API clients (they have ap_mac field)
+                const allClients = <?= json_encode(array_values(array_map(function($tc) {
+                    return [
+                        'name' => $tc['name'] ?? $tc['hostname'] ?? $tc['mac'] ?? '—',
+                        'mac' => $tc['mac'] ?? '',
+                        'ap_mac' => $tc['ap_mac'] ?? '',
+                        'essid' => $tc['essid'] ?? '',
+                        'signal' => $tc['signal'] ?? 0,
+                        'ip' => $tc['ip'] ?? '',
+                        'rx_rate' => $tc['rx_rate'] ?? 0,
+                        'tx_rate' => $tc['tx_rate'] ?? 0,
+                        'is_wired' => $tc['is_wired'] ?? false,
+                        'channel' => $tc['channel'] ?? 0,
+                        'radio' => $tc['radio'] ?? '',
+                    ];
+                }, array_filter($trad_clients, function($c) { return empty($c['is_wired']); })))) ?>;
                 const clients = allClients.filter(c => {
-                    const clientApMac = (c.ap_mac || c.last_uplink_mac || '').toLowerCase().replace(/[^a-f0-9]/g, '');
-                    const clientUplink = (c.uplinkDeviceId || '').toLowerCase();
-                    return clientApMac === apMacNorm || (devId && clientUplink === devId);
+                    const clientApMac = (c.ap_mac || '').toLowerCase().replace(/[^a-f0-9]/g, '');
+                    return clientApMac === apMacNorm;
                 });
 
                 if (clients.length === 0) {
