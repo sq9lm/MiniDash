@@ -1,5 +1,5 @@
 ﻿<?php
-/** Created by Łukasz Misiura (c) 2026 | www.lm-ads.com **/
+/** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 require_once 'config.php';
 
 echo "Using API Key: " . substr($config['api_key'], 0, 5) . "...\n";

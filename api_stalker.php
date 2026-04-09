@@ -1,5 +1,5 @@
 <?php
-/** Created by Łukasz Misiura (c) 2026 | www.lm-ads.com **/
+/** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 require_once 'config.php';
 require_once 'db.php';
 require_once 'functions.php';

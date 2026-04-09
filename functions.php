@@ -1,5 +1,5 @@
 ﻿<?php
-/** Created by Łukasz Misiura (c) 2026 | www.lm-ads.com **/
+/** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 // functions.php - Clean Version
 ini_set('memory_limit', '512M');
 ini_set('max_execution_time', 60);

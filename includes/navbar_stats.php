@@ -1,5 +1,5 @@
 ﻿<?php
-/** Created by Łukasz Misiura (c) 2026 | www.lm-ads.com **/
+/** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 // Get navbar stats for all pages
 // This function returns cached stats from the session that were populated by index.php
 function get_navbar_stats() {

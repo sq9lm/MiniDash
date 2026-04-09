@@ -1,5 +1,5 @@
 ﻿<?php
-/** Created by Łukasz Misiura (c) 2026 | www.lm-ads.com **/
+/** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 $config = include 'config.php';
 
 function fetch_api_debug($endpoint) {

@@ -1,5 +1,5 @@
 ﻿<?php
-/** Created by Łukasz Misiura (c) 2026 | www.lm-ads.com **/
+/** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 // Test script to verify API connectivity with new curl implementation
 require_once 'config.php';
 require_once 'functions.php';

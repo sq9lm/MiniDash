@@ -1,5 +1,6 @@
 -- 001_initial.sql
 -- Base schema for MiniDash v2.0.0
+-- Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com
 
 CREATE TABLE IF NOT EXISTS migrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

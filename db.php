@@ -1,4 +1,5 @@
 <?php
+/** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 /**
  * SQLite Database Layer - MiniDash v2.0.0
  * Include after config.php on every page that needs DB access.

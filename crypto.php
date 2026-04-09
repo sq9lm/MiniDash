@@ -1,4 +1,5 @@
 <?php
+/** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 /**
  * Credential Encryption - MiniDash v2.0.0
  * Uses sodium_crypto_secretbox (PHP 8 built-in).

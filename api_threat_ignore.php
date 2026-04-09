@@ -1,4 +1,5 @@
 <?php
+/** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 

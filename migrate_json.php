@@ -1,4 +1,5 @@
 <?php
+/** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 /**
  * migrate_json.php - Migrate existing JSON data files to SQLite
  * MiniDash v2.0.0
