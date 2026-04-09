@@ -1750,44 +1750,55 @@ try {
 
             try {
                 // Use existing client data from PHP (already loaded on page)
-                const apMacNorm = apMac.toLowerCase().replace(/[^a-f0-9]/g, '');
-                // Use traditional API clients (they have ap_mac field)
+                const devMacNorm = apMac.toLowerCase().replace(/[^a-f0-9]/g, '');
+                // All clients (wired + wireless) from traditional API
                 const allClients = <?= json_encode(array_values(array_map(function($tc) {
                     return [
                         'name' => $tc['name'] ?? $tc['hostname'] ?? $tc['mac'] ?? '—',
                         'mac' => $tc['mac'] ?? '',
                         'ap_mac' => $tc['ap_mac'] ?? '',
+                        'sw_mac' => $tc['sw_mac'] ?? '',
+                        'sw_port' => $tc['sw_port'] ?? '',
+                        'gw_mac' => $tc['gw_mac'] ?? '',
                         'essid' => $tc['essid'] ?? '',
+                        'network' => $tc['network'] ?? '',
                         'signal' => $tc['signal'] ?? 0,
                         'ip' => $tc['ip'] ?? '',
                         'rx_rate' => $tc['rx_rate'] ?? 0,
                         'tx_rate' => $tc['tx_rate'] ?? 0,
                         'is_wired' => $tc['is_wired'] ?? false,
-                        'channel' => $tc['channel'] ?? 0,
-                        'radio' => $tc['radio'] ?? '',
+                        'wired_rate' => $tc['wired_rate_mbps'] ?? 0,
                     ];
-                }, array_filter($trad_clients, function($c) { return empty($c['is_wired']); })))) ?>;
+                }, $trad_clients))) ?>;
+                // Match: WiFi clients by ap_mac, wired by sw_mac, gateway by gw_mac
                 const clients = allClients.filter(c => {
-                    const clientApMac = (c.ap_mac || '').toLowerCase().replace(/[^a-f0-9]/g, '');
-                    return clientApMac === apMacNorm;
+                    const apMac = (c.ap_mac || '').toLowerCase().replace(/[^a-f0-9]/g, '');
+                    const swMac = (c.sw_mac || '').toLowerCase().replace(/[^a-f0-9]/g, '');
+                    const gwMac = (c.gw_mac || '').toLowerCase().replace(/[^a-f0-9]/g, '');
+                    return apMac === devMacNorm || swMac === devMacNorm || gwMac === devMacNorm;
                 });
 
                 if (clients.length === 0) {
-                    detailRow.innerHTML = '<td colspan="6" class="p-0"><div class="bg-slate-800/30 border-t border-b border-white/5 px-8 py-4"><div class="text-xs text-slate-500">Brak klientow WiFi na tym urzadzeniu</div></div></td>';
+                    detailRow.innerHTML = '<td colspan="6" class="p-0"><div class="bg-slate-800/30 border-t border-b border-white/5 px-8 py-4"><div class="text-xs text-slate-500">Brak klientow na tym urzadzeniu</div></div></td>';
                     return;
                 }
 
                 let html = '<td colspan="6" class="p-0"><div class="bg-slate-800/30 border-t border-b border-white/5 px-6 py-3">';
-                html += '<table class="w-full"><thead><tr class="text-[10px] text-slate-500 uppercase"><th class="text-left py-1 px-2">Klient</th><th class="text-left py-1 px-2">Siec</th><th class="text-left py-1 px-2">RSSI</th><th class="text-left py-1 px-2">Predkosc</th><th class="text-left py-1 px-2">IP</th></tr></thead><tbody>';
+                html += '<table class="w-full"><thead><tr class="text-[10px] text-slate-500 uppercase"><th class="text-left py-1 px-2">Klient</th><th class="text-left py-1 px-2">Siec</th><th class="text-left py-1 px-2">Sygnal</th><th class="text-left py-1 px-2">Predkosc</th><th class="text-left py-1 px-2">IP</th></tr></thead><tbody>';
                 clients.forEach(c => {
+                    const isWired = c.is_wired;
                     const signal = c.signal || 0;
-                    const rssiClass = signal > -50 ? 'text-emerald-400' : (signal > -70 ? 'text-amber-400' : 'text-red-400');
-                    const name = c.name || c.hostname || c.mac || c.macAddress || '—';
-                    const essid = c.essid || '—';
-                    const rx = c.rx_rate ? (c.rx_rate / 1000).toFixed(0) : '0';
-                    const tx = c.tx_rate ? (c.tx_rate / 1000).toFixed(0) : '0';
-                    const ip = c.ipAddress || c.ip || '—';
-                    html += '<tr class="border-t border-white/5"><td class="py-2 px-2 text-xs text-white">' + name + '</td><td class="py-2 px-2 text-[10px] text-purple-400">' + essid + '</td><td class="py-2 px-2 text-xs font-mono ' + rssiClass + '">' + (signal ? signal + 'dBm' : '—') + '</td><td class="py-2 px-2 text-[10px] text-slate-400">' + rx + '/' + tx + ' Mbps</td><td class="py-2 px-2 text-[10px] text-slate-500 font-mono">' + ip + '</td></tr>';
+                    const rssiClass = isWired ? 'text-blue-400' : (signal > -50 ? 'text-emerald-400' : (signal > -70 ? 'text-amber-400' : 'text-red-400'));
+                    const name = c.name || c.mac || '—';
+                    const net = c.essid || c.network || '—';
+                    const speedInfo = isWired
+                        ? (c.wired_rate ? c.wired_rate + ' Mbps' : '—')
+                        : ((c.rx_rate ? (c.rx_rate/1000).toFixed(0) : '0') + '/' + (c.tx_rate ? (c.tx_rate/1000).toFixed(0) : '0') + ' Mbps');
+                    const signalInfo = isWired
+                        ? '<span class="text-blue-400">Wired' + (c.sw_port ? ' P' + c.sw_port : '') + '</span>'
+                        : (signal ? '<span class="' + rssiClass + '">' + signal + 'dBm</span>' : '—');
+                    const ip = c.ip || '—';
+                    html += '<tr class="border-t border-white/5"><td class="py-2 px-2 text-xs text-white">' + name + '</td><td class="py-2 px-2 text-[10px] text-purple-400">' + net + '</td><td class="py-2 px-2 text-xs font-mono">' + signalInfo + '</td><td class="py-2 px-2 text-[10px] text-slate-400">' + speedInfo + '</td><td class="py-2 px-2 text-[10px] text-slate-500 font-mono">' + ip + '</td></tr>';
                 });
                 html += '</tbody></table></div></td>';
                 detailRow.innerHTML = html;
