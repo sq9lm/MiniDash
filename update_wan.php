@@ -7,6 +7,7 @@ error_reporting(0);
 ob_start();
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/functions.php';
 
 header('Content-Type: application/json');
@@ -77,6 +78,11 @@ try {
     
     if (count($history) > 60) $history = array_slice($history, -60);
     file_put_contents($file, json_encode($history));
+
+    if (isset($db)) {
+        $stmt = $db->prepare("INSERT INTO wan_stats (rx_bytes, tx_bytes) VALUES (?, ?)");
+        $stmt->execute([$rx ?? 0, $tx ?? 0]);
+    }
 
     // 4. Update Monitored Devices Status History
     $monitored_config = loadDevices();
