@@ -1,6 +1,7 @@
 ﻿<?php
 /** Created by Łukasz Misiura (c) 2026 | www.lm-ads.com **/
 require_once 'config.php';
+require_once 'db.php';
 
 // Funkcja do weryfikacji logowania
 function verifyLogin($username, $password) {

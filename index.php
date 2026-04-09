@@ -1,6 +1,7 @@
 ﻿<?php
 /** Created by Łukasz Misiura (c) 2026 | www.lm-ads.com **/
 require_once 'config.php';
+require_once 'db.php';
 require_once 'functions.php';
 
 // Sprawdzenie czy użytkownik jest zalogowany
@@ -674,7 +675,7 @@ try {
                             <th onclick="sortTable(1)" class="cursor-pointer hover:text-blue-400 transition-colors py-5 px-4">Typ / Szybkość <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-1 opacity-50"></i></th>
                             <th onclick="sortTable(2)" class="cursor-pointer hover:text-blue-400 transition-colors py-5 px-4">Sieć / VLAN <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-1 opacity-50"></i></th>
                             <th onclick="sortTable(3)" class="cursor-pointer hover:text-blue-400 transition-colors py-5 px-4">IP / MAC <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-1 opacity-50"></i></th>
-                            <th onclick="sortTable(4)" class="cursor-pointer hover:text-blue-400 transition-colors py-5 px-4">Uptime <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-1 opacity-50"></i></th>
+                            <th onclick="sortTable(4)" class="cursor-pointer hover:text-blue-400 transition-colors py-5 px-4 whitespace-nowrap">Uptime <i data-lucide="chevrons-up-down" class="inline w-3 h-3 ml-1 opacity-50"></i></th>
                             <th class="text-right py-5 px-6">Akcja</th>
                         </tr>
                     </thead>
@@ -719,7 +720,7 @@ try {
                                         <?php endif; ?>
                                     </div>
                                     <div>
-                                        <div class="font-black text-base text-white leading-tight"><?= htmlspecialchars($client_name) ?></div>
+                                        <div class="font-bold text-sm text-white leading-tight"><?= htmlspecialchars($client_name) ?></div>
                                         <div class="flex items-center gap-2 mt-1">
                                             <?php if ($is_monitored): ?>
                                                 <span class="text-[9px] text-blue-400 uppercase font-black tracking-widest bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-500/20">MONITOR</span>
@@ -983,7 +984,7 @@ try {
                                                     <span class="text-2xl font-black text-purple-400 tracking-tighter"><?= $d['num_sta'] ?? 0 ?></span>
                                                 </td>
                                                 <td class="py-6 px-4 text-right">
-                                                    <span class="text-xs font-mono text-slate-400 font-black bg-slate-800/50 px-3 py-1.5 rounded-xl border border-white/5"><?= formatDuration($d['uptime'] ?? 0) ?></span>
+                                                    <span class="text-[10px] font-mono text-white whitespace-nowrap"><?= formatDuration($d['uptime'] ?? 0) ?></span>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
