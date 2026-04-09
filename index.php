@@ -377,10 +377,10 @@ try {
                     <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20 group-hover:scale-110 transition-transform">
                         <i data-lucide="radar" class="w-5 h-5 text-purple-400"></i>
                     </div>
-                    <span class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Roaming</span>
+                    <span class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Wi-Fi Stalker</span>
                 </div>
                 <div class="text-3xl font-black text-white tracking-tight" id="stalker-widget-count">-</div>
-                <div class="text-xs text-slate-500 mt-1">Zdarzenia (24h)</div>
+                <div class="text-xs text-slate-500 mt-1">Sesji WiFi</div>
                 <div class="text-[10px] text-slate-600 mt-2 truncate" id="stalker-widget-last">Ladowanie...</div>
             </div>
 
@@ -1796,22 +1796,23 @@ try {
             }
         }
 
-        // Stalker Widget: Load roaming event count
-        fetch('api_stalker.php?action=roaming_count')
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('stalker-widget-count').textContent = data.count || 0;
-                if (data.last) {
-                    document.getElementById('stalker-widget-last').textContent =
-                        (data.last.hostname || 'Unknown') + ': ' + data.last.from_ap + ' \u2192 ' + data.last.to_ap;
-                } else {
-                    document.getElementById('stalker-widget-last').textContent = 'Brak zdarzen';
-                }
-            })
-            .catch(() => {
-                document.getElementById('stalker-widget-count').textContent = '0';
-                document.getElementById('stalker-widget-last').textContent = 'Brak danych';
-            });
+        // Stalker Widget: Load active sessions count + last roaming
+        Promise.all([
+            fetch('api_stalker.php?action=sessions&time=24h&band=&search=').then(r => r.json()),
+            fetch('api_stalker.php?action=roaming_count').then(r => r.json())
+        ]).then(([sessions, roaming]) => {
+            const count = sessions.data ? sessions.data.length : 0;
+            document.getElementById('stalker-widget-count').textContent = count;
+            if (roaming.last) {
+                document.getElementById('stalker-widget-last').textContent =
+                    roaming.last.hostname + ': ' + roaming.last.from_ap + ' \u2192 ' + roaming.last.to_ap;
+            } else {
+                document.getElementById('stalker-widget-last').textContent = count > 0 ? 'Brak roamingu' : 'Brak sesji';
+            }
+        }).catch(() => {
+            document.getElementById('stalker-widget-count').textContent = '?';
+            document.getElementById('stalker-widget-last').textContent = 'Blad polaczenia';
+        });
     </script>
     <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
