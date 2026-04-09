@@ -69,8 +69,6 @@ $all_events = get_recent_events(100, false); // Pokaż wszystko, nawet "wyczyszc
             </div>
         <?php endif; ?>
     </div>
-    <?php render_footer(); ?>
-
 
     <script>lucide.createIcons();</script>
 </body>

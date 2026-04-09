@@ -391,7 +391,6 @@ for ($i = 0; $i < $bar_count; $i++) {
             </div>
         </div>
 
-        <?php render_footer(); ?>
     </div>
 
     <script>

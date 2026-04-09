@@ -575,7 +575,6 @@ try {
         </div>
 
     </div>
-    <?php render_footer(); ?>
 
 
     <!-- Modal: Ping/Latency Details -->

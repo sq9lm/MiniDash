@@ -203,7 +203,6 @@ function formatUptime($seconds) {
             <?php endif; ?>
         </div>
     </div>
-    <?php render_footer(); ?>
 
     <!-- Modal: Monitored Resource Detail -->
     <div id="resourceModal" class="modal-overlay" onclick="closeResourceModal(event)">

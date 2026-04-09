@@ -273,7 +273,6 @@ $log_lines = array_slice($processed_logs, 0, $limit);
             <!-- Removed redundant footer -->
         </div>
     </div>
-    <?php render_footer(); ?>
 
     <!-- Log Detail Modal -->
     <div id="logDetailModal" class="modal-overlay" onclick="closeModal('logDetailModal')">

@@ -430,8 +430,6 @@ $stats = [
             </div>
         </div>
     </div>
-    <?php render_footer(); ?>
-
 
     <!-- Date Range Picker Modal -->
     <div id="dateRangeModal" class="modal-overlay" onclick="closeDateRangePicker()">

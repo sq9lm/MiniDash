@@ -218,7 +218,6 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
             </div>
         </div>
     </div>
-    <?php render_footer(); ?>
 
     <!-- Modal: Installed Cameras -->
     <div id="camerasModal" class="modal-overlay" onclick="closeModal('camerasModal')">
