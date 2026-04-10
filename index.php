@@ -180,11 +180,29 @@ try {
         'wan_status' => $wan_status
     ];
     
-    // VLAN Stats — load network config from API first
-    get_vlans_from_api();
+    // 3. Fetch Historical Stats (for Total counters)
+    $user_resp = fetch_api("/proxy/network/api/s/default/stat/user");
+    $hist_clients = [];
+    if (!empty($user_resp['data'])) {
+        foreach ($user_resp['data'] as $hc) {
+            $hist_clients[normalize_mac($hc['mac'])] = $hc;
+        }
+    }
+
     $vlan_stats = [];
     $vlan_clients = []; // Clients grouped by VLAN name for detail modal
     foreach ($clients as &$client) {
+        $c_mac = normalize_mac($client['macAddress'] ?? $client['mac'] ?? '');
+        
+        // Enrich from history if present
+        if (isset($hist_clients[$c_mac])) {
+            $hc = $hist_clients[$c_mac];
+            $client['rx_bytes'] = max((float)($client['rx_bytes'] ?? 0), (float)($hc['rx_bytes'] ?? 0));
+            $client['tx_bytes'] = max((float)($client['tx_bytes'] ?? 0), (float)($hc['tx_bytes'] ?? 0));
+            if (!isset($client['uptime']) || !$client['uptime']) {
+                 $client['uptime'] = $hc['uptime'] ?? 0;
+            }
+        }
         $vlan_id = $client['vlan'] ?? $client['network_id'] ?? null;
         $ip = $client['ipAddress'] ?? $client['ip'] ?? '';
 
@@ -1364,16 +1382,41 @@ try {
                                 </div>
                             </div>
                             <div>
-                                <span class="text-xs font-black text-slate-600 uppercase tracking-widest block mb-2">Suma Danych</span>
+                                <!-- Simple Total Display -->
+                                <span class="text-xs font-black text-slate-600 uppercase tracking-widest block mb-2">Suma Danych (Total)</span>
                                 <div class="space-y-2">
                                     <div class="flex justify-between items-center bg-slate-800/20 p-2 rounded-lg border border-white/5">
-                                        <span class="text-sm text-slate-500 uppercase font-bold text-[10px]">Pobrane</span>
-                                        <span class="text-base font-mono text-slate-300 font-bold">${formatBytes(rx)}</span>
+                                        <span class="text-xs text-slate-500 uppercase font-bold text-[9px]">Pobrane</span>
+                                        <span class="text-sm font-mono text-slate-300">${formatBytes(rx)}</span>
                                     </div>
                                     <div class="flex justify-between items-center bg-slate-800/20 p-2 rounded-lg border border-white/5">
-                                        <span class="text-sm text-slate-500 uppercase font-bold text-[10px]">Wysłane</span>
-                                        <span class="text-base font-mono text-slate-300 font-bold">${formatBytes(tx)}</span>
+                                        <span class="text-xs text-slate-500 uppercase font-bold text-[9px]">Wysłane</span>
+                                        <span class="text-sm font-mono text-slate-300">${formatBytes(tx)}</span>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3-Column historical stats -->
+                        <div class="space-y-3">
+                            <span class="text-xs font-black text-slate-600 uppercase tracking-widest block">Statystyki Zużycia Danych</span>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="bg-slate-800/30 p-3 rounded-xl border border-white/5 text-center flex flex-col justify-center">
+                                    <span class="block text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-1">24 Godziny</span>
+                                    <span id="c-stat-24h" class="block text-sm font-mono text-slate-400">
+                                        <div class="flex justify-center"><div class="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div></div>
+                                    </span>
+                                </div>
+                                <div class="bg-slate-800/30 p-3 rounded-xl border border-white/5 text-center flex flex-col justify-center">
+                                    <span class="block text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-1">7 Dni</span>
+                                    <span id="c-stat-7d" class="block text-sm font-mono text-slate-400">
+                                        <div class="flex justify-center"><div class="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div></div>
+                                    </span>
+                                </div>
+                                <div class="bg-slate-800/30 p-3 rounded-xl border border-blue-500/10 text-center flex flex-col justify-center relative overflow-hidden">
+                                     <div class="absolute inset-0 bg-blue-500/5"></div>
+                                     <span class="block text-[8px] text-blue-400 font-bold uppercase tracking-wider mb-1 relative">Całkowite</span>
+                                     <span class="block text-sm font-mono text-blue-100 relative font-bold">${formatBytes(parseFloat(rx) + parseFloat(tx))}</span>
                                 </div>
                             </div>
                         </div>
@@ -1408,6 +1451,23 @@ try {
             
             modal.classList.add('active');
             lucide.createIcons();
+
+            // Fetch historical stats
+            fetch(`api_client_stats.php?mac=${encodeURIComponent(mac)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.stats_24h) {
+                        document.getElementById('c-stat-24h').innerText = formatBytes(data.stats_24h.total);
+                    }
+                    if (data.stats_7d) {
+                        document.getElementById('c-stat-7d').innerText = formatBytes(data.stats_7d.total);
+                    }
+                })
+                .catch(e => {
+                    console.error('Error fetching stats:', e);
+                    document.getElementById('c-stat-24h').innerText = '-';
+                    document.getElementById('c-stat-7d').innerText = '-';
+                });
         }
 
         function closeClientInfoModal(e) {

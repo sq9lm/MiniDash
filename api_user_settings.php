@@ -54,6 +54,12 @@ if ($action === 'update_profile') {
     $newConfig['admin_full_name'] = $full_name;
     $newConfig['admin_email'] = $email;
     
+    // New regional settings
+    if (isset($_POST['language'])) $newConfig['language'] = $_POST['language'];
+    if (isset($_POST['timezone'])) $newConfig['timezone'] = $_POST['timezone'];
+    if (isset($_POST['time_format'])) $newConfig['time_format'] = $_POST['time_format'];
+    if (isset($_POST['date_format'])) $newConfig['date_format'] = $_POST['date_format'];
+    
     if (!empty($password)) {
         $newConfig['admin_password'] = $password;
         log_settings_debug("Password updated");

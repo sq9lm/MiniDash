@@ -1,5 +1,6 @@
 <?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
+ini_set('display_errors', 0);
 require_once 'config.php';
 require_once 'db.php';
 require_once 'functions.php';

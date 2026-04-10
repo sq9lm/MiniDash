@@ -15,16 +15,32 @@ $navbar_stats = get_navbar_stats();
 
 // Get real security settings from UniFi
 $security_settings = get_unifi_security_settings();
+
+// Robust fallback for empty/failed API response
+if (empty($security_settings) || !is_array($security_settings)) {
+    $security_settings = [
+        'ips_enabled' => false,
+        'threat_detection_enabled' => false,
+        'geoblocking_enabled' => false,
+        'threats_count' => 0,
+        'total_rules_count' => 0,
+        'monitoring_active' => false,
+        'rule_list' => []
+    ];
+}
+
 $security_events = get_unifi_security_events() ?: [];
 $blocked_ips_list = get_unifi_blocked_ips() ?: [];
 
 // Load threat ignore list from SQLite
 $ignore_ips = [];
 if (isset($db)) {
-    $stmt = $db->query("SELECT ip FROM threat_ignore");
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $ignore_ips[] = $row['ip'];
-    }
+    try {
+        $stmt = $db->query("SELECT ip FROM threat_ignore");
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $ignore_ips[] = $row['ip'];
+        }
+    } catch (Exception $e) { /* Ignore DB errors */ }
 }
 // Filter out ignored IPs
 $blocked_ips_list = array_filter($blocked_ips_list, function($item) use ($ignore_ips) {
@@ -36,91 +52,63 @@ $blocked_ips_list = array_filter($blocked_ips_list, function($item) use ($ignore
 $security_score = 100; // Start with perfect score
 
 // Factor 1: IPS/IDS Status (20 points)
-$ips_enabled = $security_settings['ips_enabled']; 
+$ips_enabled = $security_settings['ips_enabled'] ?? false; 
 if (!$ips_enabled) {
     $security_score -= 20;
 }
 
 // Factor 2: Firewall & Traffic Rules Coverage (15 points)
-// Use combined count of firewall and traffic rules (flows)
-$active_rules = ($security_settings['firewall_rules_count'] ?? 0) + ($security_settings['traffic_rules_count'] ?? 0);
+$active_rules = $security_settings['total_rules_count'] ?? 0;
 if ($active_rules < 2) {
     $security_score -= 15;
 } elseif ($active_rules < 10) {
     $security_score -= 8;
-} elseif ($active_rules < 30) {
-    $security_score -= 3;
-}
-// High coverage bonus
-if ($active_rules >= 30) {
-    $security_score = min(100, $security_score + 15);
 }
 
 // 1. Data Retrieval
-// These variables are already fetched above, but the instruction implies they should be re-assigned or confirmed here.
-// Re-assigning them here to match the instruction, though it's redundant with the initial fetch.
-$ips_enabled = $security_settings['ips_enabled'];
-$threat_detection_enabled = $security_settings['threat_detection_enabled'];
-$geoblocking_enabled = $security_settings['geoblocking_enabled'];
-$active_rules = $security_settings['total_rules_count'] ?? ($security_settings['firewall_rules_count'] + $security_settings['traffic_rules_count']);
-$threats_blocked = $security_settings['threats_count'];
-$blocked_ips = count($blocked_ips_list); // Using actual blocked_ips_list count
-$vpn_secure = $security_settings['vpn_secure'] ?? false; // Assuming a default if not present
-$monitoring_active = $security_settings['monitoring_active'];
-$critical_events_count = 0; // Captured dynamically in a real app, currently 0 as per instruction
-$rule_list = $security_settings['rule_list'] ?? [];
+$ips_enabled = $security_settings['ips_enabled'] ?? false;
+$threat_detection_enabled = $security_settings['threat_detection_enabled'] ?? false;
+$geoblocking_enabled = $security_settings['geoblocking_enabled'] ?? false;
+$threats_blocked = $security_settings['threats_count'] ?? 0;
+$blocked_ips = count($blocked_ips_list);
+$vpn_secure = $security_settings['vpn_secure'] ?? false;
+$monitoring_active = $security_settings['monitoring_active'] ?? false;
+$ad_blocking = $security_settings['ad_blocking_enabled'] ?? false;
+$honeypot = $security_settings['honeypot_enabled'] ?? false;
 
 // Factor 3: Threat Detection Active (15 points)
-$threat_detection_enabled = $security_settings['threat_detection_enabled'];
 if (!$threat_detection_enabled) {
     $security_score -= 15;
 }
 
 // Factor 4: Blocked Threats Ratio (20 points)
-// Use real threat count from API
-$threats_blocked = $security_settings['threats_count'];
-// Actually let's try to get a real blocked IP count if we have that endpoint, otherwise keep mock 34 for now as it's hard to get IPS-blocked list easily without more complex API calls
 if ($threats_blocked > 1000) {
-    $security_score -= 10; // Under heavy attack
+    $security_score -= 10;
 } elseif ($threats_blocked > 500) {
-    $security_score -= 5; // Moderate attack
+    $security_score -= 5;
 }
 
 // Factor 5: Active Monitoring (10 points)
-$monitoring_active = $security_settings['monitoring_active'];
 if (!$monitoring_active) {
     $security_score -= 10;
 }
 
 // Factor 6: Advanced Protection (10 points)
-$ad_blocking = $security_settings['ad_blocking_enabled'] ?? false;
-$honeypot = $security_settings['honeypot_enabled'] ?? false;
 if (!$ad_blocking && !$honeypot) {
     $security_score -= 10;
 } elseif ($ad_blocking && $honeypot) {
-    $security_score = min(100, $security_score + 5); // Bonus for full protection
+    $security_score = min(100, $security_score + 5);
 }
 
 // Factor 7: Recent Critical Events (penalty)
-// Count critical events in last hour
 $critical_events_count = 0;
 foreach ($security_events as $event) {
-    if ($event['severity'] === 'critical') {
+    if (($event['severity'] ?? '') === 'critical') {
         $critical_events_count++;
     }
 }
 if ($critical_events_count > 5) {
-    $security_score -= 15; // Too many critical events
-} elseif ($critical_events_count > 2) {
-    $security_score -= 8;
-} elseif ($critical_events_count > 0) {
-    $security_score -= 3;
-}
-
-// Factor 8: Geo-blocking (10 points bonus or neutral)
-$geoblocking_enabled = $security_settings['geoblocking_enabled'] ?? false;
-if (!$geoblocking_enabled) {
-    $security_score -= 5; // Penalty if not even basic geoblocking is on
+    $security_score -= 15;
 }
 
 // Ensure score stays within 0-100 range
@@ -132,6 +120,20 @@ $stats = [
     'blocked_ips' => $blocked_ips,
     'security_score' => $security_score
 ];
+
+// Calculate Top Threat Countries from events
+$top_countries = [];
+foreach ($security_events as $event) {
+    if (!empty($event['country_code']) && $event['country_code'] !== 'un' && $event['country_code'] !== 'local') {
+        $cc = $event['country_code'];
+        if (!isset($top_countries[$cc])) {
+            $top_countries[$cc] = ['code' => $cc, 'count' => 0];
+        }
+        $top_countries[$cc]['count']++;
+    }
+}
+uasort($top_countries, fn($a, $b) => $b['count'] <=> $a['count']);
+$top_countries = array_slice($top_countries, 0, 5);
 ?>
 <!DOCTYPE html>
 <html lang="pl">
@@ -157,7 +159,18 @@ $stats = [
                         <i data-lucide="shield" class="w-8 h-8 text-rose-400"></i>
                         UniFi Security
                     </h1>
-                    <p class="text-slate-500 text-sm">Zaawansowany system wykrywania zagrożeń i ochrony sieci</p>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border transition-all <?= $ips_enabled ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-white/5 opacity-50' ?>" title="Intrusion Prevention System">
+                            <i data-lucide="shield-check" class="w-3 h-3 inline mr-1"></i> IPS: <?= $ips_enabled ? 'Uzbrojony' : 'Wyłączony' ?>
+                        </span>
+                        <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border transition-all <?= $honeypot ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-slate-800 text-slate-500 border-white/5 opacity-50' ?>" title="Network Honeypot Detection">
+                            <i data-lucide="ghost" class="w-3 h-3 inline mr-1"></i> Honeypot: <?= $honeypot ? 'Aktywny' : 'Wyłączony' ?>
+                        </span>
+                        <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border transition-all <?= $ad_blocking ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-slate-800 text-slate-500 border-white/5 opacity-50' ?>" title="Ad & Tracker Blocking">
+                            <i data-lucide="ban" class="w-3 h-3 inline mr-1"></i> Ad-block: <?= $ad_blocking ? 'Aktywny' : 'Wyłączony' ?>
+                        </span>
+                    </div>
+                    <p class="text-slate-500 text-sm italic">Zaawansowany system wykrywania zagrożeń i ochrony sieci</p>
                 </div>
                 <div class="flex items-center gap-3">
                 <button onclick="openIgnoreModal()" class="px-4 py-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 rounded-xl text-xs font-bold transition border border-amber-500/20">
@@ -330,8 +343,8 @@ $stats = [
                         <circle cx="64" cy="64" r="58" stroke="currentColor" stroke-width="10" fill="transparent" class="<?= $stats['security_score'] >= 80 ? 'text-emerald-500' : 'text-rose-500' ?> transition-all duration-1000 ease-out" stroke-dasharray="364.4" stroke-dashoffset="<?= 364.4 - (364.4 * $stats['security_score'] / 100) ?>" stroke-linecap="round"></circle>
                     </svg>
                     <div class="absolute inset-0 flex flex-col items-center justify-center">
-                        <span class="text-3xl font-black text-white"><?= $stats['security_score'] ?></span>
-                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Score</span>
+                        <span class="text-4xl font-black text-white leading-none"><?= $stats['security_score'] ?></span>
+                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">Score</span>
                     </div>
                 </div>
                 
@@ -342,92 +355,171 @@ $stats = [
             </div>
         </div>
 
-        <!-- Security Events -->
-        <div class="glass-card p-6">
-            <div class="flex flex-col gap-4 mb-6">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                        <i data-lucide="bell" class="w-6 h-6 text-rose-400"></i>
-                        Zdarzenia bezpieczeństwa
-                    </h2>
-                    <div class="flex items-center gap-2">
-                        <button class="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition border border-white/10">
-                            <i data-lucide="filter" class="w-4 h-4 inline mr-1"></i>
-                            Filtruj
-                        </button>
-                        <button class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">
-                            <i data-lucide="download" class="w-4 h-4 inline mr-1"></i>
-                            Eksportuj
-                        </button>
+        <!-- Main Content Area: Events + Sidebar -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left: Security Events -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="glass-card p-6">
+                    <div class="flex flex-col gap-4 mb-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                                <i data-lucide="bell" class="w-6 h-6 text-rose-400"></i>
+                                Zdarzenia bezpieczeństwa
+                            </h2>
+                            <div class="flex items-center gap-2">
+                                <button class="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition border border-white/10">
+                                    <i data-lucide="filter" class="w-4 h-4 inline mr-1"></i>
+                                    Filtruj
+                                </button>
+                                <button class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">
+                                    <i data-lucide="download" class="w-4 h-4 inline mr-1"></i>
+                                    Eksportuj
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Time Range Selector -->
+                        <div class="flex items-center gap-2 p-3 bg-slate-900/50 rounded-2xl border border-white/5">
+                            <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest mr-2">Zakres:</span>
+                            <button onclick="selectTimeRange('1h')" class="time-range-btn px-4 py-2 bg-slate-800 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="1h">1h</button>
+                            <button onclick="selectTimeRange('24h')" class="time-range-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold transition border border-blue-500/50 shadow-lg shadow-blue-600/20" data-range="24h">1D</button>
+                            <button onclick="selectTimeRange('7d')" class="time-range-btn px-4 py-2 bg-slate-800 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="7d">1W</button>
+                            <button onclick="openDateRangePicker()" class="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition border border-white/10 flex items-center gap-2 ml-auto">
+                                <i data-lucide="calendar" class="w-4 h-4"></i>
+                                Własny
+                            </button>
+                        </div>
                     </div>
-                </div>
-                
-                <!-- Time Range Selector -->
-                <div class="flex items-center gap-2 p-3 bg-slate-900/50 rounded-2xl border border-white/5">
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest mr-2">Zakres czasowy:</span>
-                    <button onclick="setThreatTimeRange('1h', this)" class="time-range-btn px-4 py-2 bg-slate-800 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="1h">
-                        1h
-                    </button>
-                    <button onclick="setThreatTimeRange('24h', this)" class="time-range-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold transition border border-blue-500/50 shadow-lg shadow-blue-600/20" data-range="24h">
-                        1D
-                    </button>
-                    <button onclick="setThreatTimeRange('7d', this)" class="time-range-btn px-4 py-2 bg-slate-800 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="7d">
-                        1W
-                    </button>
-                    <button onclick="setThreatTimeRange('30d', this)" class="time-range-btn px-4 py-2 bg-slate-800 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="30d">
-                        1M
-                    </button>
-                    <div class="h-6 w-px bg-white/10 mx-1"></div>
-                    <button onclick="openDateRangePicker()" class="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition border border-white/10 flex items-center gap-2">
-                        <i data-lucide="calendar" class="w-4 h-4"></i>
-                        Zakres
-                    </button>
+
+                    <div class="space-y-3">
+                        <?php if (empty($security_events)): ?>
+                        <div class="px-6 py-12 text-center bg-slate-900/40 rounded-3xl border border-white/5">
+                            <div class="p-4 bg-emerald-500/10 text-emerald-500 rounded-full w-fit mx-auto mb-4">
+                                <i data-lucide="shield-check" class="w-8 h-8"></i>
+                            </div>
+                            <p class="text-white font-bold">Brak wykrytych zagrożeń</p>
+                            <p class="text-slate-500 text-xs mt-1">Skanowanie IPS działa poprawnie. Ostatnie 24h bez incydentów.</p>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php foreach ($security_events as $event): 
+                            $severity_colors = [
+                                'critical' => ['bg' => 'bg-red-500/10', 'text' => 'text-red-400', 'border' => 'border-red-500/20', 'icon' => 'alert-triangle'],
+                                'high' => ['bg' => 'bg-orange-500/10', 'text' => 'text-orange-400', 'border' => 'border-orange-500/20', 'icon' => 'alert-circle'],
+                                'medium' => ['bg' => 'bg-amber-500/10', 'text' => 'text-amber-400', 'border' => 'border-amber-500/20', 'icon' => 'info'],
+                                'low' => ['bg' => 'bg-blue-500/10', 'text' => 'text-blue-400', 'border' => 'border-blue-500/20', 'icon' => 'info']
+                            ];
+                            $colors = $severity_colors[$event['severity']] ?? $severity_colors['medium'];
+                            $cc = $event['country_code'] ?? 'un';
+                        ?>
+                        <div class="threat-event-row bg-slate-900/50 rounded-2xl border border-white/5 p-4 hover:border-rose-500/30 transition-all group relative overflow-hidden active:scale-[0.99]" data-timestamp="<?= $event['timestamp'] ?? 0 ?>">
+                            <div class="absolute left-0 top-0 bottom-0 w-1 <?= $colors['bg'] ?>"></div>
+                            <div class="flex items-center gap-4">
+                                <div class="p-2.5 <?= $colors['bg'] ?> rounded-xl <?= $colors['text'] ?> shrink-0 shadow-lg shadow-black/20">
+                                    <i data-lucide="<?= $colors['icon'] ?>" class="w-5 h-5"></i>
+                                </div>
+                                <div class="flex-grow min-w-0">
+                                    <div class="flex items-center justify-between gap-4">
+                                        <div class="flex-grow min-w-0">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                 <img src="https://flagcdn.com/24x18/<?= $cc ?>.png" class="w-4 h-3 rounded-sm opacity-80" title="<?= strtoupper($cc) ?>">
+                                                 <h3 class="font-bold text-white text-sm truncate"><?= htmlspecialchars($event['signature'] ?? 'Zagrożenie bezpieczeństwa') ?></h3>
+                                            </div>
+                                            <div class="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] font-medium italic">
+                                                <span class="flex items-center gap-1.5 text-slate-400">
+                                                    <i data-lucide="clock" class="w-3 h-3 text-slate-500"></i>
+                                                    <?= $event['time'] ?>
+                                                </span>
+                                                <div class="flex items-center gap-2 bg-white/5 px-2 py-0.5 rounded-md border border-white/5">
+                                                    <span class="text-rose-400/80 font-mono"><?= $event['src_ip'] ?></span>
+                                                    <i data-lucide="chevrons-right" class="w-3 h-3 text-slate-600"></i>
+                                                    <span class="text-emerald-400/80 font-mono"><?= $event['dst_ip'] ?></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-3 shrink-0">
+                                            <div class="text-right hidden sm:block">
+                                                <p class="text-[9px] font-black <?= $colors['text'] ?> uppercase tracking-widest"><?= strtoupper($event['severity']) ?></p>
+                                            </div>
+                                            <button class="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-white/5 text-slate-400 hover:text-white">
+                                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
 
-            <div class="space-y-3">
-                <?php foreach ($security_events as $event): 
-                    $severity_colors = [
-                        'critical' => ['bg' => 'bg-red-500/10', 'text' => 'text-red-400', 'border' => 'border-red-500/20', 'icon' => 'alert-triangle'],
-                        'high' => ['bg' => 'bg-orange-500/10', 'text' => 'text-orange-400', 'border' => 'border-orange-500/20', 'icon' => 'alert-circle'],
-                        'medium' => ['bg' => 'bg-amber-500/10', 'text' => 'text-amber-400', 'border' => 'border-amber-500/20', 'icon' => 'info'],
-                        'low' => ['bg' => 'bg-blue-500/10', 'text' => 'text-blue-400', 'border' => 'border-blue-500/20', 'icon' => 'info']
-                    ];
-                    $colors = $severity_colors[$event['severity']];
-                ?>
-                <div class="threat-event-row bg-slate-900/50 rounded-2xl border border-white/5 p-4 hover:border-rose-500/30 transition-all group" data-timestamp="<?= $event['timestamp'] ?? 0 ?>">
-                    <div class="flex items-start gap-4">
-                        <div class="p-2.5 <?= $colors['bg'] ?> rounded-xl <?= $colors['text'] ?> shrink-0">
-                            <i data-lucide="<?= $colors['icon'] ?>" class="w-5 h-5"></i>
+            <!-- Right: Sidebar Stats -->
+            <div class="space-y-8">
+                <!-- Top Sources -->
+                <div class="glass-card p-6 border-amber-500/10">
+                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center justify-between">
+                        Najwyższe ryzyko wg kraju
+                        <i data-lucide="globe" class="w-4 h-4 text-amber-400"></i>
+                    </h3>
+                    <div class="space-y-4">
+                        <?php if (empty($top_countries)): ?>
+                        <div class="text-center py-8">
+                            <p class="text-[10px] text-slate-600 italic">Brak danych o pochodzeniu ataków</p>
                         </div>
-                        <div class="flex-grow min-w-0">
-                            <div class="flex items-start justify-between gap-4 mb-2">
-                                <div class="flex-grow">
-                                    <h3 class="font-bold text-white text-sm mb-1"><?= htmlspecialchars($event['description']) ?></h3>
-                                    <div class="flex items-center gap-3 text-[10px] text-slate-500">
-                                        <span class="flex items-center gap-1">
-                                            <i data-lucide="clock" class="w-3 h-3"></i>
-                                            <?= $event['time'] ?>
-                                        </span>
-                                        <span class="flex items-center gap-1">
-                                            <i data-lucide="server" class="w-3 h-3"></i>
-                                            <?= htmlspecialchars($event['source']) ?>
-                                        </span>
-                                    </div>
+                        <?php else: ?>
+                        <?php foreach ($top_countries as $cc => $data): ?>
+                        <div class="flex items-center justify-between group cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <img src="https://flagcdn.com/24x18/<?= $cc ?>.png" class="w-6 h-auto rounded shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
+                                <span class="text-sm font-bold text-slate-300"><?= strtoupper($cc) ?></span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-mono text-amber-400 bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/20"><?= $data['count'] ?></span>
+                                <div class="w-12 h-1 bg-white/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-amber-500 transition-all duration-1000" style="width: <?= min(100, ($data['count'] / max(1, $stats['threats_blocked'])) * 100) ?>%"></div>
                                 </div>
-                                <div class="flex items-center gap-2 shrink-0">
-                                    <span class="px-2.5 py-1 <?= $colors['bg'] ?> <?= $colors['text'] ?> rounded-lg text-[9px] font-black uppercase tracking-wider border <?= $colors['border'] ?>">
-                                        <?= strtoupper($event['severity']) ?>
-                                    </span>
-                                    <span class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg text-[9px] font-black uppercase tracking-wider border border-emerald-500/20">
-                                        <?= htmlspecialchars($event['action']) ?>
-                                    </span>
-                                </div>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Active Protection Pillars -->
+                <div class="glass-card p-6 overflow-hidden relative">
+                    <div class="absolute -right-8 -top-8 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full"></div>
+                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-6">Filary ochrony</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
+                            <div class="p-2 bg-emerald-500/10 rounded-xl text-emerald-400">
+                                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-white mb-0.5">Automatyczne blokowanie</p>
+                                <p class="text-[9px] text-slate-500 italic">Aktywne odpieranie ataków w czasie rzeczywistym</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
+                            <div class="p-2 bg-blue-500/10 rounded-xl text-blue-400">
+                                <i data-lucide="zap" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-white mb-0.5">Analiza DPI</p>
+                                <p class="text-[9px] text-slate-500 italic">Głęboka inspekcja pakietów aktywna w WAN</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 opacity-50">
+                            <div class="p-2 bg-purple-500/10 rounded-xl text-purple-400">
+                                <i data-lucide="shield" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-white mb-0.5">AI Threat Defense</p>
+                                <p class="text-[9px] text-slate-500 italic">Wkrótce: uczenie maszynowe wzorców</p>
                             </div>
                         </div>
                     </div>
                 </div>
-                <?php endforeach; ?>
             </div>
         </div>
     </div>

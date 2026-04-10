@@ -1,6 +1,6 @@
-# 🌐 UniFi MiniDash
+# 🌐 MiniDash
 
-**UniFi MiniDash** to lekki, nowoczesny i responsywny panel zarządzania dla systemów Ubiquiti UniFi. Został zaprojektowany, aby zapewnić szybki dostęp do kluczowych statystyk sieci, monitoringu kamer UniFi Protect oraz zaawansowanych logów systemowych w jednej, estetycznej konsoli.
+**MiniDash** to lekki, nowoczesny i responsywny panel zarządzania dla systemów Ubiquiti UniFi. Został zaprojektowany, aby zapewnić szybki dostęp do kluczowych statystyk sieci, monitoringu kamer UniFi Protect oraz zaawansowanych logów systemowych w jednej, estetycznej konsoli.
 
 Panel działa jako nakładka na oficjalne API kontrolera UniFi, oferując alternatywny, skondensowany widok najważniejszych parametrów (Single Pane of Glass).
 

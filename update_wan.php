@@ -1,7 +1,7 @@
 <?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 /**
- * UniFi MiniDash - Update WAN Stats
+ * MiniDash - Update WAN Stats
  */
 error_reporting(0);
 ob_start();
@@ -102,6 +102,18 @@ try {
 
         foreach ($statuses as $mac => $info) {
             saveDeviceHistory($mac, $info['status']);
+            
+            // Record Client Stats History
+            if (isset($db) && $info['status'] === 'on') {
+                $stmt_hist = $db->prepare("INSERT INTO client_history (mac, rx_bytes, tx_bytes, ip, vlan, seen_at) VALUES (?, ?, ?, ?, ?, datetime('now'))");
+                $stmt_hist->execute([
+                    $mac, 
+                    $info['rx_bytes'] ?? 0, 
+                    $info['tx_bytes'] ?? 0,
+                    $info['ip'] ?? '',
+                    $info['vlan'] ?? 0
+                ]);
+            }
 
             // Speed Spike Check
             if ($speed_alert_enabled && $info['status'] === 'on') {

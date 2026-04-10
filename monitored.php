@@ -43,6 +43,15 @@ try {
             $trad_clients[normalize_mac($tc['mac'])] = $tc;
         }
     }
+    
+    // 3. Fetch Historical Stats (for Total counters)
+    $user_resp = fetch_api("/proxy/network/api/s/default/stat/user");
+    $hist_clients = [];
+    if (!empty($user_resp['data'])) {
+        foreach ($user_resp['data'] as $hc) {
+            $hist_clients[normalize_mac($hc['mac'])] = $hc;
+        }
+    }
 
     // Wstępna obróbka klientów i wzbogacenie o dane tradycyjne
     foreach ($clients as &$client) {
@@ -58,11 +67,18 @@ try {
         // Enrich with traffic if online
         if (isset($trad_clients[$c_mac])) {
             $tc = $trad_clients[$c_mac];
-            $client['rx_rate'] = $tc['rx_rate'] ?? 0;
-            $client['tx_rate'] = $tc['tx_rate'] ?? 0;
+            $client['rx_rate'] = $tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? 0) * 8);
+            $client['tx_rate'] = $tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? 0) * 8);
             $client['rx_bytes'] = $tc['rx_bytes'] ?? 0;
             $client['tx_bytes'] = $tc['tx_bytes'] ?? 0;
             $client['uptime'] = $tc['uptime'] ?? 0;
+        }
+        
+        // Ensure Total Bytes are from history if present
+        if (isset($hist_clients[$c_mac])) {
+            $hc = $hist_clients[$c_mac];
+            $client['rx_bytes'] = max($client['rx_bytes'] ?? 0, $hc['rx_bytes'] ?? 0);
+            $client['tx_bytes'] = max($client['tx_bytes'] ?? 0, $hc['tx_bytes'] ?? 0);
         }
     }
 
@@ -320,21 +336,25 @@ function formatUptime($seconds) {
                             <div>
                                 <span class="text-[9px] font-black text-slate-600 uppercase tracking-widest block mb-3">Statystyki Zużycia Danych</span>
                                 <div class="grid grid-cols-3 gap-3 mb-3">
-                                     <!-- 1D Placeholder -->
+                                     <!-- 24H -->
                                      <div class="bg-slate-800/30 p-3 rounded-xl border border-white/5 text-center flex flex-col justify-center">
                                          <span class="block text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-1">24 Godziny</span>
-                                         <span class="block text-sm font-mono text-slate-400">-</span>
+                                         <span id="stat-24h" class="block text-sm font-mono text-slate-400">
+                                            <div class="flex justify-center"><div class="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div></div>
+                                         </span>
                                      </div>
-                                     <!-- 1W Placeholder -->
+                                     <!-- 7D -->
                                      <div class="bg-slate-800/30 p-3 rounded-xl border border-white/5 text-center flex flex-col justify-center">
                                          <span class="block text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-1">7 Dni</span>
-                                         <span class="block text-sm font-mono text-slate-400">-</span>
+                                         <span id="stat-7d" class="block text-sm font-mono text-slate-400">
+                                            <div class="flex justify-center"><div class="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div></div>
+                                         </span>
                                      </div>
                                      <!-- Total -->
                                      <div class="bg-slate-800/30 p-3 rounded-xl border border-blue-500/10 text-center flex flex-col justify-center relative overflow-hidden">
                                          <div class="absolute inset-0 bg-blue-500/5"></div>
                                          <span class="block text-[8px] text-blue-400 font-bold uppercase tracking-wider mb-1 relative">Całkowite</span>
-                                         <span class="block text-sm font-mono text-blue-100 relative font-bold">${formatBytes((device.rx_bytes || 0) + (device.tx_bytes || 0))}</span>
+                                         <span class="block text-sm font-mono text-blue-100 relative font-bold">${formatBytes((parseFloat(device.rx_bytes) || 0) + (parseFloat(device.tx_bytes) || 0))}</span>
                                      </div>
                                 </div>
                                 
@@ -377,6 +397,23 @@ function formatUptime($seconds) {
             
             modal.classList.add('active');
             lucide.createIcons();
+
+            // Fetch historical stats
+            fetch(`api_client_stats.php?mac=${encodeURIComponent(device.mac)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.stats_24h) {
+                        document.getElementById('stat-24h').innerText = formatBytes(data.stats_24h.total);
+                    }
+                    if (data.stats_7d) {
+                        document.getElementById('stat-7d').innerText = formatBytes(data.stats_7d.total);
+                    }
+                })
+                .catch(e => {
+                    console.error('Error fetching stats:', e);
+                    document.getElementById('stat-24h').innerText = '-';
+                    document.getElementById('stat-7d').innerText = '-';
+                });
         }
 
         function closeResourceModal() {

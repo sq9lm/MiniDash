@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logowanie - UniFi MiniDash</title>
+    <title>Logowanie - MiniDash</title>
     <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <i data-lucide="shield-check" class="w-8 h-8"></i>
             </div>
             <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
-                UniFi MiniDash
+                MiniDash
             </h1>
             <p class="text-slate-500 text-sm mt-2 font-medium tracking-wide uppercase">Dostęp Autoryzowany</p>
         </div>
