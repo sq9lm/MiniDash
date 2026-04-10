@@ -35,6 +35,33 @@ function normalize_mac($mac)
     return strtolower(str_replace(['-', ':'], '', $mac));
 }
 
+function get_console_settings() {
+    static $console_settings = null;
+    if ($console_settings !== null) return $console_settings;
+
+    $resp = fetch_api("/proxy/network/api/s/default/get/setting/system");
+    $data = $resp['data'] ?? [];
+    
+    $settings = [
+        'language' => 'en',
+        'timezone' => 'UTC',
+        'time_format' => '24h',
+        'date_format' => 'd.m.Y'
+    ];
+
+    foreach ($data as $item) {
+        if (($item['key'] ?? '') === 'system') {
+            $settings['timezone'] = $item['timezone'] ?? $settings['timezone'];
+            $settings['time_format'] = ($item['time_format'] ?? '') === 'HH:MM' ? '24h' : '12h';
+            // date_format is trickier as UniFi uses custom strings, simplified for now
+            break;
+        }
+    }
+    
+    $console_settings = $settings;
+    return $settings;
+}
+
 function get_system_info() {
     global $config;
 
@@ -332,6 +359,14 @@ function log_login_event($username) {
 
 function get_unifi_blocked_ips() {
     global $config;
+    
+    // Performance: Cache in session for 60 seconds
+    if (!empty($_SESSION['blocked_ips_data']) && !empty($_SESSION['blocked_ips_time'])) {
+        if (time() - $_SESSION['blocked_ips_time'] < 60) {
+            return $_SESSION['blocked_ips_data'];
+        }
+    }
+
     $siteId = $config['site'] ?? 'default';
     
     // Fetch latest blocked IPS events
@@ -363,25 +398,153 @@ function get_unifi_blocked_ips() {
             'time' => $time_str
         ];
         
-        if (count($blocked) >= 34) break; // Keep same UI limit for now
+        if (count($blocked) >= 34) break;
     }
     
+    $_SESSION['blocked_ips_data'] = $blocked;
+    $_SESSION['blocked_ips_time'] = time();
     return $blocked;
+}
+
+
+/**
+ * Lookup GeoIP information for multiple IP addresses in one batch call
+ * Extremely efficient and stays within ip-api.com limits
+ */
+function lookup_geoip_batch($ips) {
+    if (empty($ips)) return [];
+    
+    $cache_file = __DIR__ . '/data/geoip_cache.json';
+    $cache = file_exists($cache_file) ? (json_decode(file_get_contents($cache_file), true) ?: []) : [];
+    $results = [];
+    $to_lookup = [];
+    
+    // 1. Separate cached from unknown
+    foreach ($ips as $ip) {
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            $results[$ip] = ['country' => 'Local', 'country_code' => 'local', 'city' => '', 'org' => 'LAN'];
+            continue;
+        }
+        
+        if (isset($cache[$ip]) && (time() - ($cache[$ip]['ts'] ?? 0)) < 86400) {
+            $results[$ip] = $cache[$ip];
+        } else {
+            $to_lookup[] = $ip;
+        }
+    }
+    
+    // 2. Perform batch lookup for unknowns (max 100 per request as per ip-api limits)
+    if (!empty($to_lookup)) {
+        $chunks = array_chunk(array_unique($to_lookup), 100);
+        foreach ($chunks as $chunk) {
+            $url = "http://ip-api.com/batch?fields=status,message,query,country,countryCode,city,org,isp";
+            $post_data = json_encode($chunk);
+            
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $post_data,
+                CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+                CURLOPT_TIMEOUT => 5,
+                CURLOPT_CONNECTTIMEOUT => 3,
+                CURLOPT_SSL_VERIFYPEER => false
+            ]);
+            
+            $response = curl_exec($ch);
+            curl_close($ch);
+            
+            if ($response) {
+                $data = json_decode($response, true);
+                if (is_array($data)) {
+                    foreach ($data as $item) {
+                        $ip = $item['query'] ?? '';
+                        if (($item['status'] ?? '') === 'success') {
+                            $res = [
+                                'country' => $item['country'] ?? '??',
+                                'country_code' => strtolower($item['countryCode'] ?? '??'),
+                                'city' => $item['city'] ?? '',
+                                'org' => $item['org'] ?? $item['isp'] ?? '',
+                                'ts' => time()
+                            ];
+                            $cache[$ip] = $res;
+                            $results[$ip] = $res;
+                        } else {
+                             $results[$ip] = ['country' => '??', 'country_code' => '??', 'ts' => time()];
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Save cache back (prune old)
+        if (count($cache) > 2000) {
+            uasort($cache, fn($a, $b) => ($b['ts'] ?? 0) <=> ($a['ts'] ?? 0));
+            $cache = array_slice($cache, 0, 2000, true);
+        }
+        file_put_contents($cache_file, json_encode($cache));
+    }
+    
+    return $results;
+}
+
+/**
+ * Legacy wrapper for single IP lookup
+ */
+function lookup_geoip($ip) {
+    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+        return ['country' => 'Local', 'country_code' => 'local', 'city' => '', 'org' => 'LAN'];
+    }
+    $batch = lookup_geoip_batch([$ip]);
+    return $batch[$ip] ?? ['country' => '??', 'country_code' => '??', 'city' => '', 'org' => ''];
+}
+
+/**
+ * Get only country code for a given IP
+ */
+function get_country_code_for_ip($ip) {
+    $geo = lookup_geoip($ip);
+    return $geo['country_code'] ?? 'un';
+}
+
+/**
+ * Helper for fast file-based caching
+ */
+function minidash_cache_get($key, $ttl = 60) {
+    $file = __DIR__ . "/data/cache_" . md5($key) . ".json";
+    if (file_exists($file) && (time() - filemtime($file)) < $ttl) {
+        return json_decode(file_get_contents($file), true);
+    }
+    return null;
+}
+
+function minidash_cache_set($key, $data) {
+    if (!is_dir(__DIR__ . "/data")) @mkdir(__DIR__ . "/data", 0777, true);
+    file_put_contents(__DIR__ . "/data/cache_" . md5($key) . ".json", json_encode($data));
 }
 
 function get_unifi_security_events() {
     global $config;
+    
+    // Performance: Fast File Cache for 15s
+    $cached = minidash_cache_get('security_events', 15);
+    if ($cached !== null) return $cached;
+
     $site = $config['site'] ?? 'default';
     
     // Fetch latest 50 IPS events
     $resp = fetch_api("/proxy/network/api/s/$site/stat/ips/event?limit=50");
     $raw_events = $resp['data'] ?? [];
     
+    // 1. Collect all source IPs for batch GeoIP
+    $src_ips = array_filter(array_column($raw_events, 'src_ip'));
+    $geo_data = lookup_geoip_batch($src_ips);
+    
     $events = [];
     foreach ($raw_events as $e) {
         $time = isset($e['time']) ? date('H:i:s', $e['time'] / 1000) : date('H:i:s');
+        $src_ip = $e['src_ip'] ?? '';
         
-        // Map UniFi severity/action to our dashboard format
         $severity = 'medium';
         if (isset($e['inner_alert_action'])) {
             if ($e['inner_alert_action'] === 'blocked') $severity = 'critical';
@@ -394,134 +557,86 @@ function get_unifi_security_events() {
             'type' => strtolower($e['inner_alert_category'] ?? 'intrusion'),
             'severity' => $severity,
             'source' => 'IPS Engine',
-            'description' => 'Wykryto ' . ($e['inner_alert_signature'] ?? 'zagrożenie') . ' z IP ' . ($e['src_ip'] ?? 'nieznane'),
+            'src_ip' => $src_ip ?: 'Unknown',
+            'dst_ip' => $e['dst_ip'] ?? 'Local',
+            'country_code' => $geo_data[$src_ip]['country_code'] ?? 'un',
+            'signature' => $e['inner_alert_signature'] ?? 'Unknown Threat',
+            'description' => 'Wykryto ' . ($e['inner_alert_signature'] ?? 'zagrożenie') . ' z IP ' . ($src_ip ?: 'nieznane'),
             'action' => (($e['inner_alert_action'] ?? '') === 'blocked' ? 'Zablokowano' : 'Wykryto')
         ];
     }
     
+    minidash_cache_set('security_events', $events);
     return $events;
 }
 
 function get_unifi_security_settings() {
     global $config;
     
-    // Performance: If we have settings in session and it's less than 30 seconds old, return it
-    if (!empty($_SESSION['security_settings']) && !empty($_SESSION['security_settings_time'])) {
-        if (time() - $_SESSION['security_settings_time'] < 30) {
-            return $_SESSION['security_settings'];
-        }
-    }
+    // Performance: Fast File Cache for 60s
+    $cached = minidash_cache_get('security_settings', 60);
+    if ($cached !== null) return $cached;
 
     $site = $config['site'] ?? 'default';
     
     // 1. Fetch IPS/IDS Settings
     $ips_resp = fetch_api("/proxy/network/api/s/$site/rest/setting/ips");
     
-    // $site_to_use = $site; // Removed debug marker
     $site_to_use = $site;
     if (($ips_resp['meta']['rc'] ?? '') === 'error') {
         $sites_resp = fetch_api("/proxy/network/api/self/sites");
-        $discovered_site = $sites_resp['data'][0]['name'] ?? 'default';
-        
-        // file_put_contents(__DIR__ . '/data/debug_discovery.txt', "UUID ERROR: " . $ips_resp['meta']['msg'] . "\nDISCOVERED: $discovered_site\nALL SITES: " . print_r($sites_resp['data'], true)); // Removed debug marker
-        
-        $site_to_use = $discovered_site;
+        $site_to_use = $sites_resp['data'][0]['name'] ?? 'default';
         $ips_resp = fetch_api("/proxy/network/api/s/$site_to_use/rest/setting/ips");
-        
-        if (($ips_resp['meta']['rc'] ?? '') !== 'ok' && $site_to_use !== 'default') {
-            $ips_resp = fetch_api("/proxy/network/api/s/default/rest/setting/ips");
-            if (($ips_resp['meta']['rc'] ?? '') === 'ok') {
-                $site_to_use = 'default';
-            }
-        }
     } else {
-        // If IPS was OK, but we want to be safe, try to extract the real UUID from the data if available
         $real_site_id = $ips_resp['data'][0]['site_id'] ?? '';
-        if ($real_site_id) {
-            $site_to_use = $real_site_id;
-        }
-    }
-    // 2. Fetch Firewall Rules count (Try REST, v2, and STAT)
-    $firewall_rules_resp = fetch_api("/proxy/network/api/s/$site_to_use/rest/firewallrule");
-    if (empty($firewall_rules_resp['data']) || ($firewall_rules_resp['meta']['rc'] ?? '') === 'error') {
-        $firewall_rules_resp = fetch_api("/proxy/network/api/v2/firewall/rules");
-    }
-    if (empty($firewall_rules_resp['data']) || ($firewall_rules_resp['meta']['rc'] ?? '') === 'error') {
-        $firewall_rules_resp = fetch_api("/proxy/network/api/s/$site_to_use/stat/firewall/rules");
-    }
-    
-    // Check Firewall Groups if rules are still empty
-    $firewall_rules_count = count($firewall_rules_resp['data'] ?? []);
-    if ($firewall_rules_count === 0) {
-        $groups_resp = fetch_api("/proxy/network/api/s/$site_to_use/rest/firewallgroup");
-        $firewall_rules_count = count($groups_resp['data'] ?? []);
-    }
-    
-    // 3. Fetch Threats/Events count (last 24h)
-    $threats_resp = fetch_api("/proxy/network/api/s/$site_to_use/stat/ips/event?period=86400");
-    $threats_count = count($threats_resp['data'] ?? []);
-    
-    // 3a. Fetch VPN Status (Try multiple common endpoints + network purpose)
-    $vpn_resp = fetch_api("/proxy/network/api/s/$site_to_use/rest/vpn");
-    $vpn_server_resp = fetch_api("/proxy/network/api/s/$site_to_use/rest/vpnserver");
-    $vpn_remote_resp = fetch_api("/proxy/network/api/s/$site_to_use/rest/remotevpn");
-    $network_resp = fetch_api("/proxy/network/api/s/$site_to_use/rest/networkconf");
-    
-    $vpn_active = (count($vpn_resp['data'] ?? []) > 0) || 
-                  (count($vpn_server_resp['data'] ?? []) > 0) || 
-                  (count($vpn_remote_resp['data'] ?? []) > 0);
-                  
-    if (!$vpn_active && !empty($network_resp['data'])) {
-        foreach ($network_resp['data'] as $net) {
-            $purpose = $net['purpose'] ?? '';
-            if ($purpose === 'remotevpn' || $purpose === 'vpn' || $purpose === 'remote-user-vpn' || $purpose === 'site-vpn') {
-                if ($net['enabled'] ?? true) {
-                    $vpn_active = true;
-                    break;
-                }
-            }
-        }
-    }
-    
-    // 4. Fetch Traffic Rules (Flows) & Geo-blocking (Try REST, v2, and STAT)
-    $traffic_rules_resp = fetch_api("/proxy/network/api/s/$site_to_use/rest/trafficrule");
-    if (empty($traffic_rules_resp['data']) || ($traffic_rules_resp['meta']['rc'] ?? '') === 'error') {
-        $v2_traffic = fetch_api("/proxy/network/api/v2/trafficrule");
-        if (!empty($v2_traffic['data'])) $traffic_rules_resp = $v2_traffic;
-    }
-    
-    $traffic_rules_count = count($traffic_rules_resp['data'] ?? []);
-    
-    // Build Rule List for Details Modal
-    $rule_list = [];
-    $raw_rules = $firewall_rules_resp['data'] ?? [];
-    if (!empty($raw_rules)) {
-        foreach ($raw_rules as $r) {
-            $rule_list[] = [
-                'id' => $r['_id'] ?? $r['id'] ?? 'N/A',
-                'name' => $r['name'] ?? 'Firewall Rule',
-                'category' => $r['ruleset'] ?? 'Network',
-                'priority' => ($r['action'] ?? '') === 'drop' ? 'HIGH' : 'MEDIUM',
-                'action' => strtoupper($r['action'] ?? 'ALLOW'),
-                'status' => ($r['enabled'] ?? true) ? 'Aktywna' : 'Nieaktywna'
-            ];
-        }
-    } else {
-        // Fallback to groups for listing
-        $groups_resp = fetch_api("/proxy/network/api/s/$site_to_use/rest/firewallgroup");
-        foreach ($groups_resp['data'] ?? [] as $g) {
-            $rule_list[] = [
-                'id' => $g['_id'] ?? 'Group',
-                'name' => $g['name'] ?? 'Security Group',
-                'category' => $g['group_type'] ?? 'Address Group',
-                'priority' => 'MEDIUM',
-                'action' => 'SECURE',
-                'status' => 'Aktywna'
-            ];
-        }
+        if ($real_site_id) $site_to_use = $real_site_id;
     }
 
-    // Add traffic rules to list if any
+    // 2. Optimized Firewall Rules count with Path Memory
+    $fw_path = minidash_cache_get('api_path_firewall', 3600);
+    if (!$fw_path) {
+        $paths = ["/proxy/network/api/s/$site_to_use/rest/firewallrule", "/proxy/network/api/v2/firewall/rules", "/proxy/network/api/s/$site_to_use/stat/firewall/rules"];
+        foreach ($paths as $p) {
+            $test = fetch_api($p);
+            if (($test['meta']['rc'] ?? '') === 'ok') {
+                $fw_path = $p;
+                minidash_cache_set('api_path_firewall', $p);
+                $firewall_rules_resp = $test;
+                break;
+            }
+        }
+    } else {
+        $firewall_rules_resp = fetch_api($fw_path);
+    }
+    
+    // 3. Fast Threat Stats (Last hour)
+    $threats_resp = fetch_api("/proxy/network/api/s/$site_to_use/stat/ips/event?period=3600");
+    $threats_count = count($threats_resp['data'] ?? []);
+    
+    // 3a. VPN Check
+    $vpn_active = false;
+    $vpn_resp = fetch_api("/proxy/network/api/s/$site_to_use/rest/vpn");
+    if (!empty($vpn_resp['data'])) $vpn_active = true;
+    else {
+        $vpn_server = fetch_api("/proxy/network/api/s/$site_to_use/rest/vpnserver");
+        if (!empty($vpn_server['data'])) $vpn_active = true;
+    }
+    
+    // 4. Rule List Construction
+    $rule_list = [];
+    foreach ($firewall_rules_resp['data'] ?? [] as $r) {
+        $rule_list[] = [
+            'id' => $r['_id'] ?? $r['id'] ?? 'N/A',
+            'name' => $r['name'] ?? 'Firewall Rule',
+            'category' => $r['ruleset'] ?? 'Network',
+            'priority' => ($r['action'] ?? '') === 'drop' ? 'HIGH' : 'MEDIUM',
+            'action' => strtoupper($r['action'] ?? 'ALLOW'),
+            'status' => ($r['enabled'] ?? true) ? 'Aktywna' : 'Nieaktywna'
+        ];
+    }
+    
+    // Traffic rules enrichment
+    $traffic_rules_resp = fetch_api("/proxy/network/api/s/$site_to_use/rest/trafficrule");
     foreach ($traffic_rules_resp['data'] ?? [] as $tr) {
         $rule_list[] = [
             'id' => $tr['_id'] ?? $tr['id'] ?? 'Flow',
@@ -532,74 +647,22 @@ function get_unifi_security_settings() {
             'status' => ($tr['enabled'] ?? true) ? 'Aktywna' : 'Nieaktywna'
         ];
     }
-    $active_rules_total = count($rule_list);
 
-    // 5. Fetch Legacy Geo-blocking status
-    $geo_resp = fetch_api("/proxy/network/api/s/$site_to_use/rest/setting/countryblock");
-    $geo_config = $geo_resp['data'][0] ?? [];
-    $geoblocking_enabled = !empty($geo_config['enabled']);
-    $blocked_countries = $geo_config['countries'] ?? [];
-
-    // Auto-detect Geo-blocking from traffic rules if legacy is empty
-    if (!$geoblocking_enabled && !empty($traffic_rules_resp['data'])) {
-        foreach ($traffic_rules_resp['data'] as $rule) {
-            // Check for country/region match in newer UniFi formats
-            $target = $rule['target'] ?? '';
-            if ($target === 'country' || $target === 'region' || isset($rule['target_countries']) || isset($rule['region_ids'])) {
-                $geoblocking_enabled = true;
-                if (isset($rule['target_countries'])) {
-                    $blocked_countries = array_unique(array_merge($blocked_countries, $rule['target_countries']));
-                }
-            }
-        }
-    }
-    
-    // Final check for Geo in Firewall Rules (sometimes people block by country there)
-    if (!$geoblocking_enabled && !empty($firewall_rules_resp['data'])) {
-        foreach ($firewall_rules_resp['data'] as $rule) {
-            if (isset($rule['src_country']) || isset($rule['dst_country']) || stripos($rule['name'] ?? '', 'geo') !== false) {
-                $geoblocking_enabled = true;
-                break;
-            }
-        }
-    }
-    
-    // DEBUG ALL RAW (Extended) // Removed debug marker
-    // file_put_contents(__DIR__ . '/data/debug_all_raw.txt', 
-    //     "SITE: $site_to_use\n\n" .
-    //     "IPS:\n" . print_r($ips_resp, true) . "\n\n" .
-    //     "GEO:\n" . print_r($geo_resp, true) . "\n\n" .
-    //     "FW RULES:\n" . print_r($firewall_rules_resp, true) . "\n\n" .
-    //     "TRAFFIC RULES:\n" . print_r($traffic_rules_resp, true) . "\n\n" .
-    //     "NETWORKS:\n" . print_r($network_resp, true) . "\n\n" .
-    //     "VPN SERVER:\n" . print_r($vpn_server_resp, true) . "\n\n" .
-    //     "RULE COUNT: " . count($rule_list) . "\n"
-    // );
-
-    // Extract settings
     $ips_config = $ips_resp['data'][0] ?? [];
-
     $settings = [
-        'site_used' => $site_to_use,
         'ips_enabled' => isset($ips_config['ips_mode']) && $ips_config['ips_mode'] !== 'disabled',
-        'ips_mode' => $ips_config['ips_mode'] ?? 'disabled',
         'ad_blocking_enabled' => isset($ips_config['ad_blocking_enabled']) && $ips_config['ad_blocking_enabled'],
         'honeypot_enabled' => isset($ips_config['honeypot_enabled']) && $ips_config['honeypot_enabled'],
-        'dns_filtering_enabled' => isset($ips_config['dns_filtering']) && $ips_config['dns_filtering'],
         'threat_detection_enabled' => (isset($ips_config['ips_mode']) && $ips_config['ips_mode'] !== 'disabled') || (isset($ips_config['ad_blocking_enabled']) && $ips_config['ad_blocking_enabled']),
-        'firewall_rules_count' => $firewall_rules_count,
-        'traffic_rules_count' => $traffic_rules_count,
-        'total_rules_count' => $active_rules_total,
+        'total_rules_count' => count($rule_list),
         'rule_list' => $rule_list,
         'threats_count' => $threats_count,
-        'geoblocking_enabled' => $geoblocking_enabled || !empty($blocked_countries),
-        'blocked_countries' => $blocked_countries,
+        'geoblocking_enabled' => !empty($ips_config['geoblock_enabled']) || !empty($ips_config['country_block_enabled']),
         'monitoring_active' => true,
         'vpn_secure' => $vpn_active
     ];
     
-    $_SESSION['security_settings'] = $settings;
-    $_SESSION['security_settings_time'] = time();
+    minidash_cache_set('security_settings', $settings);
     return $settings;
 }
 
@@ -805,8 +868,11 @@ function detect_known_devices(array $clients, array $devices): array
             $client_data[$mac] = [
                 'ip' => $ip,
                 'vlan' => $c['vlan'] ?? null,
-                'rx_rate' => $c['rxRateBps'] ?? $c['rx_bytes-r'] ?? 0,
-                'tx_rate' => $c['txRateBps'] ?? $c['tx_bytes-r'] ?? 0
+                'rx_rate' => $c['rxRateBps'] ?? $c['rx_bytes-r'] ?? $c['rx_rate'] ?? 0,
+                'tx_rate' => $c['txRateBps'] ?? $c['tx_bytes-r'] ?? $c['tx_rate'] ?? 0,
+                'rx_bytes' => $c['rx_bytes'] ?? 0,
+                'tx_bytes' => $c['tx_bytes'] ?? 0,
+                'uptime' => $c['uptime'] ?? 0
             ];
         }
     }
@@ -828,7 +894,10 @@ function detect_known_devices(array $clients, array $devices): array
             'name' => $device['name'] ?? 'Unknown Device', // Added null check
             'vlan' => $vlan,
             'rx_rate' => $client_data[$norm]['rx_rate'] ?? 0,
-            'tx_rate' => $client_data[$norm]['tx_rate'] ?? 0
+            'tx_rate' => $client_data[$norm]['tx_rate'] ?? 0,
+            'rx_bytes' => $client_data[$norm]['rx_bytes'] ?? 0,
+            'tx_bytes' => $client_data[$norm]['tx_bytes'] ?? 0,
+            'uptime' => $client_data[$norm]['uptime'] ?? 0
         ];
     }
     return $status;
@@ -847,7 +916,13 @@ function group_devices_by_vlan(array $devices, array $clients): array
             'mac' => $mac,
             'name' => $info['name'],
             'status' => $info['status'],
-            'ip' => $info['ip']
+            'ip' => $info['ip'],
+            'vlan' => $vlan,
+            'rx_rate' => $info['rx_rate'],
+            'tx_rate' => $info['tx_rate'],
+            'rx_bytes' => $info['rx_bytes'],
+            'tx_bytes' => $info['tx_bytes'],
+            'uptime' => $info['uptime']
         ];
     }
     return $grouped;
@@ -1052,40 +1127,97 @@ function get_ips_status() {
  */
 function get_recent_events($limit = 10, $only_new = false) {
     global $config;
+    
+    // Performance: Cache system events for 15s to keep sidebar snappy
+    $cache_key = 'system_notifications_' . ($only_new ? 'new' : 'all');
+    $cached = minidash_cache_get($cache_key, 15);
+    if ($cached !== null) return $cached;
+
     $historyFile = __DIR__ . '/data/history.json';
-    if (!file_exists($historyFile)) return [];
-    
-    $allHistory = json_decode(file_get_contents($historyFile), true);
-    if (!is_array($allHistory)) $allHistory = [];
-    
-    $devices = loadDevices();
     $events = [];
     
-    $clear_time = 0;
-    if ($only_new && !empty($config['last_notif_clear_time'])) {
-        $clear_time = strtotime($config['last_notif_clear_time']);
-    }
-    
-    foreach ($allHistory as $mac => $history) {
-        if (!is_array($history)) continue;
-        $deviceName = $devices[$mac]['name'] ?? $mac;
-        foreach ($history as $entry) {
-            if ($clear_time && strtotime($entry['timestamp']) <= $clear_time) {
-                continue;
+    // 1. Get Monitoring Events (Local History)
+    if (file_exists($historyFile)) {
+        $allHistory = json_decode(file_get_contents($historyFile), true) ?? [];
+        $devices = loadDevices();
+        $clear_time = 0;
+        if ($only_new && !empty($config['last_notif_clear_time'])) {
+            $clear_time = strtotime($config['last_notif_clear_time']);
+        }
+        
+        foreach ($allHistory as $mac => $history) {
+            if (!is_array($history)) continue;
+            $deviceName = $devices[$mac]['name'] ?? $mac;
+            foreach ($history as $entry) {
+                if ($clear_time && strtotime($entry['timestamp']) <= $clear_time) continue;
+                $events[] = array_merge($entry, [
+                    'mac' => $mac,
+                    'deviceName' => $deviceName,
+                    'eventType' => 'monitor_status'
+                ]);
             }
-            $events[] = array_merge($entry, [
-                'mac' => $mac,
-                'deviceName' => $deviceName
-            ]);
+        }
+    }
+
+    // 2. Get MiniDash Alerts from SQLite events table
+    global $db;
+    if (isset($db)) {
+        try {
+            $stmt = $db->query("SELECT type, severity, message, details_json, created_at FROM events WHERE type = 'alert' ORDER BY created_at DESC LIMIT 30");
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $ts = $row['created_at'];
+                if ($clear_time && strtotime($ts) <= $clear_time) continue;
+                $details = json_decode($row['details_json'] ?? '{}', true);
+                $events[] = [
+                    'timestamp' => $ts,
+                    'status' => 'alert',
+                    'mac' => '',
+                    'deviceName' => $row['message'] ?? 'Alert',
+                    'eventType' => 'minidash_alert',
+                    'raw_msg' => $details['message'] ?? $row['message'] ?? '',
+                ];
+            }
+        } catch (Exception $e) {}
+    }
+
+    // 3. Get UniFi System Events (New Devices, Connects, Roaming)
+    // We only fetch if site is configured
+    $site = $config['site'] ?? 'default';
+    $unifi_events = fetch_api("/proxy/network/api/s/$site/stat/event?limit=30");
+    
+    if (!empty($unifi_events['data'])) {
+        foreach ($unifi_events['data'] as $ue) {
+            $key = $ue['key'] ?? '';
+            // Interesting events: Connected, Disconnected, Roamed, New Device
+            $interesting = [
+                'EVT_WU_Connected', 'EVT_WC_Connected', 'EVT_LU_Connected', 'EVT_LC_Connected', 
+                'EVT_WU_Disconnected', 'EVT_LU_Disconnected', 'EVT_WG_Connected',
+                'EVT_WC_Discovered', 'EVT_WD_Discovered', 'EVT_WU_Roam', 'EVT_WU_RoamRadio'
+            ];
+            
+            if (in_array($key, $interesting) || strpos($key, 'Connected') !== false || strpos($key, 'Discovered') !== false) {
+                $status = (strpos($key, 'Connected') !== false || strpos($key, 'Discovered') !== false) ? 'on' : 'off';
+                $events[] = [
+                    'timestamp' => date('Y-m-d H:i:s', $ue['time'] / 1000),
+                    'status' => $status,
+                    'mac' => $ue['user'] ?? $ue['mac'] ?? '',
+                    'deviceName' => $ue['msg'] ?? 'Urządzenie UniFi',
+                    'eventType' => 'unifi_system',
+                    'key' => $key,
+                    'raw_msg' => $ue['msg'] ?? ''
+                ];
+            }
         }
     }
     
-    // Sortuj po czasie malejąco
+    // Sort by timestamp descending
     usort($events, function($a, $b) {
         return strtotime($b['timestamp']) - strtotime($a['timestamp']);
     });
     
-    return array_slice($events, 0, $limit);
+    $result = array_slice($events, 0, $limit);
+    minidash_cache_set($cache_key, $result);
+    return $result;
 }
 
 function debug_log($message, $data = null)
@@ -1185,58 +1317,114 @@ function render_personal_modal() {
                     </div>
                 </div>
 
-                <!-- Login History Section -->
-                <div class="mt-6">
+                <!-- Regional Settings Section -->
+                <div class="mt-8 pt-8 border-t border-white/5">
+                    <?php $console = get_console_settings(); ?>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                            <i data-lucide="globe" class="w-4 h-4"></i>
+                        </div>
+                        <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Ustawienia Regionalne</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Język Interfejsu</label>
+                            <select name="language" class="w-full px-5 py-3 bg-slate-900/50 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
+                                <option value="auto">Automatyczny (<?= strtoupper($console['language'] ?? 'EN') ?>)</option>
+                                <option value="pl" <?= ($config['language'] ?? '') === 'pl' ? 'selected' : '' ?>>Polski (PL)</option>
+                                <option value="en" <?= ($config['language'] ?? '') === 'en' ? 'selected' : '' ?>>English (EN)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Strefa Czasowa</label>
+                            <select name="timezone" class="w-full px-5 py-3 bg-slate-900/50 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
+                                <option value="auto">Z konsoli (<?= $console['timezone'] ?? 'UTC' ?>)</option>
+                                <option value="Europe/Warsaw" <?= ($config['timezone'] ?? '') === 'Europe/Warsaw' ? 'selected' : '' ?>>Warszawa (GMT+1)</option>
+                                <option value="UTC" <?= ($config['timezone'] ?? '') === 'UTC' ? 'selected' : '' ?>>UTC (GMT+0)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Format Czasu / Daty</label>
+                            <div class="flex gap-2">
+                                <select name="time_format" class="flex-1 px-4 py-3 bg-slate-900/50 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
+                                    <option value="auto">Auto (<?= $console['time_format'] ?>)</option>
+                                    <option value="24h" <?= ($config['time_format'] ?? '') === '24h' ? 'selected' : '' ?>>24h</option>
+                                    <option value="12h" <?= ($config['time_format'] ?? '') === '12h' ? 'selected' : '' ?>>12h</option>
+                                </select>
+                                <select name="date_format" class="flex-1 px-4 py-3 bg-slate-900/50 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
+                                    <option value="auto">Auto (<?= $console['date_format'] ?>)</option>
+                                    <option value="d.m.Y" <?= ($config['date_format'] ?? '') === 'd.m.Y' ? 'selected' : '' ?>>DD.MM.YYYY</option>
+                                    <option value="m/d/Y" <?= ($config['date_format'] ?? '') === 'm/d/Y' ? 'selected' : '' ?>>MM/DD/YYYY</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security (2FA) Section -->
+                <div class="mt-8 pt-8 border-t border-white/5">
                     <div class="mb-4 flex items-center justify-between">
-                        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Historia Logowań</h3>
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center">
+                                <i data-lucide="shield-check" class="w-4 h-4"></i>
+                            </div>
+                            <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Bezpieczeństwo (2FA)</h3>
+                        </div>
+                        <span class="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] bg-white/5 px-2 py-1 rounded">Wkrótce</span>
+                    </div>
+                    <div class="p-4 bg-white/[0.01] border border-white/5 rounded-2xl flex items-center justify-between opacity-50 relative group cursor-not-allowed overflow-hidden">
+                        <div class="absolute inset-0 bg-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider relative z-10">Logowanie dwuetapowe</div>
+                        <div class="w-10 h-5 bg-slate-800 rounded-full relative z-10">
+                            <div class="absolute left-1 top-1 w-3 h-3 bg-slate-600 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Login History Section -->
+                <div class="mt-8 pt-8 border-t border-white/5">
+                    <div class="mb-4 flex items-center justify-between">
+                         <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-slate-500/10 text-slate-400 flex items-center justify-center">
+                                <i data-lucide="history" class="w-4 h-4"></i>
+                            </div>
+                            <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Historia Logowań</h3>
+                        </div>
                          <button type="button" class="text-[10px] text-blue-400 font-bold uppercase tracking-widest hover:text-white transition">
                             Zobacz całą historię
                         </button>
                     </div>
-                    <div class="bg-slate-900 border border-white/10 rounded-2xl overflow-hidden">
+                    <div class="bg-slate-900/50 border border-white/10 rounded-2xl overflow-hidden">
                         <div class="divide-y divide-white/5">
                              <!-- Active Session -->
                              <?php
                                 $ua = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
-                                $browser = 'Unknown Browser';
-                                $os = 'Unknown OS';
+                                $browser = 'Unknown Browser'; $os = 'Unknown OS';
                                 if (preg_match('/windows|win32/i', $ua)) $os = 'Windows';
                                 elseif (preg_match('/macintosh|mac os x/i', $ua)) $os = 'macOS';
                                 elseif (preg_match('/linux/i', $ua)) $os = 'Linux';
                                 elseif (preg_match('/android/i', $ua)) $os = 'Android';
                                 elseif (preg_match('/iphone/i', $ua)) $os = 'iOS';
-
                                 if (preg_match('/chrome/i', $ua)) $browser = 'Chrome';
                                 elseif (preg_match('/firefox/i', $ua)) $browser = 'Firefox';
                                 elseif (preg_match('/safari/i', $ua)) $browser = 'Safari';
                                 elseif (preg_match('/edge/i', $ua)) $browser = 'Edge';
-                                
                                 $client_ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
                                 $current_loc = get_ip_location($client_ip);
-
-                                // Read from SQLite first, fallback to JSON
                                 $historyData = [];
                                 if (isset($db)) {
                                     try {
                                         $stmt = $db->query("SELECT ip, location, os, browser, logged_at FROM login_history ORDER BY logged_at DESC LIMIT 20");
                                         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         foreach ($rows as $r) {
-                                            $historyData[] = [
-                                                'timestamp' => strtotime($r['logged_at']),
-                                                'ip' => $r['ip'],
-                                                'location' => $r['location'],
-                                                'os' => $r['os'],
-                                                'browser' => $r['browser'],
-                                            ];
+                                            $historyData[] = ['timestamp' => strtotime($r['logged_at']), 'ip' => $r['ip'], 'location' => $r['location'], 'os' => $r['os'], 'browser' => $r['browser']];
                                         }
                                     } catch (Exception $e) {}
                                 }
                                 if (empty($historyData)) {
                                     $historyFile = __DIR__ . '/data/login_history.json';
-                                    if (file_exists($historyFile)) {
-                                        $loaded = json_decode(file_get_contents($historyFile), true);
-                                        if (is_array($loaded)) $historyData = $loaded;
-                                    }
+                                    if (file_exists($historyFile)) { $loaded = json_decode(file_get_contents($historyFile), true); if (is_array($loaded)) $historyData = $loaded; }
                                 }
                              ?>
                              <div class="p-4 flex items-center justify-between hover:bg-white/[0.02] transition">
@@ -1256,13 +1444,13 @@ function render_personal_modal() {
                                 <span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-wider animate-pulse ring-1 ring-emerald-500/20">Aktywna</span>
                             </div>
 
-                            <!-- Past History -->
+                            <!-- Past History (Limited to 3 for brevity) -->
                             <?php
                             $hist_count = 0;
                             if (!empty($historyData)):
                                 foreach ($historyData as $idx => $entry):
                                     if ($idx === 0 && ($entry['ip'] ?? '') === $client_ip) continue;
-                                    if ($hist_count >= 5) break;
+                                    if ($hist_count >= 3) break;
                                     $hist_count++;
                             ?>
                              <div class="p-4 flex items-center justify-between hover:bg-white/[0.02] transition border-t border-white/[0.02]">
@@ -1281,36 +1469,7 @@ function render_personal_modal() {
                                 </div>
                                 <span class="text-[9px] text-slate-600 font-black uppercase tracking-widest">Logowanie</span>
                             </div>
-                            <?php 
-                                endforeach;
-                            endif;
-
-                            if ($hist_count === 0): ?>
-                             <div class="p-6 flex items-center justify-center text-slate-600 text-[9px] uppercase font-black tracking-[0.2em] italic">
-                                Brak starszych aktywności
-                             </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2FA Section -->
-                <div class="mt-6 mb-4 border border-white/10 rounded-2xl p-5 bg-gradient-to-br from-slate-900 to-slate-950 relative group overflow-hidden">
-                     <div class="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                     <div class="flex items-center justify-between relative z-10">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-blue-600/10 text-blue-500 flex items-center justify-center border border-blue-600/20 group-hover:scale-110 transition-transform shadow-lg shadow-blue-900/20">
-                                 <i data-lucide="shield-check" class="w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-bold text-white">Podwójne Uwierzytelnianie (2FA)</h3>
-                                <p class="text-[10px] font-black text-blue-400/80 uppercase tracking-widest mt-1">Coming Soon...</p>
-                            </div>
-                        </div>
-                        <div class="opacity-50 pointer-events-none">
-                            <div class="w-11 h-6 bg-slate-800 rounded-full relative border border-white/10">
-                                 <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-slate-600 rounded-full"></div>
-                            </div>
+                            <?php endforeach; endif; ?>
                         </div>
                     </div>
                 </div>
@@ -1416,7 +1575,7 @@ function render_footer() {
     render_personal_modal();
 }
 
-function render_nav($title = "UniFi MiniDash", $stats = []) {
+function render_nav($title = "MiniDash", $stats = []) {
     echo "<!-- NAV_START -->";
     global $config;
     $current_page = basename($_SERVER['PHP_SELF']);
@@ -1433,7 +1592,7 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
         <div class="max-w-[1400px] mx-auto h-full flex items-center justify-between">
             <div class="flex items-center gap-6">
                 <!-- Logo & Refresh -->
-                <a href="index.php" title="UniFi MiniDash" class="flex items-center gap-4 group">
+                <a href="index.php" title="MiniDash" class="flex items-center gap-4 group">
                     <img src="img/lm-network.svg" alt="MiniDASH v1.2.0" class="h-10 w-auto opacity-90 group-hover:opacity-100 transition-opacity">
                     <div class="flex items-baseline gap-3">
                         <h1 class="text-lg font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400 tracking-tighter">
@@ -1507,8 +1666,8 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
 
             <div class="flex items-center gap-4">
                 <!-- System Monitor (Task Manager Style) -->
-                <div onclick="openWanModal()" class="hidden xl:flex items-center gap-6 px-1 transition-all cursor-pointer group" title="Lacze WAN">
-                    <div class="flex flex-col gap-1.5">
+                <div class="hidden xl:flex items-center gap-6 px-1">
+                    <div onclick="openProcessModal()" class="flex flex-col gap-1.5 cursor-pointer hover:opacity-80 transition-opacity" title="Zarządca Procesów">
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] font-black text-slate-500 uppercase tracking-tighter w-6">CPU</span>
                             <div class="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -1525,7 +1684,7 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                         </div>
                     </div>
                     <div class="h-6 w-[1px] bg-white/10"></div>
-                    <div class="flex flex-col gap-0.5">
+                    <div onclick="openWanModal()" class="flex flex-col gap-0.5 cursor-pointer hover:opacity-80 transition-opacity" title="Łącze WAN">
                         <div class="flex items-center gap-1.5 text-blue-400">
                              <i data-lucide="arrow-up" class="w-3 h-3"></i>
                              <span class="text-[11px] font-mono font-bold"><?= format_bps($up) ?></span>
@@ -1676,16 +1835,50 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                 </div>
             <?php else: ?>
                 <?php foreach ($recent_events as $ev): 
-                    $is_up = ($ev['status'] === 'on');
+                    $is_system = ($ev['eventType'] ?? '') === 'unifi_system';
+                    $status = $ev['status'] ?? 'off';
+                    $is_up = ($status === 'on');
                     $color = $is_up ? 'emerald' : 'red';
                     $icon = $is_up ? 'check-circle' : 'alert-circle';
+                    
+                    // Specific visuals for event types
+                    if ($is_system) {
+                        $key = $ev['key'] ?? '';
+                        if (strpos($key, 'Roam') !== false) { $icon = 'repeat'; $color = 'blue'; }
+                        elseif (strpos($key, 'Disconnected') !== false) { $icon = 'log-out'; $color = 'amber'; }
+                        elseif (strpos($key, 'Discovered') !== false) { $icon = 'plus-circle'; $color = 'purple'; }
+                        elseif (strpos($key, 'Connected') !== false) { $icon = 'link'; $color = 'emerald'; }
+                    }
+                    // MiniDash alerts (speed, roaming, status changes)
+                    if (($ev['eventType'] ?? '') === 'minidash_alert') {
+                        $icon = 'bell-ring'; $color = 'amber'; $is_up = true;
+                    }
+
                     $time = strtotime($ev['timestamp']);
                     $diff = time() - $time;
                     
                     if ($diff < 60) $time_str = "teraz";
-                    elseif ($diff < 3600) $time_str = floor($diff/60) . " min temu";
-                    elseif ($diff < 86400) $time_str = floor($diff/3600) . " godz. temu";
-                    else $time_str = date('d.m H:i', $time);
+                    elseif ($diff < 3600) $time_str = floor($diff/60) . " m";
+                    elseif ($diff < 86400) $time_str = floor($diff/3600) . " g";
+                    else $time_str = date('d.m', $time);
+
+                    $title_label = $is_up ? 'Online' : 'Offline';
+                    if ($is_system) {
+                        $key = $ev['key'] ?? '';
+                        if (strpos($key, 'Roam') !== false) $title_label = 'Roaming';
+                        elseif (strpos($key, 'Disconnected') !== false) $title_label = 'Rozłączono';
+                        elseif (strpos($key, 'Discovered') !== false) $title_label = 'Nowy Klient';
+                        elseif (strpos($key, 'Connected') !== false) $title_label = 'Podłączono';
+                        else $title_label = 'System';
+                    }
+
+                    $display_name = $is_system ? ($ev['raw_msg'] ? explode(':', $ev['raw_msg'])[0] : ($ev['key'] ?? 'UniFi')) : $ev['deviceName'];
+                    // Fallback for raw keys
+                    if ($is_system && strpos($display_name, 'EVT_') !== false) {
+                        $display_name = 'Zdarzenie Sieciowe';
+                    }
+                    $display_name = htmlspecialchars($display_name);
+                    $display_msg = $is_system ? $ev['raw_msg'] : ($is_up ? 'Urządzenie połączyło się z siecią.' : 'Utrata połączenia z urządzeniem.');
                 ?>
                     <div onclick="window.location.href='history.php?mac=<?= $ev['mac'] ?>'" class="p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.08] hover:border-blue-500/30 transition group relative overflow-hidden cursor-pointer">
                         <div class="absolute left-0 top-0 bottom-0 w-1 bg-<?= $color ?>-500"></div>
@@ -1693,15 +1886,15 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                             <div class="w-8 h-8 rounded-xl bg-<?= $color ?>-500/10 text-<?= $color ?>-400 flex-shrink-0 flex items-center justify-center">
                                 <i data-lucide="<?= $icon ?>" class="w-4 h-4"></i>
                             </div>
-                            <div class="flex-grow">
-                                <div class="flex justify-between items-start mb-1">
-                                    <span class="text-xs font-black text-<?= $color ?>-500 uppercase tracking-widest">
-                                        <?= $is_up ? 'Device Online' : 'Device Offline' ?>
+                            <div class="flex-grow min-w-0">
+                                <div class="flex justify-between items-start mb-0.5">
+                                    <span class="text-[9px] font-black text-<?= $color ?>-500 uppercase tracking-widest bg-<?= $color ?>-500/10 px-1.5 py-0.5 rounded">
+                                        <?= $title_label ?>
                                     </span>
-                                    <span class="text-[11px] text-slate-400 font-mono font-bold"><?= $time_str ?></span>
+                                    <span class="text-[10px] text-slate-500 font-mono font-bold"><?= $time_str ?></span>
                                 </div>
-                                <p class="text-sm text-white leading-tight font-black mb-1"><?= htmlspecialchars($ev['deviceName']) ?></p>
-                                <p class="text-xs text-slate-400 font-medium"><?= $is_up ? 'Urządzenie połączyło się z siecią.' : 'Utrata połączenia z urządzeniem.' ?></p>
+                                <p class="text-[13px] text-white leading-tight font-bold mb-0.5 truncate"><?= htmlspecialchars($display_name) ?></p>
+                                <p class="text-[10px] text-slate-400 font-medium leading-tight line-clamp-2"><?= htmlspecialchars($display_msg) ?></p>
                             </div>
                         </div>
                     </div>
@@ -1929,6 +2122,24 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
         function closeWanModal() {
             document.getElementById('wanModal').classList.remove('active');
             document.body.style.overflow = '';
+        }
+
+        function openWanSessionsModal() {
+            const modal = document.getElementById('wanSessionsModal');
+            if (modal) {
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                loadWanSessions();
+                lucide.createIcons();
+            }
+        }
+
+        function closeWanSessionsModal() {
+            const modal = document.getElementById('wanSessionsModal');
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
         }
 
         // Process Table Sorting Logic
@@ -2335,26 +2546,80 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                                 </div>
                             </div>
                         </div>
-                        <div class="p-8 bg-slate-900/40 rounded-3xl border border-white/5 space-y-8">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-4">
-                                    <div class="p-3 bg-blue-500/10 text-blue-400 rounded-2xl"><i data-lucide="gauge" class="w-6 h-6"></i></div>
-                                    <div>
-                                        <p class="text-sm font-bold text-slate-200">Alert o nagłym wzroście transferu</p>
-                                        <p class="text-[10px] text-slate-500 uppercase tracking-widest">Monitoruj Monitowane Urządzenia</p>
+                        <div class="space-y-4">
+                            <!-- Existing: Speed Alert -->
+                            <div class="p-6 bg-slate-900/40 rounded-3xl border border-white/5 space-y-6">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-4">
+                                        <div class="p-3 bg-blue-500/10 text-blue-400 rounded-2xl"><i data-lucide="gauge" class="w-6 h-6"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-slate-200">Alert o nagłym wzroście transferu</p>
+                                            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Monitoruj Monitowane Urządzenia</p>
+                                        </div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="speed_alert_enabled" class="sr-only peer" <?= ($config['triggers']['speed_alert_enabled'] ?? false) ? 'checked' : '' ?>>
+                                        <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 after:border-none"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center gap-6 pl-12">
+                                    <div class="w-full">
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Próg prędkości (Mbps)</label>
+                                        <div class="flex items-center gap-4">
+                                            <input type="range" name="speed_threshold_mbps" min="2" max="1000" step="1" value="<?= htmlspecialchars($config['triggers']['speed_threshold_mbps'] ?? 100) ?>" class="flex-grow accent-blue-500" oninput="this.nextElementSibling.value = this.value + ' Mbps'">
+                                            <output class="text-xs font-mono text-blue-400 bg-blue-500/10 px-3 py-2 rounded-lg border border-blue-500/20 min-w-[100px] text-center"><?= htmlspecialchars($config['triggers']['speed_threshold_mbps'] ?? 100) ?> Mbps</output>
+                                        </div>
                                     </div>
                                 </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" name="speed_alert_enabled" class="sr-only peer" <?= ($config['triggers']['speed_alert_enabled'] ?? false) ? 'checked' : '' ?>>
-                                    <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 after:border-none"></div>
-                                </label>
                             </div>
-                            <div class="flex items-center gap-6 pl-12">
-                                <div class="w-full">
-                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Próg prędkości (Mbps)</label>
+
+                            <!-- Placeholder: New Device -->
+                            <div class="p-6 bg-slate-900/20 rounded-3xl border border-white/5 opacity-60 grayscale-[0.5] relative overflow-hidden group">
+                                <div class="absolute top-0 right-0 px-3 py-1 bg-white/5 text-[8px] font-black text-slate-500 uppercase tracking-widest rounded-bl-xl border-l border-b border-white/5">Wkrótce</div>
+                                <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-4">
-                                        <input type="range" name="speed_threshold_mbps" min="2" max="1000" step="1" value="<?= htmlspecialchars($config['triggers']['speed_threshold_mbps'] ?? 100) ?>" class="flex-grow accent-blue-500" oninput="this.nextElementSibling.value = this.value + ' Mbps'">
-                                        <output class="text-xs font-mono text-blue-400 bg-blue-500/10 px-3 py-2 rounded-lg border border-blue-500/20 min-w-[100px] text-center"><?= htmlspecialchars($config['triggers']['speed_threshold_mbps'] ?? 100) ?> Mbps</output>
+                                        <div class="p-3 bg-emerald-500/10 text-emerald-500 rounded-2xl"><i data-lucide="shield-plus" class="w-6 h-6"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-slate-300">Wykryto nowe urządzenie</p>
+                                            <p class="text-[10px] text-slate-600 uppercase tracking-widest">Alert przy pierwszym połączeniu MAC</p>
+                                        </div>
+                                    </div>
+                                    <div class="w-11 h-6 bg-slate-800/50 rounded-full relative">
+                                        <div class="absolute left-1 top-1 w-4 h-4 bg-slate-700 rounded-full"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Placeholder: IPS Alert -->
+                            <div class="p-6 bg-slate-900/20 rounded-3xl border border-white/5 opacity-60 grayscale-[0.5] relative overflow-hidden group">
+                                <div class="absolute top-0 right-0 px-3 py-1 bg-white/5 text-[8px] font-black text-slate-500 uppercase tracking-widest rounded-bl-xl border-l border-b border-white/5">Wkrótce</div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-4">
+                                        <div class="p-3 bg-rose-500/10 text-rose-500 rounded-2xl"><i data-lucide="radar" class="w-6 h-6"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-slate-300">Alert Bezpieczeństwa (IPS/IDS)</p>
+                                            <p class="text-[10px] text-slate-600 uppercase tracking-widest">Powiadomienie o zablokowanym ataku</p>
+                                        </div>
+                                    </div>
+                                    <div class="w-11 h-6 bg-slate-800/50 rounded-full relative">
+                                        <div class="absolute left-1 top-1 w-4 h-4 bg-slate-700 rounded-full"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Placeholder: High Latency -->
+                            <div class="p-6 bg-slate-900/20 rounded-3xl border border-white/5 opacity-60 grayscale-[0.5] relative overflow-hidden group">
+                                <div class="absolute top-0 right-0 px-3 py-1 bg-white/5 text-[8px] font-black text-slate-500 uppercase tracking-widest rounded-bl-xl border-l border-b border-white/5">Wkrótce</div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-4">
+                                        <div class="p-3 bg-amber-500/10 text-amber-500 rounded-2xl"><i data-lucide="activity" class="w-6 h-6"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-slate-300">Nagły wzrost opóźnień (Ping)</p>
+                                            <p class="text-[10px] text-slate-600 uppercase tracking-widest">Monitorowanie stabilności łącza WAN</p>
+                                        </div>
+                                    </div>
+                                    <div class="w-11 h-6 bg-slate-800/50 rounded-full relative">
+                                        <div class="absolute left-1 top-1 w-4 h-4 bg-slate-700 rounded-full"></div>
                                     </div>
                                 </div>
                             </div>
@@ -2527,6 +2792,34 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                 </button>
             </div>
             <div class="modal-body p-8 space-y-8">
+                <!-- WAN Live Transfer Chart -->
+                <div class="bg-slate-900/50 border border-white/5 rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                                <i data-lucide="activity" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-white">Transfer WAN — Live</h3>
+                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Przepustowość łącza w czasie rzeczywistym</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                                <span class="text-[10px] text-slate-400 font-bold">Download</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                                <span class="text-[10px] text-slate-400 font-bold">Upload</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="h-[200px] w-full">
+                        <canvas id="wanModalChart"></canvas>
+                    </div>
+                </div>
+
                 <!-- Info Grid: Support Multi-WAN -->
                 <div class="grid grid-cols-1 md:grid-cols-<?= min(count($_SESSION['wan_details']['wans'] ?? []), 4) + 1 ?> gap-6">
                     <div class="bg-slate-900/50 p-5 rounded-2xl border border-white/5 flex flex-col justify-center">
@@ -2572,7 +2865,9 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                             <thead>
                                 <tr class="bg-slate-950/30 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
                                     <th class="px-6 py-4">Klient</th>
-                                    <th class="px-6 py-4">IP / Siec</th>
+                                    <th class="px-6 py-4">IP Lokalne</th>
+                                    <th class="px-6 py-4">Rodzaj / Usługa</th>
+                                    <th class="px-6 py-4">IP Zewnętrzne</th>
                                     <th class="px-6 py-4 text-right">Download</th>
                                     <th class="px-6 py-4 text-right">Upload</th>
                                 </tr>
@@ -2598,12 +2893,14 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                             const tbody = document.getElementById('wan-flows-body');
                             const flows = data.data || [];
                             if (flows.length === 0) {
-                                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-slate-500 text-xs">Brak aktywnego ruchu</td></tr>';
+                                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 text-xs">Brak aktywnego ruchu</td></tr>';
                                 return;
                             }
                             tbody.innerHTML = flows.map(f => {
                                 const icon = f.is_wired ? 'monitor' : 'wifi';
                                 const netColor = f.is_wired ? 'text-blue-400' : 'text-purple-400';
+                                const countryCode = f.country_code && f.country_code !== '??' ? f.country_code : 'un';
+                                
                                 return `<tr class="hover:bg-white/[0.02] transition-colors">
                                     <td class="px-6 py-3">
                                         <div class="flex items-center gap-3">
@@ -2612,8 +2909,18 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                                         </div>
                                     </td>
                                     <td class="px-6 py-3">
-                                        <div class="text-xs font-mono text-slate-400">${f.ip || '—'}</div>
-                                        <div class="text-[9px] ${netColor}">${f.network || '—'}</div>
+                                        <div class="text-xs font-mono text-slate-400 font-bold">${f.ip || '—'}</div>
+                                    </td>
+                                    <td class="px-6 py-3">
+                                        <span class="text-[10px] font-black uppercase text-slate-500 tracking-tighter bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                                            ${f.type || 'General'}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-3">
+                                        <div class="flex items-center gap-2">
+                                            <img src="https://flagcdn.com/w20/${countryCode}.png" class="w-4 h-auto rounded-sm opacity-80" onerror="this.src='https://flagcdn.com/w20/un.png'">
+                                            <span class="text-xs font-mono font-bold text-blue-300">${f.external_ip || '<span class="text-slate-700">automatyczny</span>'}</span>
+                                        </div>
                                     </td>
                                     <td class="px-6 py-3 text-right text-xs font-bold text-emerald-400">${formatBpsJs(f.rx_bps)}</td>
                                     <td class="px-6 py-3 text-right text-xs font-bold text-amber-400">${formatBpsJs(f.tx_bps)}</td>
@@ -2625,11 +2932,145 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                             document.getElementById('wan-flows-body').innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-red-400 text-xs">Blad ladowania</td></tr>';
                         });
                 }
+                // WAN Modal Chart
+                let wanModalChart = null;
+                let wanModalChartInterval = null;
+
+                function initWanModalChart() {
+                    const canvas = document.getElementById('wanModalChart');
+                    if (!canvas || wanModalChart) return;
+
+                    const ctx = canvas.getContext('2d');
+                    const gradientRx = ctx.createLinearGradient(0, 0, 0, 180);
+                    gradientRx.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+                    gradientRx.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+                    const gradientTx = ctx.createLinearGradient(0, 0, 0, 180);
+                    gradientTx.addColorStop(0, 'rgba(245, 158, 11, 0.25)');
+                    gradientTx.addColorStop(1, 'rgba(245, 158, 11, 0)');
+
+                    wanModalChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [
+                                {
+                                    label: 'RX (Download)',
+                                    data: [],
+                                    borderColor: '#10b981',
+                                    backgroundColor: gradientRx,
+                                    fill: true,
+                                    tension: 0.4,
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                    pointHoverRadius: 4,
+                                    pointHoverBackgroundColor: '#10b981'
+                                },
+                                {
+                                    label: 'TX (Upload)',
+                                    data: [],
+                                    borderColor: '#f59e0b',
+                                    backgroundColor: gradientTx,
+                                    fill: true,
+                                    tension: 0.4,
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                    pointHoverRadius: 4,
+                                    pointHoverBackgroundColor: '#f59e0b'
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: 'rgba(15,23,42,0.95)',
+                                    titleColor: '#e2e8f0',
+                                    bodyColor: '#94a3b8',
+                                    borderColor: 'rgba(255,255,255,0.1)',
+                                    borderWidth: 1,
+                                    cornerRadius: 12,
+                                    padding: 12,
+                                    callbacks: {
+                                        label: function(context) {
+                                            return context.dataset.label + ': ' + formatBpsJs(context.parsed.y);
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { display: true, color: '#475569', font: { size: 9, weight: 'bold' }, maxTicksLimit: 8 }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(255,255,255,0.04)' },
+                                    ticks: {
+                                        color: '#475569',
+                                        font: { size: 9, weight: 'bold' },
+                                        callback: function(value) {
+                                            if (value >= 1000000000) return (value / 1000000000).toFixed(1) + ' Gb';
+                                            if (value >= 1000000) return (value / 1000000).toFixed(1) + ' Mb';
+                                            if (value >= 1000) return (value / 1000).toFixed(0) + ' Kb';
+                                            return value + ' b';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                function updateWanModalChart() {
+                    if (!wanModalChart) return;
+                    fetch('update_wan.php')
+                        .then(r => r.json())
+                        .then(data => {
+                            const last30 = data.slice(-30);
+                            wanModalChart.data.labels = last30.map(d => {
+                                const date = new Date(d.timestamp * 1000);
+                                return date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0') + ':' + String(date.getSeconds()).padStart(2, '0');
+                            });
+                            wanModalChart.data.datasets[0].data = last30.map(d => d.rx);
+                            wanModalChart.data.datasets[1].data = last30.map(d => d.tx);
+                            wanModalChart.update('none');
+                        })
+                        .catch(e => console.warn('WAN modal chart error:', e));
+                }
+
                 // Auto-load when modal opens
                 document.addEventListener('DOMContentLoaded', () => {
                     const observer = new MutationObserver(() => {
                         const modal = document.getElementById('wanModal');
-                        if (modal && modal.classList.contains('active')) loadWanFlows();
+                        if (modal && modal.classList.contains('active')) {
+                            loadWanFlows();
+                            initWanModalChart();
+                            updateWanModalChart();
+                            // Auto-refresh chart every 5s while modal is open
+                            if (!wanModalChartInterval) {
+                                wanModalChartInterval = setInterval(() => {
+                                    const m = document.getElementById('wanModal');
+                                    if (m && m.classList.contains('active')) {
+                                        updateWanModalChart();
+                                    } else {
+                                        clearInterval(wanModalChartInterval);
+                                        wanModalChartInterval = null;
+                                    }
+                                }, 5000);
+                            }
+                        } else {
+                            if (wanModalChartInterval) {
+                                clearInterval(wanModalChartInterval);
+                                wanModalChartInterval = null;
+                            }
+                        }
                     });
                     const modal = document.getElementById('wanModal');
                     if (modal) observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
@@ -2643,6 +3084,177 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
             </div>
         </div>
     </div>
+
+    <!-- Modal: WAN Sessions (External Connections) -->
+    <div id="wanSessionsModal" class="modal-overlay" onclick="closeWanSessionsModal()">
+        <div class="modal-container max-w-5xl" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h2 class="text-xl font-bold flex items-center gap-2 text-white">
+                        <i data-lucide="zap" class="w-6 h-6 text-blue-400"></i>
+                        Aktywne Sesje WAN
+                    </h2>
+                    <p class="text-slate-500 text-xs mt-1">Podgląd połączeń przychodzących i wychodzących w czasie rzeczywistym</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div id="wan-sessions-stats" class="hidden md:flex items-center gap-6 mr-6">
+                        <div class="text-right">
+                            <div class="text-[9px] text-slate-500 uppercase font-black tracking-widest">Inbound</div>
+                            <div id="wan-stats-inbound" class="text-sm font-bold text-blue-400">0</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[9px] text-slate-500 uppercase font-black tracking-widest">Outbound</div>
+                            <div id="wan-stats-outbound" class="text-sm font-bold text-amber-400">0</div>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeWanSessionsModal()" class="p-2 hover:bg-white/5 rounded-xl transition text-slate-500 hover:text-white">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body p-0">
+                <div class="p-4 bg-slate-900/30 border-b border-white/5 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest">Top Kraje</h3>
+                        <div id="wan-top-countries" class="flex items-center gap-3">
+                            <!-- Country bubbles here -->
+                        </div>
+                    </div>
+                    <button onclick="loadWanSessions()" class="p-2 hover:bg-white/5 rounded-lg text-slate-500 transition" title="Odśwież">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="max-h-[600px] overflow-y-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="sticky top-0 bg-slate-950/95 backdrop-blur-md z-10">
+                            <tr class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
+                                <th class="px-6 py-4">Lokalizacja / Kraj</th>
+                                <th class="px-6 py-4">PRZEPŁYW (ŹRÓDŁO → CEL)</th>
+                                <th class="px-6 py-4">Kierunek</th>
+                                <th class="px-6 py-4">Protokół / Typ</th>
+                                <th class="px-6 py-4 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wan-sessions-body" class="divide-y divide-white/[0.02]">
+                            <tr><td colspan="5" class="px-6 py-12 text-center text-slate-500">Inicjalizacja podglądu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer p-6 border-t border-white/5 bg-slate-900/30 flex justify-between items-center">
+                <p id="wan-sessions-total" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Wczytano 0 sesji</p>
+                <button type="button" onclick="closeWanSessionsModal()" class="px-8 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg shadow-blue-600/20">
+                    Zamknij Podgląd
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function loadWanSessions() {
+        const tbody = document.getElementById('wan-sessions-body');
+        const statsRow = document.getElementById('wan-sessions-stats');
+        const countryRow = document.getElementById('wan-top-countries');
+        
+        fetch('api_wan_sessions.php')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) throw new Error('API Error');
+                
+                document.getElementById('wan-stats-inbound').innerText = data.stats.inbound;
+                document.getElementById('wan-stats-outbound').innerText = data.stats.outbound;
+                document.getElementById('wan-sessions-total').innerText = `Aktywne sesje: ${data.stats.total} (Zablokowane: ${data.stats.blocked})`;
+                if (statsRow) statsRow.classList.remove('hidden');
+
+                if (countryRow) {
+                    countryRow.innerHTML = data.countries.map(c => `
+                        <div class="flex items-center gap-1.5 px-2 py-1 bg-white/5 rounded-lg border border-white/5" title="${c.country}">
+                            <img src="https://flagcdn.com/24x18/${c.code}.png" class="w-3.5 h-auto rounded-sm opacity-80">
+                            <span class="text-[10px] font-bold text-slate-400">${c.count}</span>
+                        </div>
+                    `).join('');
+                }
+
+                if (data.sessions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center text-slate-500">Brak aktywnych sesji zewnętrznych</td></tr>';
+                } else {
+                    tbody.innerHTML = data.sessions.map(s => {
+                        const dirIcon = s.direction === 'inbound' ? 'arrow-left' : 'arrow-right';
+                        const dirColor = s.direction === 'inbound' ? 'text-blue-400' : 'text-amber-400';
+                        const actionColor = s.is_blocked ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                        const countryCode = s.country_code === '??' ? 'un' : s.country_code;
+
+                        // Connection Flow UI
+                        let sourceUI, destUI;
+                        const extIPUI = `
+                            <div class="flex flex-col">
+                                <span class="text-xs font-mono font-bold text-blue-300">${s.external_ip}</span>
+                                <span class="text-[9px] text-slate-500 uppercase font-black truncate max-w-[150px]">${s.org || 'Provider'}</span>
+                            </div>
+                        `;
+                        const localUI = `
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-white/90">${s.client_name}</span>
+                                <span class="text-[9px] text-slate-600 font-mono">${s.local_ip}</span>
+                            </div>
+                        `;
+
+                        if (s.direction === 'inbound') {
+                            sourceUI = extIPUI;
+                            destUI = localUI;
+                        } else {
+                            sourceUI = localUI;
+                            destUI = extIPUI;
+                        }
+                        
+                        return `
+                        <tr class="hover:bg-white/[0.02] transition-colors border-t border-white/5">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <img src="https://flagcdn.com/w20/${countryCode}.png" class="w-5 h-auto rounded shadow-sm" onerror="this.src='https://flagcdn.com/w20/un.png'">
+                                    <div class="min-w-0">
+                                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">${s.country || 'Unknown'}</div>
+                                        <div class="text-[9px] text-slate-500 truncate">${s.city || 'Internet'}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-4">
+                                    ${sourceUI}
+                                    <div class="flex flex-col items-center opacity-40">
+                                        <i data-lucide="${dirIcon}" class="w-4 h-4 text-slate-400"></i>
+                                        <span class="text-[7px] font-black text-slate-500 uppercase">WAN</span>
+                                    </div>
+                                    ${destUI}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-2 ${dirColor}">
+                                    <span class="text-[10px] font-black uppercase tracking-tighter">${s.direction}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-xs font-bold text-slate-400">${s.protocol}</div>
+                                <div class="text-[9px] text-slate-500 truncate">${s.category}</div>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <span class="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tighter border ${actionColor}">
+                                    ${s.action}
+                                </span>
+                            </td>
+                        </tr>
+                        `;
+                    }).join('');
+                }
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            })
+            .catch(err => {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-12 text-center text-red-400">Błąd podczas pobierania danych sesji</td></tr>';
+            });
+    }
+    </script>
+
     <?php 
     // render_personal_modal() will be called by render_footer()
     ?>
@@ -2725,8 +3337,69 @@ function _disabled_render_personal_modal() {
                     </div>
                 </div>
 
+                <!-- Regional Settings Section -->
+                <div class="mt-8 pt-6 border-t border-white/5">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                            <i data-lucide="globe" class="w-4 h-4"></i>
+                        </div>
+                        <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Ustawienia Regionalne</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Język Interfejsu</label>
+                            <select name="language" class="w-full px-5 py-3 bg-slate-900/50 border border-white/10 rounded-2xi focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
+                                <option value="auto">Automatyczny (z konsoli)</option>
+                                <option value="pl" <?= ($config['language'] ?? '') === 'pl' ? 'selected' : '' ?>>Polski (PL)</option>
+                                <option value="en" <?= ($config['language'] ?? '') === 'en' ? 'selected' : '' ?>>English (EN)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Strefa Czasowa</label>
+                            <select name="timezone" class="w-full px-5 py-3 bg-slate-900/50 border border-white/10 rounded-2xi focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
+                                <option value="auto">Zgodnie z konsolą</option>
+                                <option value="Europe/Warsaw">Warszawa (GMT+1)</option>
+                                <option value="UTC">UTC (GMT+0)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Format Czasu / Daty</label>
+                            <div class="flex gap-2">
+                                <select name="time_format" class="flex-1 px-4 py-3 bg-slate-900/50 border border-white/10 rounded-2xi focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
+                                    <option value="24h">24h</option>
+                                    <option value="12h">12h</option>
+                                </select>
+                                <select name="date_format" class="flex-1 px-4 py-3 bg-slate-900/50 border border-white/10 rounded-2xi focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
+                                    <option value="d.m.Y">DD.MM.YY</option>
+                                    <option value="m/d/Y">MM/DD/YY</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Section (2FA Placeholder) -->
+                <div class="mt-8 pt-6 border-t border-white/5 opacity-40">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center">
+                                <i data-lucide="shield-check" class="w-4 h-4"></i>
+                            </div>
+                            <h3 class="text-xs font-black text-slate-550 uppercase tracking-[0.2em]">Bezpieczeństwo (2FA)</h3>
+                        </div>
+                        <span class="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] bg-white/5 px-2 py-1 rounded">Wkrótce</span>
+                    </div>
+                    <div class="p-4 bg-white/[0.01] border border-white/5 rounded-2xl flex items-center justify-between">
+                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Logowanie Dwuetapowe</div>
+                        <div class="w-10 h-5 bg-slate-800 rounded-full relative opacity-50">
+                            <div class="absolute left-1 top-1 w-3 h-3 bg-slate-600 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Login History Section -->
-                <div class="mt-6">
+                <div class="mt-8 pt-6 border-t border-white/5">
                     <div class="mb-4 flex items-center justify-between">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wider">Historia Logowań</h3>
                          <button type="button" class="text-[10px] text-blue-400 font-bold uppercase tracking-widest hover:text-white transition">

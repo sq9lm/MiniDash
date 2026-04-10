@@ -142,6 +142,17 @@ function sendAlert($subject, $message) {
     if ($config['n8n_notifications'] && $config['n8n_notifications']['enabled']) {
         sendN8nNotification($message);
     }
+
+    // Log alert to SQLite events table for in-app notification panel
+    global $db;
+    if (isset($db)) {
+        try {
+            $stmt = $db->prepare("INSERT INTO events (type, severity, message, details_json) VALUES (?, ?, ?, ?)");
+            $stmt->execute(['alert', 'WARNING', $subject, json_encode(['message' => $message])]);
+        } catch (Exception $e) {
+            // Silently fail — don't break alert sending
+        }
+    }
 }
 
 function sendPushNotification($subject, $message) {
@@ -173,7 +184,7 @@ function sendEmailNotification($subject, $message) {
     $headers = "From: " . $config['email_notifications']['from_email'] . "\r\n";
     $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
     
-    $htmlMessage = "<h2>UniFi MiniDash Alert</h2><p>$message</p>";
+    $htmlMessage = "<h2>MiniDash Alert</h2><p>$message</p>";
     
     @mail(
         $config['email_notifications']['to_email'],
@@ -193,7 +204,7 @@ function sendTelegramNotification($message) {
     $url = "https://api.telegram.org/bot$token/sendMessage";
     $data = [
         'chat_id' => $chatId,
-        'text' => "🔔 UniFi MiniDash Alert:\n" . $message,
+        'text' => "🔔 MiniDash Alert:\n" . $message,
         'parse_mode' => 'Markdown'
     ];
 
@@ -238,7 +249,7 @@ function sendSlackNotification($message) {
     $url = $config['slack_notifications']['webhook_url'];
     if (empty($url)) return;
 
-    $data = json_encode(['text' => "🔔 *UniFi MiniDASH Alert*\n" . $message]);
+    $data = json_encode(['text' => "🔔 *MiniDASH Alert*\n" . $message]);
     
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_POST, 1);
