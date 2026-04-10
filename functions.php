@@ -263,9 +263,12 @@ function get_trad_site_id($siteId = null) {
         $siteId = $_SESSION['site_id'] ?? $config['site'] ?? 'default';
     }
     
-    // If it looks like a long UUID (with dashes), it's probably an Integration API ID
-    // which needs to be 'default' for Traditional API on most local controllers.
+    // If it looks like a UUID (with dashes) or MongoDB ObjectId (24 hex chars),
+    // it needs to be 'default' for Traditional API on most local controllers.
     if (preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i', $siteId)) {
+        return 'default';
+    }
+    if (preg_match('/^[a-f0-9]{24}$/i', $siteId)) {
         return 'default';
     }
     
