@@ -362,7 +362,7 @@ function get_unifi_blocked_ips() {
     
     // Performance: Cache in session for 60 seconds
     if (!empty($_SESSION['blocked_ips_data']) && !empty($_SESSION['blocked_ips_time'])) {
-        if (time() - $_SESSION['blocked_ips_time'] < 60) {
+        if (time() - $_SESSION['blocked_ips_time'] < 120) {
             return $_SESSION['blocked_ips_data'];
         }
     }
@@ -526,8 +526,8 @@ function minidash_cache_set($key, $data) {
 function get_unifi_security_events() {
     global $config;
     
-    // Performance: Fast File Cache for 15s
-    $cached = minidash_cache_get('security_events', 15);
+    // Performance: Fast File Cache for 120s
+    $cached = minidash_cache_get('security_events', 120);
     if ($cached !== null) return $cached;
 
     $site = $config['site'] ?? 'default';
@@ -573,8 +573,8 @@ function get_unifi_security_events() {
 function get_unifi_security_settings() {
     global $config;
     
-    // Performance: Fast File Cache for 60s
-    $cached = minidash_cache_get('security_settings', 60);
+    // Performance: Fast File Cache for 300s (5 min)
+    $cached = minidash_cache_get('security_settings', 300);
     if ($cached !== null) return $cached;
 
     $site = $config['site'] ?? 'default';
