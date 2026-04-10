@@ -55,7 +55,11 @@ $newConfig = [
     ],
     'triggers' => [
         'speed_alert_enabled' => isset($_POST['speed_alert_enabled']) && ($_POST['speed_alert_enabled'] === 'true' || $_POST['speed_alert_enabled'] === 'on'),
-        'speed_threshold_mbps' => (int)($_POST['speed_threshold_mbps'] ?? 100)
+        'speed_threshold_mbps' => (int)($_POST['speed_threshold_mbps'] ?? 100),
+        'new_device_alert_enabled' => isset($_POST['new_device_alert_enabled']) && ($_POST['new_device_alert_enabled'] === 'true' || $_POST['new_device_alert_enabled'] === 'on'),
+        'ips_alert_enabled' => isset($_POST['ips_alert_enabled']) && ($_POST['ips_alert_enabled'] === 'true' || $_POST['ips_alert_enabled'] === 'on'),
+        'latency_alert_enabled' => isset($_POST['latency_alert_enabled']) && ($_POST['latency_alert_enabled'] === 'true' || $_POST['latency_alert_enabled'] === 'on'),
+        'latency_threshold_ms' => (int)($_POST['latency_threshold_ms'] ?? 100)
     ]
 ];
 

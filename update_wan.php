@@ -18,7 +18,8 @@ $history = [];
 
 try {
     // 1. Fetch Traditional Device Stats (more reliable for real-time rates)
-    $trad_resp = fetch_api("/proxy/network/api/s/default/stat/device");
+    $tradSite = get_trad_site_id($config['site']);
+    $trad_resp = fetch_api("/proxy/network/api/s/{$tradSite}/stat/device");
     $trad_devices = $trad_resp['data'] ?? [];
     
     // 2. Fetch Infrastructure (Modern list)
@@ -132,6 +133,83 @@ try {
             }
         }
         file_put_contents($last_speeds_file, json_encode($last_speeds));
+    }
+
+    // === TRIGGER: New Device Detection ===
+    if ($config['triggers']['new_device_alert_enabled'] ?? false) {
+        $known_macs_file = __DIR__ . '/data/known_macs.json';
+        $known_macs = file_exists($known_macs_file) ? json_decode(file_get_contents($known_macs_file), true) : [];
+        if (!is_array($known_macs)) $known_macs = [];
+
+        $sta_resp = fetch_api('/proxy/network/api/s/default/stat/sta');
+        foreach (($sta_resp['data'] ?? []) as $client) {
+            $mac = strtolower($client['mac'] ?? '');
+            if (!$mac) continue;
+            if (!isset($known_macs[$mac])) {
+                $name = $client['name'] ?? $client['hostname'] ?? $mac;
+                $ip = $client['ip'] ?? $client['last_ip'] ?? '';
+                $known_macs[$mac] = ['name' => $name, 'first_seen' => date('Y-m-d H:i:s')];
+                sendAlert(
+                    "🆕 Nowe urzadzenie: $name",
+                    "Wykryto nieznane urzadzenie **$name** (MAC: $mac, IP: $ip) w sieci."
+                );
+            }
+        }
+        file_put_contents($known_macs_file, json_encode($known_macs));
+    }
+
+    // === TRIGGER: IPS/IDS Alert ===
+    if ($config['triggers']['ips_alert_enabled'] ?? false) {
+        $last_ips_check = $_SESSION['last_ips_alert_check'] ?? 0;
+        $now = time();
+        if ($now - $last_ips_check > 60) { // Check every 60s max
+            $ips_resp = fetch_api('/proxy/network/api/s/default/stat/ips/event?limit=5');
+            $ips_events = $ips_resp['data'] ?? [];
+            $last_ips_id_file = __DIR__ . '/data/last_ips_event_id.txt';
+            $last_id = file_exists($last_ips_id_file) ? trim(file_get_contents($last_ips_id_file)) : '';
+
+            foreach ($ips_events as $evt) {
+                $evt_id = $evt['_id'] ?? '';
+                if ($evt_id === $last_id) break; // Already seen
+                $action = $evt['inner_alert_action'] ?? '';
+                if ($action === 'blocked') {
+                    $src = $evt['src_ip'] ?? '?';
+                    $sig = $evt['inner_alert_signature'] ?? $evt['inner_alert_category'] ?? 'Unknown threat';
+                    $cc = strtoupper($evt['srcipCountry'] ?? '??');
+                    sendAlert(
+                        "🛡️ IPS Zablokowany atak",
+                        "Zablokowano atak z **$src** ($cc): $sig"
+                    );
+                    break; // Only alert on newest blocked event
+                }
+            }
+            if (!empty($ips_events[0]['_id'])) {
+                file_put_contents($last_ips_id_file, $ips_events[0]['_id']);
+            }
+            $_SESSION['last_ips_alert_check'] = $now;
+        }
+    }
+
+    // === TRIGGER: High Latency ===
+    if ($config['triggers']['latency_alert_enabled'] ?? false) {
+        $latency_threshold = $config['triggers']['latency_threshold_ms'] ?? 100;
+        $dev_resp_lat = fetch_api('/proxy/network/api/s/default/stat/device');
+        foreach (($dev_resp_lat['data'] ?? []) as $d) {
+            if (in_array($d['type'] ?? '', ['ugw', 'udm', 'uxg'])) {
+                $latency = $d['wan1']['latency'] ?? $d['uplink']['latency'] ?? 0;
+                if ($latency > $latency_threshold) {
+                    $last_lat_alert = $_SESSION['last_latency_alert'] ?? 0;
+                    if (time() - $last_lat_alert > 300) { // 5 min cooldown
+                        sendAlert(
+                            "⚠️ Wysoka latencja WAN: {$latency}ms",
+                            "Opoznienie lacza WAN wynosi **{$latency}ms** (prog: {$latency_threshold}ms)."
+                        );
+                        $_SESSION['last_latency_alert'] = time();
+                    }
+                }
+                break;
+            }
+        }
     }
 
 } catch (Exception $e) {

@@ -2750,53 +2750,62 @@ function render_nav($title = "MiniDash", $stats = []) {
                                 </div>
                             </div>
 
-                            <!-- Placeholder: New Device -->
-                            <div class="p-6 bg-slate-900/20 rounded-3xl border border-white/5 opacity-60 grayscale-[0.5] relative overflow-hidden group">
-                                <div class="absolute top-0 right-0 px-3 py-1 bg-white/5 text-[12px] font-black text-slate-500 uppercase tracking-widest rounded-bl-xl border-l border-b border-white/5">Wkrótce</div>
+                            <!-- Trigger: New Device -->
+                            <div class="p-6 bg-slate-900/40 rounded-3xl border border-white/5 space-y-6">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-4">
                                         <div class="p-3 bg-emerald-500/10 text-emerald-500 rounded-2xl"><i data-lucide="shield-plus" class="w-6 h-6"></i></div>
                                         <div>
-                                            <p class="text-sm font-bold text-slate-300">Wykryto nowe urządzenie</p>
-                                            <p class="text-[12px] text-slate-600 uppercase tracking-widest">Alert przy pierwszym połączeniu MAC</p>
+                                            <p class="text-sm font-bold text-slate-200">Wykryto nowe urzadzenie</p>
+                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest">Alert przy nieznanym MAC w sieci</p>
                                         </div>
                                     </div>
-                                    <div class="w-11 h-6 bg-slate-800/50 rounded-full relative">
-                                        <div class="absolute left-1 top-1 w-4 h-4 bg-slate-700 rounded-full"></div>
-                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="new_device_alert_enabled" class="sr-only peer" <?= ($config['triggers']['new_device_alert_enabled'] ?? false) ? 'checked' : '' ?>>
+                                        <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 after:border-none"></div>
+                                    </label>
                                 </div>
                             </div>
 
-                            <!-- Placeholder: IPS Alert -->
-                            <div class="p-6 bg-slate-900/20 rounded-3xl border border-white/5 opacity-60 grayscale-[0.5] relative overflow-hidden group">
-                                <div class="absolute top-0 right-0 px-3 py-1 bg-white/5 text-[12px] font-black text-slate-500 uppercase tracking-widest rounded-bl-xl border-l border-b border-white/5">Wkrótce</div>
+                            <!-- Trigger: IPS Alert -->
+                            <div class="p-6 bg-slate-900/40 rounded-3xl border border-white/5 space-y-6">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-4">
-                                        <div class="p-3 bg-rose-500/10 text-rose-500 rounded-2xl"><i data-lucide="radar" class="w-6 h-6"></i></div>
+                                        <div class="p-3 bg-rose-500/10 text-rose-500 rounded-2xl"><i data-lucide="shield-alert" class="w-6 h-6"></i></div>
                                         <div>
-                                            <p class="text-sm font-bold text-slate-300">Alert Bezpieczeństwa (IPS/IDS)</p>
-                                            <p class="text-[12px] text-slate-600 uppercase tracking-widest">Powiadomienie o zablokowanym ataku</p>
+                                            <p class="text-sm font-bold text-slate-200">Alert Bezpieczenstwa (IPS/IDS)</p>
+                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest">Powiadomienie o zablokowanym ataku</p>
                                         </div>
                                     </div>
-                                    <div class="w-11 h-6 bg-slate-800/50 rounded-full relative">
-                                        <div class="absolute left-1 top-1 w-4 h-4 bg-slate-700 rounded-full"></div>
-                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="ips_alert_enabled" class="sr-only peer" <?= ($config['triggers']['ips_alert_enabled'] ?? false) ? 'checked' : '' ?>>
+                                        <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600 after:border-none"></div>
+                                    </label>
                                 </div>
                             </div>
 
-                            <!-- Placeholder: High Latency -->
-                            <div class="p-6 bg-slate-900/20 rounded-3xl border border-white/5 opacity-60 grayscale-[0.5] relative overflow-hidden group">
-                                <div class="absolute top-0 right-0 px-3 py-1 bg-white/5 text-[12px] font-black text-slate-500 uppercase tracking-widest rounded-bl-xl border-l border-b border-white/5">Wkrótce</div>
+                            <!-- Trigger: High Latency -->
+                            <div class="p-6 bg-slate-900/40 rounded-3xl border border-white/5 space-y-6">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-4">
                                         <div class="p-3 bg-amber-500/10 text-amber-500 rounded-2xl"><i data-lucide="activity" class="w-6 h-6"></i></div>
                                         <div>
-                                            <p class="text-sm font-bold text-slate-300">Nagły wzrost opóźnień (Ping)</p>
-                                            <p class="text-[12px] text-slate-600 uppercase tracking-widest">Monitorowanie stabilności łącza WAN</p>
+                                            <p class="text-sm font-bold text-slate-200">Nagly wzrost opoznien (Ping)</p>
+                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest">Monitorowanie stabilnosci lacza WAN</p>
                                         </div>
                                     </div>
-                                    <div class="w-11 h-6 bg-slate-800/50 rounded-full relative">
-                                        <div class="absolute left-1 top-1 w-4 h-4 bg-slate-700 rounded-full"></div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="latency_alert_enabled" class="sr-only peer" <?= ($config['triggers']['latency_alert_enabled'] ?? false) ? 'checked' : '' ?>>
+                                        <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600 after:border-none"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center gap-6 pl-12">
+                                    <div class="w-full">
+                                        <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-3">Prog opoznienia (ms)</label>
+                                        <div class="flex items-center gap-4">
+                                            <input type="range" name="latency_threshold_ms" min="10" max="500" step="5" value="<?= htmlspecialchars($config['triggers']['latency_threshold_ms'] ?? 100) ?>" class="flex-grow accent-amber-500" oninput="this.nextElementSibling.value = this.value + ' ms'">
+                                            <output class="text-xs font-mono text-amber-400 bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/20 min-w-[80px] text-center"><?= htmlspecialchars($config['triggers']['latency_threshold_ms'] ?? 100) ?> ms</output>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

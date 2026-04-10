@@ -79,7 +79,16 @@ $config = [
     ],
     'triggers' => [
         'speed_alert_enabled' => false,
-        'speed_threshold_mbps' => 100
+        'speed_threshold_mbps' => 100,
+        'new_device_alert_enabled' => false,
+        'ips_alert_enabled' => false,
+        'latency_alert_enabled' => false,
+        'latency_threshold_ms' => 100
+    ],
+    'protect' => [
+        'enabled' => null, // null = auto-detect
+        'vlan_id' => 40,
+        'camera_grid' => []
     ],
     'debug' => filter_var($_ENV['DEBUG'] ?? 'false', FILTER_VALIDATE_BOOLEAN)
 ];
