@@ -84,9 +84,11 @@ if (!$threat_detection_enabled) {
 // Factor 4: Threat Response (20 points)
 // Blocked threats = GOOD (IPS working). Only penalize unblocked (alerts that passed through)
 $unblocked_count = 0;
+$critical_events_count = 0;
 foreach ($security_events as $event) {
-    if (($event['action'] ?? '') === 'Wykryto') { // alert, not blocked
+    if (($event['action'] ?? '') === 'Wykryto') {
         $unblocked_count++;
+        $critical_events_count++;
     }
 }
 if ($unblocked_count > 50) {
@@ -378,54 +380,56 @@ $top_countries = array_slice($top_countries, 0, 5);
                         </div>
                         <?php endif; ?>
 
-                        <?php foreach ($security_events as $event): 
-                            $severity_colors = [
-                                'critical' => ['bg' => 'bg-red-500/10', 'text' => 'text-red-400', 'border' => 'border-red-500/20', 'icon' => 'alert-triangle'],
-                                'high' => ['bg' => 'bg-orange-500/10', 'text' => 'text-orange-400', 'border' => 'border-orange-500/20', 'icon' => 'alert-circle'],
-                                'medium' => ['bg' => 'bg-amber-500/10', 'text' => 'text-amber-400', 'border' => 'border-amber-500/20', 'icon' => 'info'],
-                                'low' => ['bg' => 'bg-blue-500/10', 'text' => 'text-blue-400', 'border' => 'border-blue-500/20', 'icon' => 'info']
-                            ];
-                            $colors = $severity_colors[$event['severity']] ?? $severity_colors['medium'];
-                            $cc = $event['country_code'] ?? 'un';
-                        ?>
-                        <div class="threat-event-row bg-slate-900/50 rounded-2xl border border-white/5 p-4 hover:border-rose-500/30 transition-all group relative overflow-hidden active:scale-[0.99]" data-timestamp="<?= $event['timestamp'] ?? 0 ?>">
-                            <div class="absolute left-0 top-0 bottom-0 w-1 <?= $colors['bg'] ?>"></div>
-                            <div class="flex items-center gap-4">
-                                <div class="p-2.5 <?= $colors['bg'] ?> rounded-xl <?= $colors['text'] ?> shrink-0 shadow-lg shadow-black/20">
-                                    <i data-lucide="<?= $colors['icon'] ?>" class="w-5 h-5"></i>
-                                </div>
-                                <div class="flex-grow min-w-0">
-                                    <div class="flex items-center justify-between gap-4">
+                        <div id="security-events-container"></div>
+                        <script>
+                        const securityEventsData = <?= json_encode($security_events) ?>;
+                        function renderSecurityEvents(events) {
+                            const colors = {
+                                critical: {bg:'bg-red-500/10', text:'text-red-400', icon:'alert-triangle'},
+                                high: {bg:'bg-orange-500/10', text:'text-orange-400', icon:'alert-circle'},
+                                medium: {bg:'bg-amber-500/10', text:'text-amber-400', icon:'info'},
+                                low: {bg:'bg-blue-500/10', text:'text-blue-400', icon:'info'}
+                            };
+                            const container = document.getElementById('security-events-container');
+                            if (!events.length) {
+                                container.innerHTML = '<div class="text-center py-8 text-slate-500 text-xs">Brak zdarzen w wybranym zakresie</div>';
+                                return;
+                            }
+                            container.innerHTML = events.map(e => {
+                                const c = colors[e.severity] || colors.medium;
+                                const cc = e.country_code || 'un';
+                                return `<div class="threat-event-row bg-slate-900/50 rounded-2xl border border-white/5 p-4 hover:border-rose-500/30 transition-all group relative overflow-hidden mb-2" data-timestamp="${e.timestamp||0}">
+                                    <div class="absolute left-0 top-0 bottom-0 w-1 ${c.bg}"></div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="p-2.5 ${c.bg} rounded-xl ${c.text} shrink-0"><i data-lucide="${c.icon}" class="w-5 h-5"></i></div>
                                         <div class="flex-grow min-w-0">
-                                            <div class="flex items-center gap-2 mb-1">
-                                                 <img src="https://flagcdn.com/24x18/<?= $cc ?>.png" class="w-4 h-3 rounded-sm opacity-80" title="<?= strtoupper($cc) ?>">
-                                                 <h3 class="font-bold text-white text-sm truncate"><?= htmlspecialchars($event['signature'] ?? 'Zagrożenie bezpieczeństwa') ?></h3>
-                                            </div>
-                                            <div class="flex items-center flex-wrap gap-x-4 gap-y-1 text-[12px] font-medium italic">
-                                                <span class="flex items-center gap-1.5 text-slate-400">
-                                                    <i data-lucide="clock" class="w-3 h-3 text-slate-500"></i>
-                                                    <?= $event['time'] ?>
-                                                </span>
-                                                <div class="flex items-center gap-2 bg-white/5 px-2 py-0.5 rounded-md border border-white/5">
-                                                    <span class="text-rose-400/80 font-mono"><?= $event['src_ip'] ?></span>
-                                                    <i data-lucide="chevrons-right" class="w-3 h-3 text-slate-600"></i>
-                                                    <span class="text-emerald-400/80 font-mono"><?= $event['dst_ip'] ?></span>
+                                            <div class="flex items-center justify-between gap-4">
+                                                <div class="flex-grow min-w-0">
+                                                    <div class="flex items-center gap-2 mb-1">
+                                                        <img src="https://flagcdn.com/24x18/${cc}.png" class="w-4 h-3 rounded-sm opacity-80" title="${cc.toUpperCase()}">
+                                                        <h3 class="font-bold text-white text-sm truncate">${e.signature||'Zagrozenie'}</h3>
+                                                    </div>
+                                                    <div class="flex items-center flex-wrap gap-x-4 gap-y-1 text-[12px] font-medium italic">
+                                                        <span class="flex items-center gap-1.5 text-slate-400"><i data-lucide="clock" class="w-3 h-3 text-slate-500"></i>${e.time}</span>
+                                                        <div class="flex items-center gap-2 bg-white/5 px-2 py-0.5 rounded-md border border-white/5">
+                                                            <span class="text-rose-400/80 font-mono">${e.src_ip}</span>
+                                                            <span class="text-slate-600">»</span>
+                                                            <span class="text-emerald-400/80 font-mono">${e.dst_ip||'Local'}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
+                                                <div class="shrink-0"><p class="text-[11px] font-black ${c.text} uppercase tracking-widest">${(e.severity||'').toUpperCase()}</p></div>
                                             </div>
-                                        </div>
-                                        <div class="flex items-center gap-3 shrink-0">
-                                            <div class="text-right hidden sm:block">
-                                                <p class="text-[11px] font-black <?= $colors['text'] ?> uppercase tracking-widest"><?= strtoupper($event['severity']) ?></p>
-                                            </div>
-                                            <button class="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-white/5 text-slate-400 hover:text-white">
-                                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
-                                            </button>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
+                                </div>`;
+                            }).join('');
+                            if (typeof lucide !== 'undefined') lucide.createIcons();
+                        }
+                        document.addEventListener('DOMContentLoaded', () => {
+                            MiniPagination.create('security-events-container', securityEventsData, renderSecurityEvents);
+                        });
+                        </script>
                     </div>
                 </div>
             </div>
