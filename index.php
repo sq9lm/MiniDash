@@ -179,22 +179,37 @@ try {
     // VLAN Stats — load network config from API first
     get_vlans_from_api();
     $vlan_stats = [];
+    $vlan_clients = []; // Clients grouped by VLAN name for detail modal
     foreach ($clients as &$client) {
         $vlan_id = $client['vlan'] ?? $client['network_id'] ?? null;
         $ip = $client['ipAddress'] ?? $client['ip'] ?? '';
-        
+
         // Use centralized detection
         $vlan_id = detect_vlan_id($ip, $vlan_id);
-        $client['vlan'] = $vlan_id; // Update client object for later use in table/modals
-        
+        $client['vlan'] = $vlan_id;
+
         // Also detect VPN status
         $client['is_vpn'] = ($vlan_id === 0 || $vlan_id === 69 || $vlan_id === 70);
-        
+
         $vlan_name = get_vlan_name($vlan_id);
+        $c_rx = $client['rx_rate'] ?? $client['rx_bytes-r'] ?? 0;
+        $c_tx = $client['tx_rate'] ?? $client['tx_bytes-r'] ?? 0;
+
         if (!isset($vlan_stats[$vlan_name])) {
-            $vlan_stats[$vlan_name] = ['count' => 0, 'id' => (int)$vlan_id];
+            $vlan_stats[$vlan_name] = ['count' => 0, 'id' => (int)$vlan_id, 'rx' => 0, 'tx' => 0];
         }
         $vlan_stats[$vlan_name]['count']++;
+        $vlan_stats[$vlan_name]['rx'] += $c_rx;
+        $vlan_stats[$vlan_name]['tx'] += $c_tx;
+
+        $vlan_clients[$vlan_name][] = [
+            'name' => $client['name'] ?? $client['hostname'] ?? $client['macAddress'] ?? $client['mac'] ?? '?',
+            'ip' => $ip,
+            'mac' => $client['macAddress'] ?? $client['mac'] ?? '',
+            'rx' => $c_rx,
+            'tx' => $c_tx,
+            'is_wired' => $client['is_wired'] ?? false,
+        ];
     }
     // Find Top Consumers (Bandwidth Hogs)
     $top_downloader = null;
@@ -569,7 +584,7 @@ try {
                 </div>
                 <div class="space-y-7 flex-grow">
                     <?php foreach ($vlan_stats as $name => $stat): ?>
-                        <div class="group">
+                        <div class="group cursor-pointer" onclick="openVlanDetail('<?= htmlspecialchars($name, ENT_QUOTES) ?>')">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="text-xs font-bold text-slate-300 group-hover:text-blue-400 transition-colors"><?= htmlspecialchars($name) ?></span>
                                 <span class="text-[10px] font-mono text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded">
@@ -577,7 +592,7 @@ try {
                                 </span>
                             </div>
                             <div class="vlan-bar-container bg-slate-800/50 h-2 rounded-full overflow-hidden">
-                                <div class="vlan-bar-fill h-full bg-gradient-to-r from-blue-600 to-indigo-400 rounded-full" 
+                                <div class="vlan-bar-fill h-full bg-gradient-to-r from-blue-600 to-indigo-400 rounded-full"
                                      style="width: <?= ($stat['count'] / max(count($clients), 1)) * 100 ?>%"></div>
                             </div>
                         </div>
@@ -1826,7 +1841,90 @@ try {
                 document.getElementById('stalker-widget-count').textContent = '-';
                 document.getElementById('stalker-widget-last').textContent = '';
             });
+
+        // VLAN Detail Modal
+        const vlanData = <?= json_encode($vlan_clients) ?>;
+        const vlanStats = <?= json_encode($vlan_stats) ?>;
+
+        function openVlanDetail(vlanName) {
+            const clients = vlanData[vlanName] || [];
+            const stats = vlanStats[vlanName] || {count:0, rx:0, tx:0};
+            const modal = document.getElementById('vlanDetailModal');
+            document.getElementById('vlan-detail-title').textContent = vlanName;
+            document.getElementById('vlan-detail-count').textContent = clients.length + ' urzadzen';
+            document.getElementById('vlan-detail-rx').textContent = formatBps(stats.rx || 0);
+            document.getElementById('vlan-detail-tx').textContent = formatBps(stats.tx || 0);
+
+            const tbody = document.getElementById('vlan-detail-body');
+            if (clients.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-500 text-xs">Brak klientow</td></tr>';
+            } else {
+                // Sort by total traffic descending
+                clients.sort((a,b) => (b.rx + b.tx) - (a.rx + a.tx));
+                tbody.innerHTML = clients.map(c => {
+                    const icon = c.is_wired ? 'monitor' : 'wifi';
+                    return `<tr class="hover:bg-white/[0.02] transition-colors border-t border-white/5">
+                        <td class="py-3 px-4"><div class="flex items-center gap-2"><i data-lucide="${icon}" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i><span class="text-sm text-white truncate">${c.name}</span></div></td>
+                        <td class="py-3 px-4 text-xs font-mono text-slate-400">${c.ip || '—'}</td>
+                        <td class="py-3 px-4 text-xs font-mono text-slate-500">${c.mac || '—'}</td>
+                        <td class="py-3 px-4 text-right text-xs font-bold text-emerald-400">${formatBps(c.rx * 8)}</td>
+                        <td class="py-3 px-4 text-right text-xs font-bold text-amber-400">${formatBps(c.tx * 8)}</td>
+                    </tr>`;
+                }).join('');
+            }
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        function closeVlanDetail() {
+            document.getElementById('vlanDetailModal').classList.add('hidden');
+            document.getElementById('vlanDetailModal').classList.remove('flex');
+        }
     </script>
+
+    <!-- VLAN Detail Modal -->
+    <div id="vlanDetailModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center" onclick="if(event.target===this)closeVlanDetail()">
+        <div class="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl w-full max-w-3xl max-h-[80vh] overflow-hidden shadow-2xl">
+            <div class="p-8 pb-4 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                        <i data-lucide="layers" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white" id="vlan-detail-title">VLAN</h2>
+                        <p class="text-xs text-slate-500" id="vlan-detail-count">0 urzadzen</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6 mr-8">
+                    <div class="text-right">
+                        <div class="text-[9px] text-slate-500 uppercase font-bold">Download</div>
+                        <div class="text-sm font-bold text-emerald-400" id="vlan-detail-rx">0</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[9px] text-slate-500 uppercase font-bold">Upload</div>
+                        <div class="text-sm font-bold text-amber-400" id="vlan-detail-tx">0</div>
+                    </div>
+                </div>
+                <button onclick="closeVlanDetail()" class="text-slate-500 hover:text-white transition">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="px-8 pb-8 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-[9px] text-slate-500 uppercase tracking-wider font-bold border-b border-white/5">
+                            <th class="text-left py-3 px-4">Klient</th>
+                            <th class="text-left py-3 px-4">IP</th>
+                            <th class="text-left py-3 px-4">MAC</th>
+                            <th class="text-right py-3 px-4">Download</th>
+                            <th class="text-right py-3 px-4">Upload</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vlan-detail-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
 </html>
