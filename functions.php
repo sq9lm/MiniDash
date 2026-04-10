@@ -1097,11 +1097,29 @@ function render_personal_modal() {
                                 $client_ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
                                 $current_loc = get_ip_location($client_ip);
 
-                                $historyFile = __DIR__ . '/data/login_history.json';
+                                // Read from SQLite first, fallback to JSON
                                 $historyData = [];
-                                if (file_exists($historyFile)) {
-                                    $loaded = json_decode(file_get_contents($historyFile), true);
-                                    if (is_array($loaded)) $historyData = $loaded;
+                                if (isset($db)) {
+                                    try {
+                                        $stmt = $db->query("SELECT ip, location, os, browser, logged_at FROM login_history ORDER BY logged_at DESC LIMIT 20");
+                                        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                        foreach ($rows as $r) {
+                                            $historyData[] = [
+                                                'timestamp' => strtotime($r['logged_at']),
+                                                'ip' => $r['ip'],
+                                                'location' => $r['location'],
+                                                'os' => $r['os'],
+                                                'browser' => $r['browser'],
+                                            ];
+                                        }
+                                    } catch (Exception $e) {}
+                                }
+                                if (empty($historyData)) {
+                                    $historyFile = __DIR__ . '/data/login_history.json';
+                                    if (file_exists($historyFile)) {
+                                        $loaded = json_decode(file_get_contents($historyFile), true);
+                                        if (is_array($loaded)) $historyData = $loaded;
+                                    }
                                 }
                              ?>
                              <div class="p-4 flex items-center justify-between hover:bg-white/[0.02] transition">
@@ -1122,13 +1140,12 @@ function render_personal_modal() {
                             </div>
 
                             <!-- Past History -->
-                            <?php 
+                            <?php
                             $hist_count = 0;
                             if (!empty($historyData)):
                                 foreach ($historyData as $idx => $entry):
-                                    // Skip current (first entry in file is newest, likely current or just previous)
                                     if ($idx === 0 && ($entry['ip'] ?? '') === $client_ip) continue;
-                                    if ($hist_count >= 3) break;
+                                    if ($hist_count >= 5) break;
                                     $hist_count++;
                             ?>
                              <div class="p-4 flex items-center justify-between hover:bg-white/[0.02] transition border-t border-white/[0.02]">
@@ -1161,31 +1178,32 @@ function render_personal_modal() {
                 </div>
 
                 <!-- 2FA Section -->
-                <div class="mt-6 border border-white/10 rounded-2xl p-5 bg-gradient-to-br from-slate-900 to-slate-950 flex flex-col justify-center relative group overflow-hidden">
+                <div class="mt-6 mb-4 border border-white/10 rounded-2xl p-5 bg-gradient-to-br from-slate-900 to-slate-950 relative group overflow-hidden">
                      <div class="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                     <div class="flex items-center gap-4 relative z-10">
-                        <div class="w-12 h-12 rounded-xl bg-blue-600/10 text-blue-500 flex items-center justify-center border border-blue-600/20 group-hover:scale-110 transition-transform shadow-lg shadow-blue-900/20">
-                             <i data-lucide="shield-check" class="w-6 h-6"></i>
+                     <div class="flex items-center justify-between relative z-10">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-blue-600/10 text-blue-500 flex items-center justify-center border border-blue-600/20 group-hover:scale-110 transition-transform shadow-lg shadow-blue-900/20">
+                                 <i data-lucide="shield-check" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-white">Podwójne Uwierzytelnianie (2FA)</h3>
+                                <p class="text-[10px] font-black text-blue-400/80 uppercase tracking-widest mt-1">Coming Soon...</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 class="text-sm font-bold text-white">Podwójne Uwierzytelnianie (2FA)</h3>
-                            <p class="text-[10px] font-black text-blue-400/80 uppercase tracking-widest mt-1">Coming Soon...</p>
+                        <div class="opacity-50 pointer-events-none">
+                            <div class="w-11 h-6 bg-slate-800 rounded-full relative border border-white/10">
+                                 <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-slate-600 rounded-full"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center relative z-10 opacity-50 pointer-events-none">
-                        <span class="text-[10px] text-slate-500 font-medium">Zabezpiecz konto dodatkową warstwą ochrony.</span>
-                        <div class="w-10 h-5 bg-slate-800 rounded-full relative border border-white/10">
-                             <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-slate-600 rounded-full"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pt-6 flex justify-end sticky bottom-0 bg-slate-900/95 backdrop-blur py-4 -mx-6 px-6 border-t border-white/5 mt-4">
-                    <button type="submit" class="px-12 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition shadow-xl shadow-blue-600/20 text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-                         Zapisz Dane
-                    </button>
                 </div>
             </form>
+
+            <div class="p-6 bg-slate-950/50 border-t border-white/5 flex justify-end shrink-0">
+                <button type="submit" form="personalForm" class="px-12 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition shadow-xl shadow-blue-600/20 text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+                     Zapisz Dane
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1242,14 +1260,14 @@ function render_personal_modal() {
                 const result = await response.json();
                 
                 if (result.success) {
-                    // Refresh current page to see changes
-                    location.reload();
+                    showToast('Profil zaktualizowany', 'success');
+                    setTimeout(() => location.reload(), 1200);
                 } else {
-                    alert('Błąd: ' + result.message);
+                    showToast('Błąd: ' + result.message, 'error');
                 }
             } catch (err) {
                 console.error(err);
-                alert('Wystąpił nieoczekiwany błąd zapisu.');
+                showToast('Wystąpił nieoczekiwany błąd zapisu', 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalText;
@@ -1641,11 +1659,49 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
         }
         setInterval(updateNavClock, 30000); // Co 30 sekund
         // Removed auto-reload to prevent closing modals
-        
+
+        // Toast notification system
+        (function() {
+            if (document.getElementById('toast-container')) return;
+            const tc = document.createElement('div');
+            tc.id = 'toast-container';
+            tc.style.cssText = 'position:fixed;top:24px;left:24px;z-index:99999;display:flex;flex-direction:column;gap:12px;pointer-events:none;';
+            document.body.appendChild(tc);
+        })();
+        function showToast(message, type) {
+            type = type || 'success';
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colors = {
+                success: { bg:'rgba(16,185,129,0.15)', border:'rgba(16,185,129,0.3)', text:'#34d399', icon:'check-circle' },
+                error:   { bg:'rgba(239,68,68,0.15)',  border:'rgba(239,68,68,0.3)',  text:'#f87171', icon:'x-circle' },
+                warning: { bg:'rgba(245,158,11,0.15)', border:'rgba(245,158,11,0.3)', text:'#fbbf24', icon:'alert-triangle' }
+            };
+            const c = colors[type] || colors.success;
+            toast.style.cssText = 'pointer-events:auto;background:'+c.bg+';border:1px solid '+c.border+';color:'+c.text+';padding:14px 20px;border-radius:16px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;backdrop-filter:blur(12px);transform:translateX(-120%);opacity:0;transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1),opacity 0.3s ease;';
+            toast.innerHTML = '<i data-lucide="'+c.icon+'" style="width:20px;height:20px;flex-shrink:0;"></i><span>'+message+'</span>';
+            container.appendChild(toast);
+            if (typeof lucide !== 'undefined') lucide.createIcons({nodes:[toast]});
+            requestAnimationFrame(function() { toast.style.transform='translateX(0)'; toast.style.opacity='1'; });
+            setTimeout(function() {
+                toast.style.transform='translateX(-120%)'; toast.style.opacity='0';
+                setTimeout(function() { toast.remove(); }, 400);
+            }, 4000);
+        }
+
         function openNotifSettings() {
             document.getElementById('notifSettingsModal').classList.add('active');
             document.body.style.overflow = 'hidden';
             lucide.createIcons();
+            // Init collapsible toggle for notification sections
+            document.querySelectorAll('#notifSettingsModal .space-y-6').forEach(section => {
+                const cb = section.querySelector(':scope > .flex input[type="checkbox"]');
+                const fields = section.querySelector(':scope > .notif-fields');
+                if (!cb || !fields) return;
+                cb.addEventListener('change', () => {
+                    fields.classList.toggle('collapsed', !cb.checked);
+                });
+            });
         }
 
         function closeNotifSettings() {
@@ -1688,13 +1744,13 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                         location.reload();
                     }, 1000);
                 } else {
-                    alert('Błąd: ' + result.message);
+                    showToast('Błąd: ' + result.message, 'error');
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                     lucide.createIcons();
                 }
             } catch (e) {
-                alert('Błąd sieci');
+                showToast('Błąd sieci', 'error');
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 lucide.createIcons();
@@ -1702,14 +1758,23 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
         }
 
         function openPersonalModal() {
-            document.getElementById('personalModal').classList.add('active');
-            document.body.style.overflow = 'hidden';
-            lucide.createIcons();
+            const modal = document.getElementById('personalModal');
+            if (modal) {
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                lucide.createIcons();
+            } else {
+                console.error('personalModal not found!');
+            }
         }
 
-        function closePersonalModal() {
-            document.getElementById('personalModal').classList.remove('active');
-            document.body.style.overflow = '';
+        function closePersonalModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            const modal = document.getElementById('personalModal');
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
         }
 
         function openSystemInfoModal() {
@@ -1902,7 +1967,7 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
     <!-- Modal: Notification Settings -->
     <div id="notifSettingsModal" class="modal-overlay" onclick="closeNotifSettings()">
         <div class="modal-container max-w-5xl" onclick="event.stopPropagation()">
-            <form onsubmit="event.preventDefault(); saveNotifSettings(this);" class="flex flex-col h-full max-h-[90vh]">
+            <form onsubmit="event.preventDefault(); saveNotifSettings(this);" class="flex flex-col flex-1 min-h-0 overflow-hidden">
                 <div class="modal-header shrink-0">
                     <div>
                         <h2 class="text-xl font-bold flex items-center gap-2 text-white">
@@ -2067,18 +2132,20 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                                     <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500 after:border-none"></div>
                                 </label>
                             </div>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">SMS API URL</label>
-                                    <input type="text" name="sms_url" value="<?= htmlspecialchars($config['sms_notifications']['api_url'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500/50" placeholder="https://sms.gateway.com">
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer docelowy</label>
-                                    <input type="text" name="sms_phone" value="<?= htmlspecialchars($config['sms_notifications']['to_number'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500/50" placeholder="+48 123 456 789">
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Key / Token</label>
-                                    <input type="password" name="sms_key" value="<?= htmlspecialchars($config['sms_notifications']['api_key'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500/50" placeholder="••••••••">
+                            <div class="notif-fields <?= !($config['sms_notifications']['enabled'] ?? false) ? 'collapsed' : '' ?>">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">SMS API URL</label>
+                                        <input type="text" name="sms_url" value="<?= htmlspecialchars($config['sms_notifications']['api_url'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500/50" placeholder="https://sms.gateway.com">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer docelowy</label>
+                                        <input type="text" name="sms_phone" value="<?= htmlspecialchars($config['sms_notifications']['to_number'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500/50" placeholder="+48 123 456 789">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Key / Token</label>
+                                        <input type="password" name="sms_key" value="<?= htmlspecialchars($config['sms_notifications']['api_key'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500/50" placeholder="••••••••">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2098,14 +2165,16 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                                     <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600 after:border-none"></div>
                                 </label>
                             </div>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Topic (Unikalny kanał)</label>
-                                    <input type="text" name="ntfy_topic" value="<?= htmlspecialchars($config['ntfy_notifications']['topic'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500/50" placeholder="np. minidash_alerty">
-                                </div>
-                                <div>
-                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Serwer Push</label>
-                                    <input type="text" name="ntfy_server" value="<?= htmlspecialchars($config['ntfy_notifications']['server'] ?? 'https://ntfy.sh') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500/50">
+                            <div class="notif-fields <?= !($config['ntfy_notifications']['enabled'] ?? false) ? 'collapsed' : '' ?>">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Topic (Unikalny kanał)</label>
+                                        <input type="text" name="ntfy_topic" value="<?= htmlspecialchars($config['ntfy_notifications']['topic'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500/50" placeholder="np. minidash_alerty">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Serwer Push</label>
+                                        <input type="text" name="ntfy_server" value="<?= htmlspecialchars($config['ntfy_notifications']['server'] ?? 'https://ntfy.sh') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500/50">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2149,7 +2218,7 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                     </div>
                 </div>
 
-                <div class="modal-footer shrink-0 p-8 bg-slate-950/30 border-t border-white/5 flex justify-end gap-3">
+                <div class="modal-footer shrink-0 p-6 bg-slate-950/50 border-t border-white/5 flex justify-end gap-3 rounded-b-3xl">
                     <button type="button" onclick="closeNotifSettings()" class="px-8 py-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-2xl font-bold transition border border-white/10">
                         Anuluj
                     </button>
@@ -2297,80 +2366,81 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                     <?php endforeach; ?>
                 </div>
 
-                <!-- Session Table -->
+                <!-- Active Clients Traffic -->
                 <div class="space-y-4">
-                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Aktywne Sesje Ingress / Egress</h3>
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Aktywny ruch klientow</h3>
+                        <button onclick="loadWanFlows()" class="text-[9px] text-slate-600 hover:text-slate-400 transition uppercase tracking-wider">
+                            <i data-lucide="refresh-cw" class="w-3 h-3 inline mr-1"></i>Odswiez
+                        </button>
+                    </div>
                     <div class="bg-slate-900/50 rounded-2xl border border-white/5 overflow-hidden">
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-slate-950/30 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
-                                    <th class="px-6 py-4">Protokół</th>
-                                    <th class="px-6 py-4">IP Zewnętrzny (Destination)</th>
-                                    <th class="px-6 py-4">Port</th>
-                                    <th class="px-6 py-4 text-right">Prędkość</th>
+                                    <th class="px-6 py-4">Klient</th>
+                                    <th class="px-6 py-4">IP / Siec</th>
+                                    <th class="px-6 py-4 text-right">Download</th>
+                                    <th class="px-6 py-4 text-right">Upload</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-white/[0.02]">
-                                <tr class="hover:bg-white/[0.02] transition-colors">
-                                    <td class="px-6 py-4">
-                                        <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-[10px] font-mono text-blue-400 border border-blue-500/20">HTTPS</span>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm font-bold text-white/90">142.250.184.206</td>
-                                    <td class="px-6 py-4 text-xs font-mono text-slate-500">443</td>
-                                    <td class="px-6 py-4 text-right text-xs font-bold text-emerald-400">1.2 Mbps</td>
-                                </tr>
-                                <tr class="hover:bg-white/[0.02] transition-colors">
-                                    <td class="px-6 py-4">
-                                        <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[10px] font-mono text-purple-400 border border-purple-500/20">QUIC</span>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm font-bold text-white/90">23.235.43.27</td>
-                                    <td class="px-6 py-4 text-xs font-mono text-slate-500">443</td>
-                                    <td class="px-6 py-4 text-right text-xs font-bold text-emerald-400">840 Kbps</td>
-                                </tr>
-                                <tr class="hover:bg-white/[0.02] transition-colors">
-                                    <td class="px-6 py-4">
-                                        <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-mono text-amber-400 border border-amber-500/20">HTTP</span>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm font-bold text-white/90">104.26.10.228</td>
-                                    <td class="px-6 py-4 text-xs font-mono text-slate-500">80</td>
-                                    <td class="px-6 py-4 text-right text-xs font-bold text-emerald-400">120 Kbps</td>
-                                </tr>
-                                <tr class="hover:bg-white/[0.02] transition-colors">
-                                    <td class="px-6 py-4">
-                                        <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[10px] font-mono text-rose-400 border border-rose-500/20">VPN</span>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm font-bold text-white/90">45.132.22.11</td>
-                                    <td class="px-6 py-4 text-xs font-mono text-slate-500">1194</td>
-                                    <td class="px-6 py-4 text-right text-xs font-bold text-emerald-400">4.5 Mbps</td>
-                                </tr>
-                                <tr class="hover:bg-white/[0.02] transition-colors">
-                                    <td class="px-6 py-4">
-                                        <span class="px-2 py-0.5 rounded-md bg-slate-500/10 text-[10px] font-mono text-slate-400 border border-slate-500/20">SSH</span>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm font-bold text-white/90">62.210.15.10</td>
-                                    <td class="px-6 py-4 text-xs font-mono text-slate-500">22</td>
-                                    <td class="px-6 py-4 text-right text-xs font-bold text-emerald-400">12 Kbps</td>
-                                </tr>
-                                <tr class="hover:bg-white/[0.02] transition-colors">
-                                    <td class="px-6 py-4">
-                                        <span class="px-2 py-0.5 rounded-md bg-cyan-500/10 text-[10px] font-mono text-cyan-400 border border-cyan-500/20">DNS</span>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm font-bold text-white/90">8.8.8.8</td>
-                                    <td class="px-6 py-4 text-xs font-mono text-slate-500">53</td>
-                                    <td class="px-6 py-4 text-right text-xs font-bold text-emerald-400">2 Kbps</td>
-                                </tr>
-                                <tr class="hover:bg-white/[0.02] transition-colors">
-                                    <td class="px-6 py-4">
-                                        <span class="px-2 py-0.5 rounded-md bg-indigo-500/10 text-[10px] font-mono text-indigo-400 border border-indigo-500/20">NTP</span>
-                                    </td>
-                                    <td class="px-6 py-4 text-sm font-bold text-white/90">129.6.15.28</td>
-                                    <td class="px-6 py-4 text-xs font-mono text-slate-500">123</td>
-                                    <td class="px-6 py-4 text-right text-xs font-bold text-emerald-400">< 1 Kbps</td>
-                                </tr>
+                            <tbody id="wan-flows-body" class="divide-y divide-white/[0.02]">
+                                <tr><td colspan="4" class="px-6 py-8 text-center text-slate-500 text-xs">Ladowanie...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
+                <script>
+                function formatBpsJs(bps) {
+                    if (bps >= 1000000000) return (bps/1000000000).toFixed(1) + ' Gbps';
+                    if (bps >= 1000000) return (bps/1000000).toFixed(1) + ' Mbps';
+                    if (bps >= 1000) return (bps/1000).toFixed(1) + ' Kbps';
+                    return bps + ' bps';
+                }
+                function loadWanFlows() {
+                    fetch('api_wan_flows.php')
+                        .then(r => r.json())
+                        .then(data => {
+                            const tbody = document.getElementById('wan-flows-body');
+                            const flows = data.data || [];
+                            if (flows.length === 0) {
+                                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-slate-500 text-xs">Brak aktywnego ruchu</td></tr>';
+                                return;
+                            }
+                            tbody.innerHTML = flows.map(f => {
+                                const icon = f.is_wired ? 'monitor' : 'wifi';
+                                const netColor = f.is_wired ? 'text-blue-400' : 'text-purple-400';
+                                return `<tr class="hover:bg-white/[0.02] transition-colors">
+                                    <td class="px-6 py-3">
+                                        <div class="flex items-center gap-3">
+                                            <i data-lucide="${icon}" class="w-4 h-4 text-slate-500 shrink-0"></i>
+                                            <span class="text-sm font-bold text-white/90 truncate">${f.name}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-3">
+                                        <div class="text-xs font-mono text-slate-400">${f.ip || '—'}</div>
+                                        <div class="text-[9px] ${netColor}">${f.network || '—'}</div>
+                                    </td>
+                                    <td class="px-6 py-3 text-right text-xs font-bold text-emerald-400">${formatBpsJs(f.rx_bps)}</td>
+                                    <td class="px-6 py-3 text-right text-xs font-bold text-amber-400">${formatBpsJs(f.tx_bps)}</td>
+                                </tr>`;
+                            }).join('');
+                            if (typeof lucide !== 'undefined') lucide.createIcons();
+                        })
+                        .catch(() => {
+                            document.getElementById('wan-flows-body').innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-red-400 text-xs">Blad ladowania</td></tr>';
+                        });
+                }
+                // Auto-load when modal opens
+                document.addEventListener('DOMContentLoaded', () => {
+                    const observer = new MutationObserver(() => {
+                        const modal = document.getElementById('wanModal');
+                        if (modal && modal.classList.contains('active')) loadWanFlows();
+                    });
+                    const modal = document.getElementById('wanModal');
+                    if (modal) observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+                });
+                </script>
             </div>
             <div class="modal-footer p-6 border-t border-white/5 bg-slate-900/30 flex justify-end">
                 <button type="button" onclick="closeWanModal()" class="px-8 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg shadow-blue-600/20">
@@ -2490,11 +2560,29 @@ function _disabled_render_personal_modal() {
                                 $client_ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
                                 $current_loc = get_ip_location($client_ip);
 
-                                $historyFile = __DIR__ . '/data/login_history.json';
+                                // Read from SQLite first, fallback to JSON
                                 $historyData = [];
-                                if (file_exists($historyFile)) {
-                                    $loaded = json_decode(file_get_contents($historyFile), true);
-                                    if (is_array($loaded)) $historyData = $loaded;
+                                if (isset($db)) {
+                                    try {
+                                        $stmt = $db->query("SELECT ip, location, os, browser, logged_at FROM login_history ORDER BY logged_at DESC LIMIT 20");
+                                        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                        foreach ($rows as $r) {
+                                            $historyData[] = [
+                                                'timestamp' => strtotime($r['logged_at']),
+                                                'ip' => $r['ip'],
+                                                'location' => $r['location'],
+                                                'os' => $r['os'],
+                                                'browser' => $r['browser'],
+                                            ];
+                                        }
+                                    } catch (Exception $e) {}
+                                }
+                                if (empty($historyData)) {
+                                    $historyFile = __DIR__ . '/data/login_history.json';
+                                    if (file_exists($historyFile)) {
+                                        $loaded = json_decode(file_get_contents($historyFile), true);
+                                        if (is_array($loaded)) $historyData = $loaded;
+                                    }
                                 }
                              ?>
                              <div class="p-4 flex items-center justify-between hover:bg-white/[0.02] transition">
@@ -2515,13 +2603,12 @@ function _disabled_render_personal_modal() {
                             </div>
 
                             <!-- Past History -->
-                            <?php 
+                            <?php
                             $hist_count = 0;
                             if (!empty($historyData)):
                                 foreach ($historyData as $idx => $entry):
-                                    // Skip current (first entry in file is newest, likely current or just previous)
                                     if ($idx === 0 && ($entry['ip'] ?? '') === $client_ip) continue;
-                                    if ($hist_count >= 3) break;
+                                    if ($hist_count >= 5) break;
                                     $hist_count++;
                             ?>
                              <div class="p-4 flex items-center justify-between hover:bg-white/[0.02] transition border-t border-white/[0.02]">
@@ -2554,31 +2641,32 @@ function _disabled_render_personal_modal() {
                 </div>
 
                 <!-- 2FA Section -->
-                <div class="mt-6 border border-white/10 rounded-2xl p-5 bg-gradient-to-br from-slate-900 to-slate-950 flex flex-col justify-center relative group overflow-hidden">
+                <div class="mt-6 mb-4 border border-white/10 rounded-2xl p-5 bg-gradient-to-br from-slate-900 to-slate-950 relative group overflow-hidden">
                      <div class="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                     <div class="flex items-center gap-4 relative z-10">
-                        <div class="w-12 h-12 rounded-xl bg-blue-600/10 text-blue-500 flex items-center justify-center border border-blue-600/20 group-hover:scale-110 transition-transform shadow-lg shadow-blue-900/20">
-                             <i data-lucide="shield-check" class="w-6 h-6"></i>
+                     <div class="flex items-center justify-between relative z-10">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-blue-600/10 text-blue-500 flex items-center justify-center border border-blue-600/20 group-hover:scale-110 transition-transform shadow-lg shadow-blue-900/20">
+                                 <i data-lucide="shield-check" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-white">Podwójne Uwierzytelnianie (2FA)</h3>
+                                <p class="text-[10px] font-black text-blue-400/80 uppercase tracking-widest mt-1">Coming Soon...</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 class="text-sm font-bold text-white">Podwójne Uwierzytelnianie (2FA)</h3>
-                            <p class="text-[10px] font-black text-blue-400/80 uppercase tracking-widest mt-1">Coming Soon...</p>
+                        <div class="opacity-50 pointer-events-none">
+                            <div class="w-11 h-6 bg-slate-800 rounded-full relative border border-white/10">
+                                 <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-slate-600 rounded-full"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center relative z-10 opacity-50 pointer-events-none">
-                        <span class="text-[10px] text-slate-500 font-medium">Zabezpiecz konto dodatkową warstwą ochrony.</span>
-                        <div class="w-10 h-5 bg-slate-800 rounded-full relative border border-white/10">
-                             <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-slate-600 rounded-full"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pt-6 flex justify-end sticky bottom-0 bg-slate-900/95 backdrop-blur py-4 -mx-6 px-6 border-t border-white/5 mt-4">
-                    <button type="submit" class="px-12 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition shadow-xl shadow-blue-600/20 text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-                         Zapisz Dane
-                    </button>
                 </div>
             </form>
+
+            <div class="p-6 bg-slate-950/50 border-t border-white/5 flex justify-end shrink-0">
+                <button type="submit" form="personalForm" class="px-12 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition shadow-xl shadow-blue-600/20 text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+                     Zapisz Dane
+                </button>
+            </div>
         </div>
     </div>
 
@@ -2635,14 +2723,14 @@ function _disabled_render_personal_modal() {
                 const result = await response.json();
                 
                 if (result.success) {
-                    // Refresh current page to see changes
-                    location.reload();
+                    showToast('Profil zaktualizowany', 'success');
+                    setTimeout(() => location.reload(), 1200);
                 } else {
-                    alert('Błąd: ' + result.message);
+                    showToast('Błąd: ' + result.message, 'error');
                 }
             } catch (err) {
                 console.error(err);
-                alert('Wystąpił nieoczekiwany błąd zapisu.');
+                showToast('Wystąpił nieoczekiwany błąd zapisu', 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalText;
