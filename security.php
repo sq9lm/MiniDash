@@ -228,21 +228,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                                 <?= $geoblocking_enabled ? 'AKTYWNE' : 'WYŁĄCZONE' ?>
                                             </span>
                                         </div>
-                                        <p class="text-[12px] text-slate-500 mt-0.5">Blokada ruchu z wybranych krajów</p>
-
-                                        <?php if ($geoblocking_enabled && !empty($security_settings['blocked_countries'])): ?>
-                                        <div class="mt-2 flex flex-wrap gap-1 items-center">
-                                            <?php foreach (array_slice($security_settings['blocked_countries'], 0, 12) as $country):
-                                                $code = is_numeric($country) ? 'un' : strtolower($country);
-                                                if ($code === 'un') continue;
-                                            ?>
-                                                <img src="https://flagcdn.com/24x18/<?= $code ?>.png" class="w-4 h-3 rounded-sm opacity-50 hover:opacity-100 transition-opacity" title="<?= strtoupper($code) ?>">
-                                            <?php endforeach; ?>
-                                            <?php if (count($security_settings['blocked_countries']) > 12): ?>
-                                                <span class="text-[12px] text-slate-600 font-bold">+<?= count($security_settings['blocked_countries']) - 12 ?></span>
-                                            <?php endif; ?>
-                                        </div>
-                                        <?php endif; ?>
+                                        <p class="text-[12px] text-slate-500 mt-0.5">Blokada ruchu z wybranych krajów<?php if (!empty($security_settings['blocked_countries'])): ?> (<?= count($security_settings['blocked_countries']) ?> krajów)<?php endif; ?></p>
                                     </div>
                                 </a>
                                 
