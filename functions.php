@@ -1452,6 +1452,17 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                 </a>
 
                 <script>
+                    // Navbar monitor: single click = processes, double click = WAN
+                    let _navClickTimer = null;
+                    function navMonitorClick(e) {
+                        if (_navClickTimer) clearTimeout(_navClickTimer);
+                        _navClickTimer = setTimeout(() => { openProcessModal(); }, 250);
+                    }
+                    function navMonitorDblClick(e) {
+                        if (_navClickTimer) { clearTimeout(_navClickTimer); _navClickTimer = null; }
+                        openWanModal();
+                    }
+
                     function smartRefresh() {
                         const btn = document.querySelector('button[title="Odśwież stronę"]');
                         const icon = btn ? btn.querySelector('[data-lucide="refresh-cw"]') : null;
@@ -1507,7 +1518,7 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
 
             <div class="flex items-center gap-4">
                 <!-- System Monitor (Task Manager Style) -->
-                <div onclick="openProcessModal()" class="hidden xl:flex items-center gap-6 px-1 transition-all cursor-pointer group">
+                <div onclick="navMonitorClick(event)" ondblclick="navMonitorDblClick(event)" class="hidden xl:flex items-center gap-6 px-1 transition-all cursor-pointer group" title="Klik: procesy | Podwojny klik: ruch WAN">
                     <div class="flex flex-col gap-1.5">
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] font-black text-slate-500 uppercase tracking-tighter w-6">CPU</span>
