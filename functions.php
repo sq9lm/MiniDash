@@ -435,8 +435,8 @@ function get_unifi_blocked_ips() {
         }
     }
 
-    $siteId = $_SESSION['site_id'] ?? $config['site'] ?? 'default';
-    
+    $siteId = get_trad_site_id($_SESSION['site_id'] ?? $config['site'] ?? 'default');
+
     // Fetch latest blocked IPS events
     $resp = fetch_api("/proxy/network/api/s/$siteId/stat/ips/event?limit=100");
     $raw_events = $resp['data'] ?? [];
