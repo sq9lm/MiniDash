@@ -598,8 +598,8 @@ function get_unifi_security_events() {
     $cached = minidash_cache_get('security_events', 120);
     if ($cached !== null) return $cached;
 
-    $site = $_SESSION['site_id'] ?? $config['site'] ?? 'default';
-    
+    $site = get_trad_site_id($_SESSION['site_id'] ?? $config['site'] ?? 'default');
+
     // Fetch latest 50 IPS events
     $resp = fetch_api("/proxy/network/api/s/$site/stat/ips/event?limit=50");
     $raw_events = $resp['data'] ?? [];
