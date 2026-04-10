@@ -187,7 +187,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                     <div class="absolute right-0 top-full mt-2 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                         <div class="bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
                             <div class="p-2 space-y-1">
-                                <a href="#" class="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/item">
+                                <a href="#" onclick="event.preventDefault(); openSecurityRulesModal();" class="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/item">
                                     <div class="p-2 bg-rose-500/10 rounded-lg text-rose-400 shrink-0">
                                         <i data-lucide="shield" class="w-4 h-4"></i>
                                     </div>
@@ -202,7 +202,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                     </div>
                                 </a>
                                 
-                                 <a href="#" class="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/item">
+                                 <a href="#" onclick="event.preventDefault(); openThreatIntelModal();" class="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/item">
                                     <div class="p-2 bg-blue-500/10 rounded-lg text-blue-400 shrink-0">
                                         <i data-lucide="database" class="w-4 h-4"></i>
                                     </div>
@@ -246,17 +246,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                     </div>
                                 </a>
                                 
-                                <a href="#" class="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/item">
-                                    <div class="p-2 bg-amber-500/10 rounded-lg text-amber-400 shrink-0">
-                                        <i data-lucide="zap" class="w-4 h-4"></i>
-                                    </div>
-                                    <div class="flex-grow min-w-0">
-                                        <p class="text-sm font-bold text-white">Ochrona DDoS</p>
-                                        <p class="text-[12px] text-slate-500 mt-0.5">Konfiguracja limitów i progów</p>
-                                    </div>
-                                </a>
-                                
-                                <a href="#" class="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/item">
+                                <a href="#" onclick="event.preventDefault(); openIgnoreModal();" class="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/item">
                                     <div class="p-2 bg-emerald-500/10 rounded-lg text-emerald-400 shrink-0">
                                         <i data-lucide="list" class="w-4 h-4"></i>
                                     </div>
@@ -268,7 +258,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 
                                 <div class="h-px bg-white/5 my-2"></div>
                                 
-                                <a href="#" class="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/item">
+                                <a href="#" onclick="event.preventDefault(); window.location='settings_notifications.php';" class="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/item">
                                     <div class="p-2 bg-slate-500/10 rounded-lg text-slate-400 shrink-0">
                                         <i data-lucide="bell" class="w-4 h-4"></i>
                                     </div>
@@ -1673,6 +1663,190 @@ $top_countries = array_slice($top_countries, 0, 5);
     </div>
 </div>
 
+<!-- Security Rules Modal -->
+<div id="securityRulesModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center" onclick="if(event.target===this)closeSecurityRulesModal()">
+    <div class="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-4xl max-h-[80vh] overflow-y-auto shadow-2xl">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                <i data-lucide="shield" class="w-6 h-6 text-rose-400"></i>
+                Reguły IPS
+            </h2>
+            <button onclick="closeSecurityRulesModal()" class="text-slate-500 hover:text-white transition">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+        <?php $rules = $security_settings['rule_list'] ?? []; ?>
+        <?php if (empty($rules)): ?>
+            <div class="text-center text-slate-500 py-8">Brak skonfigurowanych reguł IPS</div>
+        <?php else: ?>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-xs text-slate-500 uppercase border-b border-white/5">
+                        <th class="text-left py-3 px-3">Nazwa</th>
+                        <th class="text-left py-3 px-3">Kategoria</th>
+                        <th class="text-left py-3 px-3">Priorytet</th>
+                        <th class="text-left py-3 px-3">Akcja</th>
+                        <th class="text-left py-3 px-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($rules as $rule): ?>
+                    <tr class="border-t border-white/5 hover:bg-white/[0.02]">
+                        <td class="py-3 px-3 text-sm text-white font-medium"><?= htmlspecialchars($rule['name'] ?? '-') ?></td>
+                        <td class="py-3 px-3 text-sm text-slate-400"><?= htmlspecialchars($rule['category'] ?? '-') ?></td>
+                        <td class="py-3 px-3">
+                            <?php $prio = strtolower($rule['priority'] ?? ''); ?>
+                            <span class="px-2 py-0.5 rounded text-[11px] font-bold uppercase
+                                <?= $prio === 'high' ? 'bg-rose-500/20 text-rose-400' : ($prio === 'medium' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-400') ?>">
+                                <?= htmlspecialchars($rule['priority'] ?? '-') ?>
+                            </span>
+                        </td>
+                        <td class="py-3 px-3">
+                            <?php $action = strtolower($rule['action'] ?? ''); ?>
+                            <span class="px-2 py-0.5 rounded text-[11px] font-bold uppercase
+                                <?= $action === 'block' || $action === 'drop' ? 'bg-rose-500/20 text-rose-400' : ($action === 'alert' ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-400') ?>">
+                                <?= htmlspecialchars($rule['action'] ?? '-') ?>
+                            </span>
+                        </td>
+                        <td class="py-3 px-3">
+                            <?php $enabled = $rule['enabled'] ?? false; ?>
+                            <span class="px-2 py-0.5 rounded text-[11px] font-bold uppercase <?= $enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500' ?>">
+                                <?= $enabled ? 'AKTYWNA' : 'WYŁĄCZONA' ?>
+                            </span>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Threat Intelligence Modal -->
+<div id="threatIntelModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center" onclick="if(event.target===this)closeThreatIntelModal()">
+    <div class="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-2xl">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                <i data-lucide="database" class="w-6 h-6 text-blue-400"></i>
+                Threat Intelligence
+            </h2>
+            <button onclick="closeThreatIntelModal()" class="text-slate-500 hover:text-white transition">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="bg-slate-800/50 border border-white/5 rounded-2xl p-5">
+                <div class="flex items-center gap-3 mb-2">
+                    <i data-lucide="shield-alert" class="w-5 h-5 text-blue-400"></i>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Tryb IPS</span>
+                </div>
+                <p class="text-lg font-bold text-white capitalize"><?= htmlspecialchars($security_settings['ips_mode'] ?? 'disabled') ?></p>
+            </div>
+            <div class="bg-slate-800/50 border border-white/5 rounded-2xl p-5">
+                <div class="flex items-center gap-3 mb-2">
+                    <i data-lucide="ban" class="w-5 h-5 text-blue-400"></i>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Ad Blocking</span>
+                </div>
+                <?php $adBlock = $security_settings['ad_blocking_enabled'] ?? false; ?>
+                <span class="px-2 py-0.5 rounded text-sm font-bold uppercase <?= $adBlock ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400' ?>">
+                    <?= $adBlock ? 'Włączony' : 'Wyłączony' ?>
+                </span>
+            </div>
+            <div class="bg-slate-800/50 border border-white/5 rounded-2xl p-5">
+                <div class="flex items-center gap-3 mb-2">
+                    <i data-lucide="ghost" class="w-5 h-5 text-amber-400"></i>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Honeypot</span>
+                </div>
+                <?php $honeypotEnabled = $security_settings['honeypot_enabled'] ?? false; ?>
+                <span class="px-2 py-0.5 rounded text-sm font-bold uppercase <?= $honeypotEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400' ?>">
+                    <?= $honeypotEnabled ? 'Aktywny' : 'Wyłączony' ?>
+                </span>
+            </div>
+            <div class="bg-slate-800/50 border border-white/5 rounded-2xl p-5">
+                <div class="flex items-center gap-3 mb-2">
+                    <i data-lucide="globe-2" class="w-5 h-5 text-purple-400"></i>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-widest">DNS Filtering</span>
+                </div>
+                <?php $dnsFilter = $security_settings['dns_filtering_enabled'] ?? false; ?>
+                <span class="px-2 py-0.5 rounded text-sm font-bold uppercase <?= $dnsFilter ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400' ?>">
+                    <?= $dnsFilter ? 'Włączony' : 'Wyłączony' ?>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Geo-blocking Modal -->
+<div id="geoBlockModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center" onclick="if(event.target===this)closeGeoBlockModal()">
+    <div class="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-3xl max-h-[80vh] overflow-y-auto shadow-2xl">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                <i data-lucide="globe" class="w-6 h-6 text-purple-400"></i>
+                Geo-blocking
+            </h2>
+            <button onclick="closeGeoBlockModal()" class="text-slate-500 hover:text-white transition">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+        <?php
+            $geo_rules = $security_settings['geo_rules'] ?? [];
+            $blocked_countries_list = $security_settings['blocked_countries'] ?? [];
+        ?>
+        <?php if (!empty($geo_rules)): ?>
+            <div class="space-y-4">
+                <?php foreach ($geo_rules as $rule): ?>
+                <?php
+                    $direction = strtoupper($rule['direction'] ?? 'IN');
+                    $countries = $rule['countries'] ?? [];
+                    $dirColor = $direction === 'OUT' ? 'bg-amber-500/20 text-amber-400' : ($direction === 'BOTH' ? 'bg-purple-500/20 text-purple-400' : 'bg-rose-500/20 text-rose-400');
+                ?>
+                <div class="bg-slate-800/50 border border-white/5 rounded-2xl p-5">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="px-2 py-0.5 rounded text-xs font-black uppercase <?= $dirColor ?>"><?= $direction ?></span>
+                        <span class="text-sm font-bold text-white"><?= htmlspecialchars($rule['name'] ?? 'Reguła') ?></span>
+                        <span class="text-xs text-slate-500"><?= count($countries) ?> krajów</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <?php foreach ($countries as $cc):
+                            $code = strtolower(is_string($cc) ? $cc : ($cc['code'] ?? ''));
+                            if (!$code || $code === 'un') continue;
+                        ?>
+                        <div class="flex items-center gap-1.5 bg-slate-700/50 rounded-lg px-2 py-1">
+                            <img src="https://flagcdn.com/24x18/<?= $code ?>.png" class="w-5 h-3.5 rounded-sm" title="<?= strtoupper($code) ?>">
+                            <span class="text-xs text-slate-300 font-mono"><?= strtoupper($code) ?></span>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        <?php elseif (!empty($blocked_countries_list)): ?>
+            <div class="bg-slate-800/50 border border-white/5 rounded-2xl p-5">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="px-2 py-0.5 rounded text-xs font-black uppercase bg-rose-500/20 text-rose-400">IN</span>
+                    <span class="text-sm font-bold text-white">Zablokowane kraje</span>
+                    <span class="text-xs text-slate-500"><?= count($blocked_countries_list) ?> krajów</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <?php foreach ($blocked_countries_list as $cc):
+                        $code = strtolower(is_string($cc) ? $cc : '');
+                        if (!$code || is_numeric($code) || $code === 'un') continue;
+                    ?>
+                    <div class="flex items-center gap-1.5 bg-slate-700/50 rounded-lg px-2 py-1">
+                        <img src="https://flagcdn.com/24x18/<?= $code ?>.png" class="w-5 h-3.5 rounded-sm" title="<?= strtoupper($code) ?>">
+                        <span class="text-xs text-slate-300 font-mono"><?= strtoupper($code) ?></span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php else: ?>
+            <div class="text-center text-slate-500 py-8">Brak skonfigurowanych reguł geo-blockingu</div>
+        <?php endif; ?>
+    </div>
+</div>
+
 <script>
 function openIgnoreModal() {
     document.getElementById('ignoreListModal').classList.remove('hidden');
@@ -1683,6 +1857,33 @@ function openIgnoreModal() {
 function closeIgnoreModal() {
     document.getElementById('ignoreListModal').classList.add('hidden');
     document.getElementById('ignoreListModal').classList.remove('flex');
+}
+function openSecurityRulesModal() {
+    document.getElementById('securityRulesModal').classList.remove('hidden');
+    document.getElementById('securityRulesModal').classList.add('flex');
+    lucide.createIcons();
+}
+function closeSecurityRulesModal() {
+    document.getElementById('securityRulesModal').classList.add('hidden');
+    document.getElementById('securityRulesModal').classList.remove('flex');
+}
+function openThreatIntelModal() {
+    document.getElementById('threatIntelModal').classList.remove('hidden');
+    document.getElementById('threatIntelModal').classList.add('flex');
+    lucide.createIcons();
+}
+function closeThreatIntelModal() {
+    document.getElementById('threatIntelModal').classList.add('hidden');
+    document.getElementById('threatIntelModal').classList.remove('flex');
+}
+function openGeoBlockModal() {
+    document.getElementById('geoBlockModal').classList.remove('hidden');
+    document.getElementById('geoBlockModal').classList.add('flex');
+    lucide.createIcons();
+}
+function closeGeoBlockModal() {
+    document.getElementById('geoBlockModal').classList.add('hidden');
+    document.getElementById('geoBlockModal').classList.remove('flex');
 }
 async function loadIgnoreList() {
     const resp = await fetch('api_threat_ignore.php');
