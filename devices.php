@@ -63,11 +63,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         $currentConfig['ping_hosts'] = $newHosts;
-        
+
         if (!is_dir(__DIR__ . '/data')) mkdir(__DIR__ . '/data', 0777, true);
         file_put_contents(__DIR__ . '/data/config.json', json_encode($currentConfig, JSON_PRETTY_PRINT));
-        
+
         $_SESSION['success'] = "Lista hostów ping została zaktualizowana.";
+        header('Location: devices.php');
+        exit;
+    }
+
+    // Akcja: Zapis retencji danych
+    if (isset($_POST['action']) && $_POST['action'] === 'save_purge') {
+        $currentConfig = $config;
+        $currentConfig['purge_days'] = [
+            'wan_stats' => max(7, (int)($_POST['purge_wan_stats'] ?? 90)),
+            'client_history' => max(7, (int)($_POST['purge_client_history'] ?? 30)),
+            'events' => max(7, (int)($_POST['purge_events'] ?? 30)),
+            'stalker_sessions' => max(7, (int)($_POST['purge_stalker_sessions'] ?? 60)),
+            'stalker_roaming' => max(7, (int)($_POST['purge_stalker_roaming'] ?? 60)),
+            'device_status_history' => max(7, (int)($_POST['purge_device_status_history'] ?? 90)),
+            'login_history' => max(30, (int)($_POST['purge_login_history'] ?? 180)),
+        ];
+        require_once __DIR__ . '/crypto.php';
+        encrypt_config($currentConfig);
+        file_put_contents(__DIR__ . '/data/config.json', json_encode($currentConfig, JSON_PRETTY_PRINT));
+        $_SESSION['success'] = "Ustawienia retencji zapisane.";
+        header('Location: devices.php');
+        exit;
+    }
+
+    // Akcja: Zapis ustawień bezpieczeństwa
+    if (isset($_POST['action']) && $_POST['action'] === 'save_security') {
+        $currentConfig = $config;
+        $currentConfig['session_timeout'] = max(5, (int)($_POST['session_timeout'] ?? 60));
+        $currentConfig['max_login_attempts'] = max(1, (int)($_POST['max_login_attempts'] ?? 5));
+        $currentConfig['lock_duration'] = max(1, (int)($_POST['lock_duration'] ?? 15));
+        require_once __DIR__ . '/crypto.php';
+        encrypt_config($currentConfig);
+        file_put_contents(__DIR__ . '/data/config.json', json_encode($currentConfig, JSON_PRETTY_PRINT));
+        $_SESSION['success'] = "Ustawienia bezpieczenstwa zapisane.";
+        header('Location: devices.php');
+        exit;
+    }
+
+    // Akcja: Zapis interwału odświeżania
+    if (isset($_POST['action']) && $_POST['action'] === 'save_refresh') {
+        $currentConfig = $config;
+        $currentConfig['poll_interval'] = max(5, min(120, (int)($_POST['poll_interval'] ?? 30)));
+        require_once __DIR__ . '/crypto.php';
+        encrypt_config($currentConfig);
+        file_put_contents(__DIR__ . '/data/config.json', json_encode($currentConfig, JSON_PRETTY_PRINT));
+        $_SESSION['success'] = "Interwal odswiezania zapisany.";
         header('Location: devices.php');
         exit;
     }
@@ -125,6 +171,44 @@ try {
 } catch (Throwable $e) {
     $error_msg = $e->getMessage();
     echo "<div style='background: red; color: white; padding: 20px; z-index: 9999; position: relative;'>PHP Error: $error_msg<br>File: " . $e->getFile() . " line " . $e->getLine() . "</div>";
+}
+
+// GET: Vacuum
+if (isset($_GET['action']) && $_GET['action'] === 'vacuum') {
+    $db->exec('VACUUM');
+    $_SESSION['success'] = "Baza danych zoptymalizowana.";
+    header('Location: devices.php');
+    exit;
+}
+
+// GET: Export config
+if (isset($_GET['action']) && $_GET['action'] === 'export_config') {
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="minidash_config_' . date('Y-m-d') . '.json"');
+    echo file_get_contents(__DIR__ . '/data/config.json');
+    exit;
+}
+
+// GET: Export DB
+if (isset($_GET['action']) && $_GET['action'] === 'export_db') {
+    $dbFile = __DIR__ . '/data/minidash.db';
+    header('Content-Type: application/octet-stream');
+    header('Content-Disposition: attachment; filename="minidash_' . date('Y-m-d') . '.db"');
+    header('Content-Length: ' . filesize($dbFile));
+    readfile($dbFile);
+    exit;
+}
+
+// Statystyki bazy danych
+$db_file = __DIR__ . '/data/minidash.db';
+$db_size = file_exists($db_file) ? filesize($db_file) : 0;
+$db_tables = ['wan_stats', 'client_history', 'events', 'stalker_sessions', 'stalker_roaming', 'login_history', 'device_monitors', 'device_status_history'];
+$db_counts = [];
+$db_total = 0;
+foreach ($db_tables as $t) {
+    try { $c = $db->query("SELECT COUNT(*) FROM $t")->fetchColumn(); } catch(Exception $e) { $c = 0; }
+    $db_counts[$t] = $c;
+    $db_total += $c;
 }
 
 ?>
@@ -245,6 +329,207 @@ try {
                          </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Sekcja: Retencja Danych -->
+        <div class="glass-card p-8 mb-8 border-amber-500/20 shadow-[0_0_40px_rgba(245,158,11,0.08)] relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-40 h-40 bg-amber-600/5 blur-3xl -mr-20 -mt-20 group-hover:bg-amber-600/10 transition-all duration-700"></div>
+            <form method="POST" class="relative z-10">
+                <input type="hidden" name="action" value="save_purge">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-lg font-black uppercase tracking-[0.2em] text-amber-400 flex items-center gap-3">
+                            <i data-lucide="database" class="w-6 h-6"></i>
+                            Retencja Danych
+                        </h2>
+                        <p class="text-slate-500 text-[10px] mt-1 font-bold uppercase tracking-widest">Automatyczne czyszczenie starych rekordow</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <?php
+                    $purge_fields = [
+                        ['key' => 'wan_stats',            'name' => 'purge_wan_stats',            'label' => 'WAN Stats',              'def' => 90,  'min' => 7,  'max' => 365],
+                        ['key' => 'client_history',       'name' => 'purge_client_history',       'label' => 'Historia klientow',      'def' => 30,  'min' => 7,  'max' => 180],
+                        ['key' => 'events',               'name' => 'purge_events',               'label' => 'Zdarzenia systemowe',    'def' => 30,  'min' => 7,  'max' => 180],
+                        ['key' => 'stalker_sessions',     'name' => 'purge_stalker_sessions',     'label' => 'Wi-Fi Stalker sesje',    'def' => 60,  'min' => 7,  'max' => 365],
+                        ['key' => 'stalker_roaming',      'name' => 'purge_stalker_roaming',      'label' => 'Historia roamingu',      'def' => 60,  'min' => 7,  'max' => 365],
+                        ['key' => 'device_status_history','name' => 'purge_device_status_history','label' => 'Historia urzadzen',      'def' => 90,  'min' => 7,  'max' => 365],
+                        ['key' => 'login_history',        'name' => 'purge_login_history',        'label' => 'Historia logowan',       'def' => 180, 'min' => 30, 'max' => 730],
+                    ];
+                    foreach ($purge_fields as $f):
+                        $val = $config['purge_days'][$f['key']] ?? $f['def'];
+                    ?>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1"><?= $f['label'] ?></label>
+                        <div class="flex items-center gap-4">
+                            <input type="range" name="<?= $f['name'] ?>" min="<?= $f['min'] ?>" max="<?= $f['max'] ?>" value="<?= $val ?>"
+                                class="flex-grow accent-amber-500"
+                                oninput="this.nextElementSibling.textContent = this.value + ' dni'">
+                            <span class="text-xs font-mono text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 min-w-[80px] text-center">
+                                <?= $val ?> dni
+                            </span>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="pt-6">
+                    <button type="submit" class="bg-amber-600 hover:bg-amber-500 text-white font-black py-4 px-8 rounded-xl transition shadow-xl shadow-amber-600/20 text-xs uppercase tracking-[0.2em] flex items-center gap-3">
+                        <i data-lucide="save" class="w-4 h-4"></i> Zapisz Retencje
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+            <!-- Sekcja: Sesja i Bezpieczenstwo -->
+            <div class="glass-card p-8 flex flex-col w-full h-full border-rose-500/20 shadow-[0_0_40px_rgba(244,63,94,0.08)] relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-rose-600/5 blur-3xl -mr-16 -mt-16 group-hover:bg-rose-600/10 transition-all duration-700"></div>
+                <form method="POST" class="flex flex-col h-full relative z-10">
+                    <input type="hidden" name="action" value="save_security">
+                    <div class="flex items-center justify-between mb-8">
+                        <div>
+                            <h2 class="text-lg font-black uppercase tracking-[0.2em] text-rose-400 flex items-center gap-3">
+                                <i data-lucide="shield" class="w-6 h-6"></i>
+                                Sesja i Bezpieczenstwo
+                            </h2>
+                            <p class="text-slate-500 text-[10px] mt-1 font-bold uppercase tracking-widest">Limity dostepu i czas wygasniecia</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6 flex-grow">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Timeout sesji (minuty)</label>
+                            <input type="number" name="session_timeout" min="5" max="1440"
+                                value="<?= (int)($config['session_timeout'] ?? 60) ?>"
+                                class="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 text-xs font-mono transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Maks. prob logowania</label>
+                            <input type="number" name="max_login_attempts" min="1" max="20"
+                                value="<?= (int)($config['max_login_attempts'] ?? 5) ?>"
+                                class="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 text-xs font-mono transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Czas blokady (minuty)</label>
+                            <input type="number" name="lock_duration" min="1" max="1440"
+                                value="<?= (int)($config['lock_duration'] ?? 15) ?>"
+                                class="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 text-xs font-mono transition-all">
+                        </div>
+                    </div>
+
+                    <div class="pt-6">
+                        <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-black py-4 rounded-xl transition shadow-xl shadow-rose-600/20 text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3">
+                            <i data-lucide="save" class="w-4 h-4"></i> Zapisz Bezpieczenstwo
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Sekcja: Odswiezanie Dashboardu -->
+            <div class="glass-card p-8 flex flex-col w-full h-full border-cyan-500/20 shadow-[0_0_40px_rgba(6,182,212,0.08)] relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-600/5 blur-3xl -mr-16 -mt-16 group-hover:bg-cyan-600/10 transition-all duration-700"></div>
+                <form method="POST" class="flex flex-col h-full relative z-10">
+                    <input type="hidden" name="action" value="save_refresh">
+                    <div class="flex items-center justify-between mb-8">
+                        <div>
+                            <h2 class="text-lg font-black uppercase tracking-[0.2em] text-cyan-400 flex items-center gap-3">
+                                <i data-lucide="refresh-cw" class="w-6 h-6"></i>
+                                Odswiezanie Dashboardu
+                            </h2>
+                            <p class="text-slate-500 text-[10px] mt-1 font-bold uppercase tracking-widest">Interwal pollingu danych w czasie rzeczywistym</p>
+                        </div>
+                    </div>
+
+                    <div class="flex-grow flex flex-col justify-center">
+                        <?php $poll_val = (int)($config['poll_interval'] ?? 30); ?>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 px-1">Interwal odpytywania (sekundy)</label>
+                        <div class="flex items-center gap-4">
+                            <input type="range" name="poll_interval" min="5" max="120" value="<?= $poll_val ?>"
+                                class="flex-grow accent-cyan-500"
+                                oninput="this.nextElementSibling.textContent = this.value + ' s'">
+                            <span class="text-xs font-mono text-cyan-400 bg-cyan-500/10 px-3 py-1.5 rounded-lg border border-cyan-500/20 min-w-[60px] text-center">
+                                <?= $poll_val ?> s
+                            </span>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-slate-600 font-mono mt-1 px-1">
+                            <span>5s</span><span>120s</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-6">
+                        <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-black py-4 rounded-xl transition shadow-xl shadow-cyan-600/20 text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3">
+                            <i data-lucide="save" class="w-4 h-4"></i> Zapisz Interwal
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sekcja: Baza Danych -->
+        <div class="glass-card p-8 mb-10 border-emerald-500/20 shadow-[0_0_40px_rgba(16,185,129,0.08)] relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-40 h-40 bg-emerald-600/5 blur-3xl -mr-20 -mt-20 group-hover:bg-emerald-600/10 transition-all duration-700"></div>
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-lg font-black uppercase tracking-[0.2em] text-emerald-400 flex items-center gap-3">
+                            <i data-lucide="database" class="w-6 h-6"></i>
+                            Baza Danych
+                        </h2>
+                        <p class="text-slate-500 text-[10px] mt-1 font-bold uppercase tracking-widest">Statystyki, optymalizacja i eksport</p>
+                    </div>
+                </div>
+
+                <!-- Stats grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-slate-900/50 border border-white/5 rounded-xl p-4">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Rozmiar pliku</p>
+                        <p class="text-lg font-black text-emerald-400"><?= format_bytes($db_size) ?></p>
+                    </div>
+                    <div class="bg-slate-900/50 border border-white/5 rounded-xl p-4">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Lacznie rekordow</p>
+                        <p class="text-lg font-black text-emerald-400"><?= number_format($db_total) ?></p>
+                    </div>
+                </div>
+
+                <!-- Per-table counts -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+                    <?php
+                    $table_labels = [
+                        'wan_stats'             => 'WAN Stats',
+                        'client_history'        => 'Historia klientow',
+                        'events'                => 'Zdarzenia',
+                        'stalker_sessions'      => 'Stalker sesje',
+                        'stalker_roaming'       => 'Roaming',
+                        'login_history'         => 'Logowania',
+                        'device_monitors'       => 'Monitory',
+                        'device_status_history' => 'Historia urz.',
+                    ];
+                    foreach ($db_tables as $t): ?>
+                    <div class="bg-slate-900/30 border border-white/5 rounded-lg px-4 py-3 flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest"><?= $table_labels[$t] ?></span>
+                        <span class="text-xs font-black text-slate-300 font-mono"><?= number_format($db_counts[$t]) ?></span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="flex flex-wrap gap-3">
+                    <a href="?action=vacuum"
+                        class="px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition shadow-xl shadow-emerald-600/20 text-xs uppercase tracking-[0.2em] flex items-center gap-2">
+                        <i data-lucide="zap" class="w-4 h-4"></i> Optymalizuj (VACUUM)
+                    </a>
+                    <a href="?action=export_config"
+                        class="px-5 py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-black rounded-xl transition text-xs uppercase tracking-[0.2em] flex items-center gap-2 border border-white/5">
+                        <i data-lucide="file-json" class="w-4 h-4"></i> Eksportuj Config
+                    </a>
+                    <a href="?action=export_db"
+                        class="px-5 py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-black rounded-xl transition text-xs uppercase tracking-[0.2em] flex items-center gap-2 border border-white/5">
+                        <i data-lucide="download" class="w-4 h-4"></i> Eksportuj Baze
+                    </a>
+                </div>
             </div>
         </div>
 
