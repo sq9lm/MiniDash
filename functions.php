@@ -802,10 +802,11 @@ function loadDeviceHistory($mac)
 
 
 function format_bps($bps) {
+    if ($bps >= 1000000000000) return number_format($bps / 1000000000000, 2) . ' Tbps';
     if ($bps >= 1000000000) return number_format($bps / 1000000000, 2) . ' Gbps';
-    if ($bps >= 1000000) return number_format($bps / 1000000, 2) . ' Mbps';
+    if ($bps >= 1000000) return number_format($bps / 1000000, 1) . ' Mbps';
     if ($bps >= 1000) return number_format($bps / 1000, 1) . ' Kbps';
-    return $bps . ' bps';
+    return round($bps) . ' bps';
 }
 
 function formatBps($bps) {
@@ -2392,10 +2393,11 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                 </div>
                 <script>
                 function formatBpsJs(bps) {
-                    if (bps >= 1000000000) return (bps/1000000000).toFixed(1) + ' Gbps';
+                    if (bps >= 1000000000000) return (bps/1000000000000).toFixed(2) + ' Tbps';
+                    if (bps >= 1000000000) return (bps/1000000000).toFixed(2) + ' Gbps';
                     if (bps >= 1000000) return (bps/1000000).toFixed(1) + ' Mbps';
                     if (bps >= 1000) return (bps/1000).toFixed(1) + ' Kbps';
-                    return bps + ' bps';
+                    return Math.round(bps) + ' bps';
                 }
                 function loadWanFlows() {
                     fetch('api_wan_flows.php')

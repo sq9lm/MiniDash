@@ -1148,9 +1148,11 @@ try {
         window.refreshDashboard = window.updateStats;
 
         function formatBps(bps) {
-            if (bps >= 1000000) return (bps / 1000000).toFixed(2) + ' Mbps';
+            if (bps >= 1000000000000) return (bps / 1000000000000).toFixed(2) + ' Tbps';
+            if (bps >= 1000000000) return (bps / 1000000000).toFixed(2) + ' Gbps';
+            if (bps >= 1000000) return (bps / 1000000).toFixed(1) + ' Mbps';
             if (bps >= 1000) return (bps / 1000).toFixed(1) + ' Kbps';
-            return bps + ' bps';
+            return Math.round(bps) + ' bps';
         }
 
         function formatBytes(bytes, decimals = 2) {
