@@ -81,11 +81,24 @@ if (!$threat_detection_enabled) {
     $security_score -= 15;
 }
 
-// Factor 4: Blocked Threats Ratio (20 points)
-if ($threats_blocked > 1000) {
+// Factor 4: Threat Response (20 points)
+// Blocked threats = GOOD (IPS working). Only penalize unblocked (alerts that passed through)
+$unblocked_count = 0;
+foreach ($security_events as $event) {
+    if (($event['action'] ?? '') === 'Wykryto') { // alert, not blocked
+        $unblocked_count++;
+    }
+}
+if ($unblocked_count > 50) {
+    $security_score -= 20;
+} elseif ($unblocked_count > 20) {
     $security_score -= 10;
-} elseif ($threats_blocked > 500) {
+} elseif ($unblocked_count > 5) {
     $security_score -= 5;
+}
+// Bonus: many blocked = IPS is active and effective
+if ($threats_blocked > 100 && $unblocked_count == 0) {
+    $security_score = min(100, $security_score + 5);
 }
 
 // Factor 5: Active Monitoring (10 points)
@@ -98,17 +111,6 @@ if (!$ad_blocking && !$honeypot) {
     $security_score -= 10;
 } elseif ($ad_blocking && $honeypot) {
     $security_score = min(100, $security_score + 5);
-}
-
-// Factor 7: Recent Critical Events (penalty)
-$critical_events_count = 0;
-foreach ($security_events as $event) {
-    if (($event['severity'] ?? '') === 'critical') {
-        $critical_events_count++;
-    }
-}
-if ($critical_events_count > 5) {
-    $security_score -= 15;
 }
 
 // Ensure score stays within 0-100 range
