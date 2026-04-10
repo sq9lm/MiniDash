@@ -1135,15 +1135,15 @@ function get_recent_events($limit = 10, $only_new = false) {
 
     $historyFile = __DIR__ . '/data/history.json';
     $events = [];
-    
+    $clear_time = 0;
+    if ($only_new && !empty($config['last_notif_clear_time'])) {
+        $clear_time = strtotime($config['last_notif_clear_time']);
+    }
+
     // 1. Get Monitoring Events (Local History)
     if (file_exists($historyFile)) {
         $allHistory = json_decode(file_get_contents($historyFile), true) ?? [];
         $devices = loadDevices();
-        $clear_time = 0;
-        if ($only_new && !empty($config['last_notif_clear_time'])) {
-            $clear_time = strtotime($config['last_notif_clear_time']);
-        }
         
         foreach ($allHistory as $mac => $history) {
             if (!is_array($history)) continue;
