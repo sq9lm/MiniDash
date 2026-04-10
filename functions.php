@@ -525,46 +525,84 @@ function get_unifi_security_settings() {
     return $settings;
 }
 
-// Funkcja do pobierania nazwy VLAN
-// Lista zdefiniowanych VLANów
-function get_vlans() {
-    return [
-        0 => 'VPN Connection',
-        1 => 'Main',
-        5 => 'Servers',
-        10 => 'VoIP',
-        20 => 'Guest',
-        30 => 'IoT',
-        40 => 'Cameras',
-        55 => 'Kids',
-        69 => 'OpenVPN',
-        70 => 'VPN WireGuard',
-        99 => 'Lab'
-    ];
+// Pobierz sieci z API UniFi (cache w sesji na 5 min)
+function get_vlans_from_api() {
+    if (isset($_SESSION['network_vlans']) && isset($_SESSION['network_vlans_time']) && (time() - $_SESSION['network_vlans_time'] < 300)) {
+        return $_SESSION['network_vlans'];
+    }
+
+    $resp = fetch_api("/proxy/network/api/s/default/rest/networkconf");
+    $networks = $resp['data'] ?? [];
+
+    $vlans = [];
+    $subnets = []; // subnet => vlan_id mapping
+
+    foreach ($networks as $net) {
+        $vlan_id = (int)($net['vlan'] ?? $net['vlan_id'] ?? 0);
+        $name = $net['name'] ?? 'Network ' . $vlan_id;
+        $purpose = $net['purpose'] ?? '';
+        $subnet = $net['ip_subnet'] ?? '';
+
+        // For corporate/VLAN networks
+        if ($vlan_id > 0 || $purpose === 'corporate' || $purpose === 'vlan-only') {
+            $vlans[$vlan_id] = $name;
+            if ($subnet) {
+                $subnets[$subnet] = $vlan_id;
+            }
+        }
+
+        // VPN networks (remote-user-vpn, site-vpn)
+        if ($purpose === 'remote-user-vpn' || $purpose === 'site-vpn' || strpos($name, 'VPN') !== false || strpos($name, 'vpn') !== false) {
+            if ($vlan_id === 0) $vlan_id = crc32($net['_id'] ?? $name) & 0xFFFF; // Generate pseudo-ID
+            $vlans[$vlan_id] = $name;
+            if ($subnet) {
+                $subnets[$subnet] = $vlan_id;
+            }
+        }
+    }
+
+    // Default network (VLAN 1 / untagged)
+    if (!isset($vlans[1])) {
+        foreach ($networks as $net) {
+            if (($net['purpose'] ?? '') === 'corporate' && empty($net['vlan'])) {
+                $vlans[1] = $net['name'] ?? 'Default';
+                if (!empty($net['ip_subnet'])) $subnets[$net['ip_subnet']] = 1;
+                break;
+            }
+        }
+    }
+    if (!isset($vlans[1])) $vlans[1] = 'Main';
+    if (!isset($vlans[0])) $vlans[0] = 'VPN';
+
+    $_SESSION['network_vlans'] = $vlans;
+    $_SESSION['network_subnets'] = $subnets;
+    $_SESSION['network_vlans_time'] = time();
+
+    return $vlans;
 }
 
-// Funkcja do wykrywania VLANu na podstawie IP (fallback)
+// Pobierz nazwę VLAN
+function get_vlans() {
+    return get_vlans_from_api();
+}
+
+// Wykrywanie VLAN na podstawie IP — dynamicznie z subnet map
 function detect_vlan_id($ip, $current_vlan = null) {
     if ($current_vlan !== null && $current_vlan > 0) return (int)$current_vlan;
-    
+
     if (empty($ip) || $ip === 'N/A' || $ip === 'Offline') return 0;
-    
-    if (strpos($ip, '10.0.0.') === 0) return 1;
-    if (strpos($ip, '10.5.') === 0) return 5;
-    if (strpos($ip, '10.10.') === 0) return 10;
-    if (strpos($ip, '10.20.') === 0) return 20;
-    if (strpos($ip, '10.30.') === 0) return 30;
-    if (strpos($ip, '10.40.') === 0) return 40;
-    if (strpos($ip, '10.55.') === 0) return 55;
-    if (strpos($ip, '10.99.') === 0) return 99;
-    
-    // VPN subnets (user confirmed 10.69 and 10.70 are VPNs)
-    if (strpos($ip, '10.69.') === 0) return 69;
-    if (strpos($ip, '10.70.') === 0) return 70;
-    
-    // Default to 0 (VPN) for other unknown 10.x subnets if they are not explicitly Main
+
+    // Use cached subnet map from API
+    $subnets = $_SESSION['network_subnets'] ?? [];
+    foreach ($subnets as $subnet => $vlan_id) {
+        if (ip_in_subnet($ip, $subnet)) {
+            return $vlan_id;
+        }
+    }
+
+    // Fallback: unknown 10.x = VPN
     if (strpos($ip, '10.') === 0) return 0;
-    
+
     return 0;
 }
 

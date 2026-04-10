@@ -176,7 +176,8 @@ try {
         'wan_status' => $wan_status
     ];
     
-    // VLAN Stats
+    // VLAN Stats — load network config from API first
+    get_vlans_from_api();
     $vlan_stats = [];
     foreach ($clients as &$client) {
         $vlan_id = $client['vlan'] ?? $client['network_id'] ?? null;
