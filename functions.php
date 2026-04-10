@@ -1844,7 +1844,7 @@ function render_nav($title = "MiniDash", $stats = []) {
                     </div>
                     <div class="h-6 w-[1px] bg-white/10"></div>
                     <div onclick="openWanModal()" class="flex flex-col gap-0.5 cursor-pointer hover:opacity-80 transition-opacity" title="Łącze WAN">
-                        <div class="flex items-center gap-1.5 text-blue-400">
+                        <div class="flex items-center gap-1.5 text-amber-400">
                              <i data-lucide="arrow-up" class="w-3 h-3"></i>
                              <span class="text-[11px] font-mono font-bold"><?= format_bps($up) ?></span>
                         </div>

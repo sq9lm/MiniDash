@@ -10,11 +10,11 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
     exit;
 }
 
-$siteId = $config['site'];
+$siteId = $_SESSION['site_id'] ?? $config['site'] ?? 'default';
 $devices_config = loadDevices();
 
 try {
-    // 1. Fetch Clients from Integration API (Modern, but sometimes thin)
+    // 1. Fetch Clients
     $clients_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/clients?limit=1000");
     
     // Auto-detect correct site ID if the configured one fails
@@ -27,13 +27,12 @@ try {
     }
     
     // 2. Fetch from Traditional API (Rich data: SSID, signals, rates)
-    // We try 'default' site first as it's most common for traditional API paths
-    $trad_resp = fetch_api("/proxy/network/api/s/default/stat/sta");
+    $tradSite = get_trad_site_id($siteId);
+    $trad_resp = fetch_api("/proxy/network/api/s/$tradSite/stat/sta");
     $trad_clients = $trad_resp['data'] ?? [];
-    
     $clients = $clients_resp['data'] ?? [];
     
-    // Merge data: Use Modern list but enrich with Traditional stats if MAC matches
+    // Merge data
     if (!empty($trad_clients)) {
         $trad_map = [];
         foreach ($trad_clients as $tc) {
@@ -45,25 +44,21 @@ try {
             $c_mac = normalize_mac($c['macAddress'] ?? $c['mac'] ?? '');
             if (isset($trad_map[$c_mac])) {
                 $tc = $trad_map[$c_mac];
-                // Enrich
-                $c['essid'] = $c['essid'] ?? $tc['essid'] ?? '';
-                $c['rx_rate'] = $tc['rx_bytes-r'] ?? $tc['rx_rate'] ?? 0;
-                $c['tx_rate'] = $tc['tx_bytes-r'] ?? $tc['tx_rate'] ?? 0;
-                $c['rx_bytes'] = $tc['rx_bytes'] ?? 0;
-                $c['tx_bytes'] = $tc['tx_bytes'] ?? 0;
-                $c['rx_bytes_r'] = $tc['rx_bytes-r'] ?? 0;
-                $c['tx_bytes_r'] = $tc['tx_bytes-r'] ?? 0;
+                // Map SSID and rates
+                $c['essid'] = $tc['essid'] ?? $c['essid'] ?? '';
+                $c['rx_rate'] = (float)($tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? 0) * 8));
+                $c['tx_rate'] = (float)($tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? 0) * 8));
+                $c['rx_bytes'] = (float)($tc['rx_bytes'] ?? 0);
+                $c['tx_bytes'] = (float)($tc['tx_bytes'] ?? 0);
                 $c['signal'] = $tc['signal'] ?? $tc['rssi'] ?? 0;
                 $c['is_wired'] = $c['is_wired'] ?? ($tc['is_wired'] ?? ($tc['type'] == 'wired' || empty($tc['essid'])));
                 $c['vlan'] = $c['vlan'] ?? $tc['vlan'] ?? 0;
-                $c['uptime'] = $tc['uptime'] ?? 0;
-                $c['satisfaction'] = $tc['satisfaction'] ?? 0;
             }
         }
     }
     
     // 3. Fetch Infrastructure Devices with traditional API for better stats
-    $trad_dev_resp = fetch_api("/proxy/network/api/s/default/stat/device");
+    $trad_dev_resp = fetch_api("/proxy/network/api/s/$tradSite/stat/device");
     $trad_devices = $trad_dev_resp['data'] ?? [];
     $trad_dev_map = [];
     foreach ($trad_devices as $td) {
@@ -74,95 +69,60 @@ try {
     $infr_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/devices");
     $infr_devices = $infr_resp['data'] ?? [];
     
-    // Gateway detection
+    // Ensure we also populate subnets for detect_vlan_id
+    get_vlans(); 
+
     $gateway = null;
-    foreach ($infr_devices as $dev) {
-        $model = strtoupper($dev['model'] ?? '');
-        $type = strtolower($dev['type'] ?? '');
+    $cpu = 0; $ram = 0; $wan_rx = 0; $wan_tx = 0; $wans = []; $latency = 0;
+
+    foreach ($infr_devices as $d) {
+        $mac = normalize_mac($d['macAddress'] ?? $d['mac'] ?? '');
+        $trad = $trad_dev_map[$mac] ?? [];
+        $model = $d['model'] ?? '';
         
-        // Detect by model or type or presence of wan1
-        if (in_array($model, ['UDR', 'UDM', 'UXG', 'USG']) || 
-            strpos($model, 'DREAM') !== false || 
-            $type === 'udm' || 
-            $type === 'gateway' ||
-            isset($dev['wan1'])) {
-            $gateway = $dev;
-            break;
-        }
-    }
-    
-    $wans = [];
-    $wan_rx = $wan_tx = $cpu = $ram = $latency = $gateway_uptime = 0;
-    
-    if ($gateway) {
-        $g_mac = normalize_mac($gateway['macAddress'] ?? $gateway['mac'] ?? '');
-        $tg = $trad_dev_map[$g_mac] ?? [];
-        
-        // Enrich gateway from traditional data if available
-        if (!empty($tg)) {
-            $cpu = $tg['system-stats']['cpu'] ?? $cpu;
-            $ram = $tg['system-stats']['mem'] ?? $ram;
-            $gateway_uptime = $tg['uptime'] ?? 0;
+        // Much more aggressive gateway detection
+        $is_gateway = in_array($model, ['UDR', 'UDM', 'UXG', 'USG', 'UCG', 'UX', 'UXG-LITE', 'UXG-MAX', 'UDMPRO', 'UDMSE', 'UDM-SE', 'UDM-PRO-MAX']) 
+                    || isset($d['wan1']) 
+                    || ($trad['type'] ?? '') === 'ugw' 
+                    || ($trad['type'] ?? '') === 'u-wan'
+                    || isset($trad['wan1']);
+
+        if ($is_gateway) {
+            $gateway = $d;
+            $cpu = $trad['system-stats']['cpu'] ?? $d['cpu'] ?? 0;
+            $ram = $trad['system-stats']['mem'] ?? $d['ram'] ?? 0;
+            $latency = $trad['stat']['gw']['latency'] ?? $trad['latency'] ?? 0;
+
+            // WAN Processing
+            $wan_keys = ['wan1', 'wan2'];
+            foreach ($wan_keys as $wk) {
+                if (!empty($trad[$wk]) && ($trad[$wk]['up'] ?? false)) {
+                    $rx = (float)($trad[$wk]['rx_bytes-r'] ?? 0) * 8;
+                    $tx = (float)($trad[$wk]['tx_bytes-r'] ?? 0) * 8;
+                    $wan_rx += $rx; $wan_tx += $tx;
+                    $wans[] = ['index' => (int)str_replace('wan', '', $wk), 'name' => strtoupper($wk), 'status' => 'ONLINE', 'ip' => $trad[$wk]['ip'] ?? 'N/A', 'rx' => $rx, 'tx' => $tx];
+                }
+            }
             
-            // Collect WANs (Traditional API usually has wan1, wan2)
-            for ($i = 1; $i <= 4; $i++) {
-                $k = ($i === 1) ? 'wan1' : 'wan' . $i;
-                if (!empty($tg[$k]['ip'])) {
-                    $wans[] = [
-                        'index' => $i,
-                        'name' => 'WAN ' . $i,
-                        'ip' => $tg[$k]['ip'],
-                        'status' => ($tg['last_wan_status']['WAN' . ($i > 1 ? $i : '')] ?? '') === 'online' ? 'ONLINE' : 'OFFLINE',
-                        'rx' => $tg[$k]['rx_rate'] ?? (($tg[$k]['rx_bytes-r'] ?? 0) * 8),
-                        'tx' => $tg[$k]['tx_rate'] ?? (($tg[$k]['tx_bytes-r'] ?? 0) * 8),
-                        'latency' => $tg[$k]['latency'] ?? 0,
-                        'vendor' => $tg[$k]['isp_name'] ?? $tg[$k]['vendor'] ?? $tg[$k]['isp_organization'] ?? ''
-                    ];
+            // Backup for aggregate WAN stats
+            if (empty($wans)) {
+                $rx = (float)($trad['stat']['gw']['wan_rx_bytes-r'] ?? $trad['rx_bytes-r'] ?? 0) * 8;
+                $tx = (float)($trad['stat']['gw']['wan_tx_bytes-r'] ?? $trad['tx_bytes-r'] ?? 0) * 8;
+                if ($rx > 0 || $tx > 0) {
+                    $wan_rx = $rx; $wan_tx = $tx;
+                    $wans[] = ['index' => 1, 'name' => 'WAN (Auto)', 'status' => 'ONLINE', 'ip' => $trad['wan1']['ip'] ?? $d['ip'] ?? 'N/A', 'rx' => $rx, 'tx' => $tx];
                 }
             }
         }
+    }
 
-        // Fallback to integration stats if wans is still empty
-        if (empty($wans)) {
-            $ip = $gateway['wan1']['ip'] ?? $gateway['ipAddress'] ?? $gateway['ip'] ?? 'Nieznane';
-            if ($ip !== 'Nieznane') {
-                $wans[] = [
-                    'index' => 1,
-                    'name' => 'WAN 1',
-                    'ip' => $ip,
-                    'status' => (isset($gateway['state']) && $gateway['state'] === 'ONLINE') ? 'ONLINE' : 'OFFLINE',
-                    'rx' => $gateway['uplink']['rxRateBps'] ?? $gateway['wan1']['rxRateBps'] ?? 0,
-                    'tx' => $gateway['uplink']['txRateBps'] ?? $gateway['wan1']['txRateBps'] ?? 0,
-                    'latency' => 0,
-                    'vendor' => $gateway['wan1']['vendor'] ?? ''
-                ];
-            }
+    $wan_status = 'OFFLINE';
+    $wan_ip = 'Nieznane';
+    if (!empty($wans)) {
+        $wan_status = 'ONLINE';
+        foreach ($wans as $w) {
+            if ($w['ip'] && $w['ip'] !== 'N/A') { $wan_ip = $w['ip']; break; }
         }
-
-        // Main WAN for backward compatibility in summaries
-        if (!empty($wans)) {
-            $main_wan = $wans[0];
-            $wan_ip = $main_wan['ip'];
-            $wan_status = $main_wan['status'];
-            $wan_rx = $main_wan['rx']; // We could sum them up, but usually RX/TX kafelki refer to aggregate or main
-            $wan_tx = $main_wan['tx'];
-            $latency = $main_wan['latency'];
-            
-            // If we have more wans, aggregate RX/TX for the primary kafelki?
-            if (count($wans) > 1) {
-                $wan_rx = array_sum(array_column($wans, 'rx'));
-                $wan_tx = array_sum(array_column($wans, 'tx'));
-            }
-        } else {
-            $wan_ip = 'Nieznane';
-            $wan_status = 'OFFLINE';
-        }
-
-        if (empty($cpu) || $cpu == 0) $cpu = $gateway['system-stats']['cpu'] ?? $gateway['cpu-stats']['cpu'] ?? 0;
-        if (empty($ram) || $ram == 0) $ram = $gateway['system-stats']['mem'] ?? $gateway['memory-stats']['mem'] ?? 0;
-    } else {
-        $wan_status = 'NIEZNANY';
-        $wan_ip = 'Nieznane';
     }
     
     // Cache navbar stats and WAN details in session for other pages
@@ -181,7 +141,7 @@ try {
     ];
     
     // 3. Fetch Historical Stats (for Total counters)
-    $user_resp = fetch_api("/proxy/network/api/s/default/stat/user");
+    $user_resp = fetch_api("/proxy/network/api/s/$siteId/stat/user");
     $hist_clients = [];
     if (!empty($user_resp['data'])) {
         foreach ($user_resp['data'] as $hc) {
@@ -331,10 +291,10 @@ try {
                     <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 group-hover:bg-blue-500/20 transition-colors">
                         <i data-lucide="users" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Aktywni</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Aktywni</span>
                 </div>
-                <div class="text-3xl font-black tracking-tighter"><?= count($clients) ?></div>
-                <div class="text-slate-400 text-xs mt-1 font-medium italic">Użytkownicy sieci</div>
+                <div class="text-3xl font-black tracking-tighter text-white"><?= count($clients) ?></div>
+                <div class="text-slate-400 text-sm mt-1 font-medium italic">Użytkownicy sieci</div>
             </div>
 
             <!-- 2. WiFi SSIDs -->
@@ -346,7 +306,7 @@ try {
                     <div class="p-3 bg-indigo-500/10 rounded-xl text-indigo-400">
                         <i data-lucide="wifi" class="w-6 h-6"></i>
                     </div>
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Sieci WiFi</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Sieci WiFi</span>
                 </div>
                 <div class="space-y-1.5 relative z-10">
                     <?php 
@@ -355,9 +315,9 @@ try {
                     foreach ($wifi_stats as $ssid => $count): 
                         if ($i >= $limit) break;
                     ?>
-                        <div class="flex justify-between items-center text-[11px]">
+                        <div class="flex justify-between items-center text-xs">
                             <span class="font-bold text-slate-200 truncate mr-2"><?= htmlspecialchars($ssid) ?></span>
-                            <span class="font-mono text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20"><?= $count ?></span>
+                            <span class="font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20"><?= $count ?></span>
                         </div>
                     <?php 
                         $i++;
@@ -365,7 +325,7 @@ try {
                     ?>
                     
                     <div class="pt-3">
-                        <button onclick="openWifiModal(); event.stopPropagation();" class="w-full py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-[10px] font-black uppercase tracking-widest rounded-lg border border-indigo-500/20 transition-all flex items-center justify-center gap-2">
+                        <button onclick="openWifiModal(); event.stopPropagation();" class="w-full py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-black uppercase tracking-widest rounded-lg border border-indigo-500/20 transition-all flex items-center justify-center gap-2">
                             <span>Zarządzaj</span>
                             <i data-lucide="chevron-right" class="w-3 h-3"></i>
                         </button>
@@ -379,10 +339,10 @@ try {
                     <div class="p-3 bg-purple-500/10 rounded-xl text-purple-400 group-hover:bg-purple-500/20 transition-colors">
                         <i data-lucide="network" class="w-6 h-6"></i>
                     </div>
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Sprzęt</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Sprzęt</span>
                 </div>
                 <div class="text-4xl font-black tracking-tighter text-white"><?= count($infr_devices) ?></div>
-                <div class="text-slate-500 text-[10px] mt-1 font-black uppercase tracking-widest italic tracking-[0.1em]">Urządzenia UniFi</div>
+                <div class="text-slate-500 text-xs mt-1 font-black uppercase tracking-widest italic tracking-[0.1em]">Urządzenia UniFi</div>
             </div>
 
             <!-- 4. WAN Ingress (Download) -->
@@ -391,10 +351,10 @@ try {
                     <div class="p-3 bg-amber-500/10 rounded-xl text-amber-400 group-hover:bg-amber-400/20 transition-colors">
                         <i data-lucide="arrow-down-to-line" class="w-6 h-6"></i>
                     </div>
-                    <div class="text-[10px] font-black text-amber-500/80 uppercase tracking-tighter tracking-[0.1em]">Ingress</div>
+                    <div class="text-xs font-black text-amber-500/80 uppercase tracking-tighter tracking-[0.1em]">Ingress</div>
                 </div>
                 <div class="text-3xl font-black tracking-tighter text-white"><?= formatBps($wan_rx) ?></div>
-                <div class="text-slate-500 text-[10px] uppercase font-black tracking-[0.2em] mt-1">Internet → Router</div>
+                <div class="text-slate-500 text-xs uppercase font-black tracking-[0.2em] mt-1">Internet → Router</div>
             </div>
 
             <!-- 5. WAN Egress (Upload) -->
@@ -403,10 +363,10 @@ try {
                     <div class="p-3 bg-emerald-500/10 rounded-xl text-emerald-400 group-hover:bg-emerald-400/20 transition-colors">
                         <i data-lucide="arrow-up-from-line" class="w-6 h-6"></i>
                     </div>
-                    <div class="text-[10px] font-black text-emerald-400/80 uppercase tracking-tighter tracking-[0.1em]">Egress</div>
+                    <div class="text-xs font-black text-emerald-400/80 uppercase tracking-tighter tracking-[0.1em]">Egress</div>
                 </div>
                 <div class="text-3xl font-black tracking-tighter text-white"><?= formatBps($wan_tx) ?></div>
-                <div class="text-slate-500 text-[10px] uppercase font-black tracking-[0.2em] mt-1">Router → Internet</div>
+                <div class="text-slate-500 text-xs uppercase font-black tracking-[0.2em] mt-1">Router → Internet</div>
             </div>
 
             <!-- 6. Stalker Widget -->
@@ -415,11 +375,11 @@ try {
                     <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20 group-hover:scale-110 transition-transform">
                         <i data-lucide="radar" class="w-5 h-5 text-purple-400"></i>
                     </div>
-                    <span class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Wi-Fi Stalker</span>
+                    <span class="text-[12px] font-bold text-purple-400 uppercase tracking-widest">Wi-Fi Stalker</span>
                 </div>
                 <div class="text-3xl font-black text-white tracking-tight" id="stalker-widget-count">-</div>
                 <div class="text-xs text-slate-500 mt-1">Sesji WiFi</div>
-                <div class="text-[10px] text-slate-600 mt-2 truncate" id="stalker-widget-last">Ladowanie...</div>
+                <div class="text-[12px] text-slate-600 mt-2 truncate" id="stalker-widget-last">Ladowanie...</div>
             </div>
 
             <!-- 7. WAN Status (Dynamic Loop) -->
@@ -429,12 +389,12 @@ try {
                     <div class="p-2.5 bg-red-500/10 text-red-400 rounded-xl">
                         <i data-lucide="globe" class="w-5 h-5"></i>
                     </div>
-                    <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-red-500/20 text-red-400">
+                    <span class="px-2 py-0.5 rounded text-[12px] font-black uppercase tracking-widest bg-red-500/20 text-red-400">
                         OFFLINE
                     </span>
                 </div>
                 <div class="text-lg font-black tracking-tighter truncate text-slate-200">Brak połączenia</div>
-                <div class="text-slate-500 text-[10px] mt-1 font-bold uppercase tracking-widest">WAN 1</div>
+                <div class="text-slate-500 text-[12px] mt-1 font-bold uppercase tracking-widest">WAN 1</div>
             </div>
             <?php else: ?>
                 <?php foreach ($wans as $index => $w): 
@@ -452,7 +412,7 @@ try {
                             <i data-lucide="globe" class="w-5 h-5"></i>
                         </div>
                         <div class="flex flex-col items-end gap-1">
-                            <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-<?= $color ?>-500/20 text-<?= $color ?>-400 relative z-10">
+                            <span class="px-2 py-0.5 rounded text-[12px] font-black uppercase tracking-widest bg-<?= $color ?>-500/20 text-<?= $color ?>-400 relative z-10">
                                 <?= $w['status'] ?>
                             </span>
                             <?php if ($is_wan1): ?>
@@ -467,7 +427,7 @@ try {
                     <div class="text-slate-500 text-[11px] mt-1 font-mono font-bold uppercase tracking-widest truncate relative z-10"><?= $w['ip'] ?></div>
                     
                     <?php if (count($wans) > 1 || $is_wan1): ?>
-                    <div class="mt-3 flex items-center justify-between text-[8px] font-bold uppercase tracking-tighter border-t border-white/5 pt-2">
+                    <div class="mt-3 flex items-center justify-between text-[12px] font-bold uppercase tracking-tighter border-t border-white/5 pt-2">
                         <span class="<?= $is_online ? 'text-slate-400' : 'text-slate-600' ?>"><?= formatBps($w['rx']) ?> ↓</span>
                         <div class="h-1 w-1 rounded-full bg-slate-700"></div>
                         <span class="<?= $is_online ? 'text-slate-400' : 'text-slate-600' ?>"><?= formatBps($w['tx']) ?> ↑</span>
@@ -477,29 +437,7 @@ try {
                 <?php endforeach; ?>
             <?php endif; ?>
 
-            <!-- 7. Latency -->
-            <div class="glass-card p-6 stat-glow-blue cursor-pointer transition hover:scale-[1.02] active:scale-95 group" onclick="openPingModal()">
-                <div class="flex justify-between items-center mb-5">
-                    <div class="p-3 bg-blue-500/10 rounded-xl text-blue-400">
-                        <i data-lucide="timer" class="w-6 h-6"></i>
-                    </div>
-                    <div class="text-[10px] font-mono text-blue-400 font-black uppercase tracking-widest"><?= $latency ?>ms</div>
-                </div>
-                <div class="text-3xl font-black tracking-tighter text-white"><?= $latency ?> <span class="text-xs text-slate-500 font-bold uppercase tracking-widest">ms</span></div>
-                <div class="text-slate-500 text-[10px] mt-1 font-black uppercase tracking-[0.2em]">Opóźnienie (Ping)</div>
-            </div>
 
-            <!-- 8. Packet Loss -->
-            <div class="glass-card p-6 stat-glow-amber">
-                <div class="flex justify-between items-center mb-5">
-                    <div class="p-3 bg-amber-500/10 rounded-xl text-amber-400">
-                        <i data-lucide="activity" class="w-6 h-6"></i>
-                    </div>
-                    <div class="text-[10px] font-mono text-amber-400 font-black uppercase tracking-widest">0.0%</div>
-                </div>
-                <div class="text-3xl font-black tracking-tighter text-white">0.0 <span class="text-sm text-slate-500 font-bold uppercase tracking-widest">%</span></div>
-                <div class="text-slate-500 text-[10px] mt-1 font-black uppercase tracking-[0.2em]">Straty Pakietów</div>
-            </div>
 
             <!-- 9. Incoming Connections -->
             <div onclick="openWanSessionsModal()" class="glass-card p-6 stat-glow-blue relative overflow-hidden group cursor-pointer hover:scale-[1.02] transition-all">
@@ -507,20 +445,20 @@ try {
                     <div class="p-3 bg-blue-500/10 rounded-xl text-blue-400">
                         <i data-lucide="arrow-down-to-line" class="w-6 h-6"></i>
                     </div>
-                    <div class="text-[10px] font-mono text-blue-400 font-black uppercase tracking-widest">SUMA IN</div>
+                    <div class="text-[12px] font-mono text-blue-400 font-black uppercase tracking-widest">SUMA IN</div>
                 </div>
-                <div class="text-2xl font-black tracking-tighter text-white"><?= formatBps($total_clients_rx) ?></div>
-                <div class="text-slate-500 text-[10px] mt-1 font-black uppercase tracking-[0.15em]">Ruch Lokalny (IN)</div>
+                <div class="text-[18px] font-black tracking-tight text-white"><?= formatBps($total_clients_rx) ?></div>
+                <div class="text-slate-500 text-[12px] mt-1 font-black uppercase tracking-[0.15em]">Ruch Lokalny (IN)</div>
                 
                 <?php if ($top_downloader && $max_rx_rate > 50000): ?>
                 <div class="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
                     <div class="flex items-center gap-2 min-w-0">
                         <div class="w-1.5 h-1.5 rounded-full bg-blue-500 pulse"></div>
-                        <span class="text-[10px] text-slate-400 font-bold truncate">
+                        <span class="text-[12px] text-slate-400 font-bold truncate">
                             <?= htmlspecialchars($top_downloader['name'] ?? $top_downloader['hostname'] ?? 'Nieznany') ?>
                         </span>
                     </div>
-                    <span class="text-[10px] font-mono text-blue-400 font-black px-1.5 py-0.5 bg-blue-500/10 rounded">
+                    <span class="text-[12px] font-mono text-blue-400 font-black px-1.5 py-0.5 bg-blue-500/10 rounded">
                         <?= formatBps($max_rx_rate) ?>
                     </span>
                 </div>
@@ -533,24 +471,72 @@ try {
                     <div class="p-3 bg-amber-500/10 rounded-xl text-amber-400">
                         <i data-lucide="arrow-up-from-line" class="w-6 h-6"></i>
                     </div>
-                    <div class="text-[10px] font-mono text-amber-400 font-black uppercase tracking-widest">SUMA OUT</div>
+                    <div class="text-[12px] font-mono text-amber-400 font-black uppercase tracking-widest">SUMA OUT</div>
                 </div>
-                <div class="text-2xl font-black tracking-tighter text-white"><?= formatBps($total_clients_tx) ?></div>
-                <div class="text-slate-500 text-[10px] mt-1 font-black uppercase tracking-[0.15em]">Ruch Lokalny (OUT)</div>
+                <div class="text-[18px] font-black tracking-tight text-white"><?= formatBps($total_clients_tx) ?></div>
+                <div class="text-slate-500 text-[12px] mt-1 font-black uppercase tracking-[0.15em]">Ruch Lokalny (OUT)</div>
 
                 <?php if ($top_uploader && $max_tx_rate > 50000): ?>
                 <div class="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
                     <div class="flex items-center gap-2 min-w-0">
                         <div class="w-1.5 h-1.5 rounded-full bg-amber-500 pulse"></div>
-                        <span class="text-[10px] text-slate-400 font-bold truncate">
+                        <span class="text-[12px] text-slate-400 font-bold truncate">
                             <?= htmlspecialchars($top_uploader['name'] ?? $top_uploader['hostname'] ?? 'Nieznany') ?>
                         </span>
                     </div>
-                    <span class="text-[10px] font-mono text-amber-400 font-black px-1.5 py-0.5 bg-amber-500/10 rounded">
+                    <span class="text-[12px] font-mono text-amber-400 font-black px-1.5 py-0.5 bg-amber-500/10 rounded">
                         <?= formatBps($max_tx_rate) ?>
                     </span>
                 </div>
-                <?php endif; ?>
+            <?php endif; ?>
+            </div>
+            
+            <!-- 8. Packet Loss -->
+            <div class="glass-card p-6 stat-glow-amber">
+                <div class="flex justify-between items-center mb-5">
+                    <div class="p-3 bg-amber-500/10 rounded-xl text-amber-400">
+                        <i data-lucide="activity" class="w-6 h-6"></i>
+                    </div>
+                    <div class="text-[12px] font-mono text-amber-400 font-black uppercase tracking-widest" id="packet-loss-val-top">0.0%</div>
+                </div>
+                <div class="text-3xl font-black tracking-tighter text-white" id="packet-loss-val-main">0.0 <span class="text-sm text-slate-500 font-bold uppercase tracking-widest">%</span></div>
+                <div class="text-slate-500 text-[12px] mt-1 font-black uppercase tracking-[0.2em]">Straty Pakietów</div>
+            </div>
+
+            <!-- 7. Latency -->
+            <div class="glass-card p-5 stat-glow-blue cursor-pointer transition hover:scale-[1.02] active:scale-95 group relative overflow-hidden" onclick="openPingModal()">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 group-hover:bg-blue-500/20 transition-colors">
+                        <i data-lucide="timer" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-[12px] font-black text-slate-500 uppercase tracking-widest">Ping (ms)</span>
+                </div>
+                
+                <div class="space-y-2 relative z-10">
+                    <div class="flex justify-between items-center bg-white/[0.02] p-2 rounded-lg border border-white/5">
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-400 pulse"></span>
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Cloudflare</span>
+                        </div>
+                        <span id="ping-val-1.1.1.1" class="text-sm font-black text-white font-mono">--</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-white/[0.02] p-2 rounded-lg border border-white/5">
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse"></span>
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Google</span>
+                        </div>
+                        <span id="ping-val-8.8.8.8" class="text-sm font-black text-white font-mono">--</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-white/[0.02] p-2 rounded-lg border border-white/5">
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-purple-400 pulse"></span>
+                            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">WP.pl</span>
+                        </div>
+                        <span id="ping-val-wp.pl" class="text-sm font-black text-white font-mono">--</span>
+                    </div>
+                </div>
+                
+                <div class="mt-3 text-[10px] text-slate-600 font-bold uppercase tracking-widest text-center">Opóźnienie Sieciowe</div>
             </div>
         </div>
 
@@ -561,7 +547,7 @@ try {
                     <div>
                         <div class="flex items-center gap-3 mb-1">
                             <h2 class="text-2xl font-black tracking-tight">Łącze WAN</h2>
-                            <span class="px-2 py-0.5 <?= $wan_status === 'ONLINE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20' ?> text-[10px] font-bold rounded-md border">
+                            <span class="px-2 py-0.5 <?= $wan_status === 'ONLINE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20' ?> text-[12px] font-bold rounded-md border">
                                 <?= $wan_status ?>
                             </span>
                         </div>
@@ -576,7 +562,7 @@ try {
                                 <i data-lucide="download" class="w-5 h-5"></i>
                             </div>
                             <div>
-                                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Down</div>
+                                <div class="text-[12px] text-slate-500 font-bold uppercase tracking-widest">Down</div>
                                 <div class="text-lg font-bold font-mono" id="wan-rx-val"><?= formatBps($wan_rx) ?></div>
                             </div>
                         </div>
@@ -585,7 +571,7 @@ try {
                                 <i data-lucide="upload" class="w-5 h-5"></i>
                             </div>
                             <div>
-                                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Up</div>
+                                <div class="text-[12px] text-slate-500 font-bold uppercase tracking-widest">Up</div>
                                 <div class="text-lg font-bold font-mono" id="wan-tx-val"><?= formatBps($wan_tx) ?></div>
                             </div>
                         </div>
@@ -604,36 +590,36 @@ try {
                     </div>
                     <h2 class="text-xl font-bold tracking-tight">Segmentacja VLAN</h2>
                 </div>
-                <div class="space-y-7 flex-grow">
+                <div class="space-y-8 flex-grow">
                     <?php foreach ($vlan_stats as $name => $stat): ?>
                         <div class="group cursor-pointer" onclick="openVlanDetail('<?= htmlspecialchars($name, ENT_QUOTES) ?>')">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-xs font-bold text-slate-300 group-hover:text-blue-400 transition-colors"><?= htmlspecialchars($name) ?></span>
-                                <div class="flex items-center gap-4">
-                                    <div class="flex items-center gap-6 text-[10px] font-mono mr-2">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-[13px] font-black text-slate-200 group-hover:text-blue-400 transition-colors uppercase tracking-wider"><?= htmlspecialchars($name) ?></span>
+                                <div class="flex items-center gap-5">
+                                    <div class="flex items-center gap-6 text-[13px] font-mono mr-2">
                                         <div class="flex flex-col items-end">
                                             <span class="text-emerald-400 font-bold"><?= formatBps(($stat['rx'] ?? 0) * 8) ?> ↓</span>
-                                            <span class="text-slate-600 text-[8px] font-black uppercase tracking-tighter"><?= format_bytes($stat['total_rx'] ?? 0) ?></span>
+                                            <span class="text-slate-600 text-[10px] font-black uppercase tracking-tighter"><?= format_bytes($stat['total_rx'] ?? 0) ?></span>
                                         </div>
                                         <div class="flex flex-col items-end">
                                             <span class="text-amber-400 font-bold"><?= formatBps(($stat['tx'] ?? 0) * 8) ?> ↑</span>
-                                            <span class="text-slate-600 text-[8px] font-black uppercase tracking-tighter"><?= format_bytes($stat['total_tx'] ?? 0) ?></span>
+                                            <span class="text-slate-600 text-[10px] font-black uppercase tracking-tighter"><?= format_bytes($stat['total_tx'] ?? 0) ?></span>
                                         </div>
                                     </div>
-                                    <span class="text-[10px] font-mono text-slate-500 bg-slate-800/50 px-2 py-1 rounded flex flex-col items-center min-w-[40px]">
-                                        <span class="font-black"><?= $stat['count'] ?></span>
-                                        <span class="text-[8px] uppercase opacity-50">devs</span>
+                                    <span class="text-sm font-mono text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-white/5 flex flex-col items-center min-w-[50px]">
+                                        <span class="font-black text-white"><?= $stat['count'] ?></span>
+                                        <span class="text-[11px] font-bold uppercase opacity-50 tracking-widest">devs</span>
                                     </span>
                                 </div>
                             </div>
-                            <div class="vlan-bar-container bg-slate-800/50 h-2 rounded-full overflow-hidden">
+                            <div class="vlan-bar-container bg-slate-800/50 h-2.5 rounded-full overflow-hidden">
                                 <div class="vlan-bar-fill h-full bg-gradient-to-r from-blue-600 to-indigo-400 rounded-full"
                                      style="width: <?= ($stat['count'] / max(count($clients), 1)) * 100 ?>%"></div>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
-                <div class="mt-8 pt-6 border-t border-white/5 text-[10px] text-slate-500 leading-relaxed italic">
+                <div class="mt-8 pt-6 border-t border-white/5 text-xs text-slate-500 leading-relaxed italic">
                     Automatyczna detekcja podsieci w czasie rzeczywistym.
                 </div>
             </div>
@@ -708,7 +694,7 @@ try {
                             <input type="text" id="filter-search" oninput="handleSearchInput(this)" placeholder="Szukaj..." class="pl-10 bg-slate-900/50 border border-white/10 rounded-xl py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 w-48 placeholder:text-slate-600 transition-all">
                          </div>
                          <div class="h-6 w-[1px] bg-white/10 mx-1"></div>
-                         <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest hidden sm:inline">Filtry:</span>
+                         <span class="text-[12px] font-black text-slate-500 uppercase tracking-widest hidden sm:inline">Filtry:</span>
                          <select id="filter-type" onchange="filterClients()" class="bg-slate-900/50 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer hover:bg-slate-800 transition-colors">
                              <option value="all">Wszystkie typy</option>
                              <option value="wifi">Wi-Fi</option>
@@ -785,10 +771,10 @@ try {
                                         <div class="font-bold text-sm text-white leading-tight"><?= htmlspecialchars($client_name) ?></div>
                                         <div class="flex items-center gap-2 mt-1">
                                             <?php if ($is_monitored): ?>
-                                                <span class="text-[9px] text-blue-400 uppercase font-black tracking-widest bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-500/20">MONITOR</span>
+                                                <span class="text-[11px] text-blue-400 uppercase font-black tracking-widest bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-500/20">MONITOR</span>
                                             <?php endif; ?>
                                             <?php if ($is_vpn): ?>
-                                                <span class="text-[9px] text-purple-400 uppercase font-black tracking-widest bg-purple-500/10 px-2 py-0.5 rounded-lg border border-purple-500/20">VPN Session</span>
+                                                <span class="text-[11px] text-purple-400 uppercase font-black tracking-widest bg-purple-500/10 px-2 py-0.5 rounded-lg border border-purple-500/20">VPN Session</span>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -822,7 +808,7 @@ try {
                                         <i data-lucide="activity" class="w-3.5 h-3.5 text-blue-500/50"></i>
                                         <span class="font-bold"><?= $speed_str ?></span>
                                     </div>
-                                    <div class="text-[9px] font-mono text-slate-600 mt-1 flex items-center gap-2">
+                                    <div class="text-[11px] font-mono text-slate-600 mt-1 flex items-center gap-2">
                                         <i data-lucide="database" class="w-3 h-3 text-slate-700"></i>
                                         <span><?= format_bytes($client['rx_bytes'] ?? 0) ?> / <?= format_bytes($client['tx_bytes'] ?? 0) ?></span>
                                     </div>
@@ -831,7 +817,7 @@ try {
                             <td class="py-5 px-4">
                                 <div class="flex flex-col gap-2">
                                     <div class="flex items-center gap-2">
-                                        <span class="px-2 py-1 bg-slate-800/80 rounded-lg text-[10px] text-slate-300 font-black border border-white/10">VLAN <?= $vlan ?></span>
+                                        <span class="px-2 py-1 bg-slate-800/80 rounded-lg text-[12px] text-slate-300 font-black border border-white/10">VLAN <?= $vlan ?></span>
                                         <span class="text-xs font-bold text-slate-500"><?= get_vlan_name($vlan) ?></span>
                                     </div>
                                 </div>
@@ -905,7 +891,7 @@ try {
                                 </div>
                                 <div>
                                     <div class="text-lg font-black text-white mb-1"><?= htmlspecialchars($ssid) ?></div>
-                                    <div class="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">Active Clients Connected</div>
+                                    <div class="text-[12px] text-slate-500 font-black uppercase tracking-[0.2em]">Active Clients Connected</div>
                                 </div>
                             </div>
                             <div class="flex items-center gap-5">
@@ -919,7 +905,7 @@ try {
                 </div>
             </div>
             <div class="p-6 border-t border-white/10 text-center">
-                <p class="text-[10px] text-slate-600 uppercase font-black tracking-widest italic">Dane odświeżane automatycznie z kontrolera UniFi</p>
+                <p class="text-[12px] text-slate-600 uppercase font-black tracking-widest italic">Dane odświeżane automatycznie z kontrolera UniFi</p>
             </div>
         </div>
     </div>
@@ -941,7 +927,7 @@ try {
                     </div>
                     <div>
                         <h2 class="text-xl font-black text-white">Urządzenia UniFi</h2>
-                        <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold font-mono">Infrastructure Overview</p>
+                        <p class="text-[12px] text-slate-500 uppercase tracking-widest font-bold font-mono">Infrastructure Overview</p>
                     </div>
                 </div>
                 <button onclick="closeInfrModal()" class="p-2 text-slate-500 hover:text-white transition bg-white/5 rounded-xl border border-white/5">
@@ -980,13 +966,13 @@ try {
                     ?>
                         <div class="space-y-4">
                              <div class="flex items-center gap-4">
-                                <span class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]"><?= $app ?></span>
+                                <span class="text-[12px] font-black text-slate-500 uppercase tracking-[0.3em]"><?= $app ?></span>
                                 <div class="h-[1px] flex-grow bg-white/10"></div>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left">
                                      <thead>
-                                        <tr class="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] border-b border-white/5">
+                                        <tr class="text-[12px] font-black uppercase text-slate-500 tracking-[0.2em] border-b border-white/5">
                                             <th class="py-5 px-4 text-center">Status</th>
                                             <th class="py-5 px-4">Urządzenie</th>
                                             <th class="py-5 px-4">Adres IP</th>
@@ -1022,14 +1008,16 @@ try {
                                                 </td>
                                                 <td class="py-6 px-4">
                                                     <div class="flex items-center gap-4">
-                                                        <div class="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-slate-400 group-hover:text-purple-400 transition-all shadow-inner border border-white/5 group-hover:scale-110">
-                                                            <i data-lucide="<?= ($d['type'] == 'uap') ? 'wifi' : (($d['type'] == 'usw') ? 'layers' : 'shield') ?>" class="w-7 h-7"></i>
+                                                        <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-slate-400 group-hover:text-purple-400 transition-all shadow-inner border border-white/5 group-hover:scale-110">
+                                                            <i data-lucide="<?= ($d['type'] == 'uap') ? 'wifi' : (($d['type'] == 'usw') ? 'layers' : 'shield') ?>" class="w-4 h-4"></i>
                                                         </div>
-                                                        <div class="flex flex-col justify-center">
-                                                            <div class="flex items-baseline gap-3">
-                                                                 <span class="text-xl font-black text-white leading-tight"><?= htmlspecialchars($d['name'] ?? $d['model']) ?></span>
-                                                                 <span class="text-xs font-mono text-slate-600 font-bold uppercase tracking-tighter">(<?= $d['model'] ?>)</span>
-                                                            </div>
+                                                        <div class="flex flex-col">
+                                                            <?php 
+                                                                $displayName = $d['name'] ?? $d['hostname'] ?? $d['model'] ?? 'Unknown';
+                                                                $subName = ($displayName === $d['model']) ? ($d['mac'] ?? '') : ($d['model'] ?? '');
+                                                            ?>
+                                                            <span class="text-[14px] font-black text-white leading-none mb-0.5"><?= htmlspecialchars($displayName) ?></span>
+                                                            <span class="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest"><?= htmlspecialchars($subName) ?></span>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -1050,7 +1038,7 @@ try {
                                                     <span class="text-2xl font-black text-purple-400 tracking-tighter"><?= $d['num_sta'] ?? 0 ?></span>
                                                 </td>
                                                 <td class="py-6 px-4 text-right">
-                                                    <span class="text-[10px] font-mono text-white whitespace-nowrap"><?= formatDuration($d['uptime'] ?? 0) ?></span>
+                                                    <span class="text-[12px] font-mono text-white whitespace-nowrap"><?= formatDuration($d['uptime'] ?? 0) ?></span>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -1144,8 +1132,37 @@ try {
             console.warn('WAN Chart initialization error:', e);
         }
 
+        // Function to update summary pings in tile
+        window.updateDashboardPings = function updateDashboardPings() {
+            const targets = [
+                { name: 'Cloudflare', host: '1.1.1.1' },
+                { name: 'Google', host: '8.8.8.8' },
+                { name: 'WP.pl', host: 'wp.pl' }
+            ];
+            
+            fetch('api_ping.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hosts: targets })
+            })
+            .then(r => r.json())
+            .then(json => {
+                if (json.data) {
+                    json.data.forEach(res => {
+                        const el = document.getElementById(`ping-val-${res.host}`);
+                        if (el) {
+                            el.innerText = res.status === 'online' ? res.latency + ' ms' : 'OFF';
+                            el.className = `text-sm font-black font-mono ${res.status === 'online' ? (res.latency < 50 ? 'text-emerald-400' : (res.latency < 100 ? 'text-amber-400' : 'text-red-400')) : 'text-slate-600'}`;
+                        }
+                    });
+                }
+            })
+            .catch(e => console.warn('Dashboard ping update error:', e));
+        };
+
         // Function to update stats
         window.updateStats = function updateStats() {
+            updateDashboardPings(); // Refresh pings too
             if (!wanChart) return;
             // Call the PHP script directly to force a refresh and get latest data
             fetch('update_wan.php')
@@ -1344,9 +1361,9 @@ try {
                             <div>
                                 <h2 class="text-xl font-black text-white leading-tight">${name}</h2>
                                 <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider">${mac}</span>
+                                    <span class="text-[12px] font-mono text-slate-500 uppercase tracking-wider">${mac}</span>
                                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <span class="text-[9px] font-black uppercase text-slate-500 tracking-widest">Online</span>
+                                    <span class="text-[11px] font-black uppercase text-slate-500 tracking-widest">Online</span>
                                 </div>
                             </div>
                         </div>
@@ -1386,11 +1403,11 @@ try {
                                 <span class="text-xs font-black text-slate-600 uppercase tracking-widest block mb-2">Suma Danych (Total)</span>
                                 <div class="space-y-2">
                                     <div class="flex justify-between items-center bg-slate-800/20 p-2 rounded-lg border border-white/5">
-                                        <span class="text-xs text-slate-500 uppercase font-bold text-[9px]">Pobrane</span>
+                                        <span class="text-xs text-slate-500 uppercase font-bold text-[11px]">Pobrane</span>
                                         <span class="text-sm font-mono text-slate-300">${formatBytes(rx)}</span>
                                     </div>
                                     <div class="flex justify-between items-center bg-slate-800/20 p-2 rounded-lg border border-white/5">
-                                        <span class="text-xs text-slate-500 uppercase font-bold text-[9px]">Wysłane</span>
+                                        <span class="text-xs text-slate-500 uppercase font-bold text-[11px]">Wysłane</span>
                                         <span class="text-sm font-mono text-slate-300">${formatBytes(tx)}</span>
                                     </div>
                                 </div>
@@ -1402,20 +1419,20 @@ try {
                             <span class="text-xs font-black text-slate-600 uppercase tracking-widest block">Statystyki Zużycia Danych</span>
                             <div class="grid grid-cols-3 gap-3">
                                 <div class="bg-slate-800/30 p-3 rounded-xl border border-white/5 text-center flex flex-col justify-center">
-                                    <span class="block text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-1">24 Godziny</span>
+                                    <span class="block text-[12px] text-slate-500 font-bold uppercase tracking-wider mb-1">24 Godziny</span>
                                     <span id="c-stat-24h" class="block text-sm font-mono text-slate-400">
                                         <div class="flex justify-center"><div class="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div></div>
                                     </span>
                                 </div>
                                 <div class="bg-slate-800/30 p-3 rounded-xl border border-white/5 text-center flex flex-col justify-center">
-                                    <span class="block text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-1">7 Dni</span>
+                                    <span class="block text-[12px] text-slate-500 font-bold uppercase tracking-wider mb-1">7 Dni</span>
                                     <span id="c-stat-7d" class="block text-sm font-mono text-slate-400">
                                         <div class="flex justify-center"><div class="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div></div>
                                     </span>
                                 </div>
                                 <div class="bg-slate-800/30 p-3 rounded-xl border border-blue-500/10 text-center flex flex-col justify-center relative overflow-hidden">
                                      <div class="absolute inset-0 bg-blue-500/5"></div>
-                                     <span class="block text-[8px] text-blue-400 font-bold uppercase tracking-wider mb-1 relative">Całkowite</span>
+                                     <span class="block text-[12px] text-blue-400 font-bold uppercase tracking-wider mb-1 relative">Całkowite</span>
                                      <span class="block text-sm font-mono text-blue-100 relative font-bold">${formatBytes(parseFloat(rx) + parseFloat(tx))}</span>
                                 </div>
                             </div>
@@ -1477,25 +1494,25 @@ try {
         }
 
         async function deleteDeviceHistory(mac) {
-            if (!confirm('Czy na pewno chcesz usunąć to urządzenie z historii i monitoringu? Ta operacja jest nieodwracalna.')) return;
+            showConfirm('Czy na pewno chcesz usunąć to urządzenie z historii i monitoringu? Ta operacja jest nieodwracalna.', async () => {
+                try {
+                    const response = await fetch('api_toggle_monitor.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mac, action: 'delete' })
+                    });
 
-            try {
-                const response = await fetch('api_toggle_monitor.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mac, action: 'delete' })
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    window.location.reload();
-                } else {
-                    alert('Błąd: ' + (result.message || 'Nieznany błąd'));
+                    const result = await response.json();
+                    if (result.success) {
+                        window.location.reload();
+                    } else {
+                        showToast(result.message || 'Nieznany błąd', 'error');
+                    }
+                } catch (e) {
+                    console.error('Error:', e);
+                    showToast('Wystąpił błąd podczas usuwania.', 'error');
                 }
-            } catch (e) {
-                console.error('Error:', e);
-                alert('Wystąpił błąd podczas usuwania.');
-            }
+            });
         }
 
         function formatUptime(seconds) {
@@ -1531,11 +1548,14 @@ try {
                     result = JSON.parse(text);
                 } catch (e) {
                     console.error('Invalid JSON response:', text);
-                    alert('Błąd API: Nieprawidłowa odpowiedź serwera');
+                    showToast('Błąd API: Nieprawidłowa odpowiedź serwera', 'error');
                     return;
                 }
 
                 if (result.success) {
+                    // Show success toast
+                    showToast(action === 'add' ? 'Dodano do obserwowanych' : 'Usunięto z obserwowanych', 'success');
+                    
                     // Refresh current page if on monitored.php to show results immediately
                     if (window.location.pathname.includes('monitored.php')) {
                         window.location.reload();
@@ -1568,11 +1588,11 @@ try {
                     }
                     lucide.createIcons();
                 } else {
-                    console.error('Błąd: ' + result.message);
+                    showToast(result.message || 'Nieznany błąd', 'error');
                 }
             } catch (err) {
                 console.error(err);
-                console.error('Błąd połączenia z API');
+                showToast('Błąd połączenia z API', 'error');
             }
         }
 
@@ -1677,6 +1697,19 @@ try {
                     }
                 }
             });
+            
+            // Also update real WAN Packet Loss and Health
+            fetch('api_wan_health.php')
+            .then(r => r.json())
+            .then(json => {
+                if (json.success && json.data) {
+                    const loss = json.data.packet_loss || 0;
+                    const lossEl = document.getElementById('packet-loss-val-main');
+                    const lossTopEl = document.getElementById('packet-loss-val-top');
+                    if (lossEl) lossEl.innerHTML = `${loss.toFixed(1)} <span class="text-sm text-slate-500 font-bold uppercase tracking-widest">%</span>`;
+                    if (lossTopEl) lossTopEl.innerText = `${loss.toFixed(1)}%`;
+                }
+            });
         }
 
         function startPingPolling() {
@@ -1759,14 +1792,14 @@ try {
                 <div class="p-4 rounded-xl bg-slate-900/60 border border-white/5 flex flex-col gap-1 transition hover:bg-white/5 group relative">
                     ${isRemovable ? `<button onclick="removePingHost('${h.host}')" class="absolute top-2 right-2 p-1 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition"><i data-lucide="trash-2" class="w-3 h-3"></i></button>` : ''}
                     <div class="flex justify-between items-start">
-                        <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider truncate pr-4">${h.name}</span>
+                        <span class="text-[12px] uppercase font-bold text-slate-500 tracking-wider truncate pr-4">${h.name}</span>
                         <div class="w-2 h-2 rounded-full bg-${isOnline ? 'emerald-500' : 'red-500'} ${isOnline ? 'animate-pulse' : ''} shrink-0"></div>
                     </div>
                     <div class="flex items-baseline gap-1">
                         <span class="text-2xl font-black text-white tracking-tighter">${h.latency}</span>
                         <span class="text-xs font-bold text-slate-500">ms</span>
                     </div>
-                    <div class="text-[9px] font-mono text-slate-600 truncate">${h.host}</div>
+                    <div class="text-[11px] font-mono text-slate-600 truncate">${h.host}</div>
                 </div>
                 `;
             }).join('');
@@ -1882,7 +1915,7 @@ try {
                 }
 
                 let html = '<td colspan="6" class="p-0"><div class="bg-slate-800/30 border-t border-b border-white/5 px-6 py-3">';
-                html += '<table class="w-full"><thead><tr class="text-[10px] text-slate-500 uppercase"><th class="text-left py-1 px-2">Klient</th><th class="text-left py-1 px-2">Siec</th><th class="text-left py-1 px-2">Sygnal</th><th class="text-left py-1 px-2">Predkosc</th><th class="text-left py-1 px-2">IP</th></tr></thead><tbody>';
+                html += '<table class="w-full"><thead><tr class="text-[12px] text-slate-500 uppercase"><th class="text-left py-1 px-2">Klient</th><th class="text-left py-1 px-2">Siec</th><th class="text-left py-1 px-2">Sygnal</th><th class="text-left py-1 px-2">Predkosc</th><th class="text-left py-1 px-2">IP</th></tr></thead><tbody>';
                 clients.forEach(c => {
                     const isWired = c.is_wired;
                     const signal = c.signal || 0;
@@ -1896,7 +1929,7 @@ try {
                         ? '<span class="text-blue-400">Wired' + (c.sw_port ? ' P' + c.sw_port : '') + '</span>'
                         : (signal ? '<span class="' + rssiClass + '">' + signal + 'dBm</span>' : '—');
                     const ip = c.ip || '—';
-                    html += '<tr class="border-t border-white/5"><td class="py-2 px-2 text-xs text-white">' + name + '</td><td class="py-2 px-2 text-[10px] text-purple-400">' + net + '</td><td class="py-2 px-2 text-xs font-mono">' + signalInfo + '</td><td class="py-2 px-2 text-[10px] text-slate-400">' + speedInfo + '</td><td class="py-2 px-2 text-[10px] text-slate-500 font-mono">' + ip + '</td></tr>';
+                    html += '<tr class="border-t border-white/5"><td class="py-2 px-2 text-xs text-white">' + name + '</td><td class="py-2 px-2 text-[12px] text-purple-400">' + net + '</td><td class="py-2 px-2 text-xs font-mono">' + signalInfo + '</td><td class="py-2 px-2 text-[12px] text-slate-400">' + speedInfo + '</td><td class="py-2 px-2 text-[12px] text-slate-500 font-mono">' + ip + '</td></tr>';
                 });
                 html += '</tbody></table></div></td>';
                 detailRow.innerHTML = html;
@@ -1952,15 +1985,15 @@ try {
                         </td>
                         <td class="py-3 px-4">
                             <div class="text-xs font-mono text-slate-300">${c.ip || '—'}</div>
-                            <div class="text-[9px] font-mono text-slate-600 uppercase tracking-tighter">${c.mac || '—'}</div>
+                            <div class="text-[11px] font-mono text-slate-600 uppercase tracking-tighter">${c.mac || '—'}</div>
                         </td>
                         <td class="py-3 px-4 text-right">
                             <div class="text-xs font-bold text-emerald-400">${formatBps(c.rx * 8)}</div>
-                            <div class="text-[10px] text-slate-500 font-mono">${formatBytes(c.rx_total)}</div>
+                            <div class="text-[12px] text-slate-500 font-mono">${formatBytes(c.rx_total)}</div>
                         </td>
                         <td class="py-3 px-4 text-right">
                             <div class="text-xs font-bold text-amber-400">${formatBps(c.tx * 8)}</div>
-                            <div class="text-[10px] text-slate-500 font-mono">${formatBytes(c.tx_total)}</div>
+                            <div class="text-[12px] text-slate-500 font-mono">${formatBytes(c.tx_total)}</div>
                         </td>
                     </tr>`;
                 }).join('');
@@ -1990,11 +2023,11 @@ try {
                 </div>
                 <div class="flex items-center gap-6 mr-8">
                     <div class="text-right">
-                        <div class="text-[9px] text-slate-500 uppercase font-bold">Download</div>
+                        <div class="text-[11px] text-slate-500 uppercase font-bold">Download</div>
                         <div class="text-sm font-bold text-emerald-400" id="vlan-detail-rx">0</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-[9px] text-slate-500 uppercase font-bold">Upload</div>
+                        <div class="text-[11px] text-slate-500 uppercase font-bold">Upload</div>
                         <div class="text-sm font-bold text-amber-400" id="vlan-detail-tx">0</div>
                     </div>
                 </div>
@@ -2005,7 +2038,7 @@ try {
             <div class="px-8 pb-8 overflow-y-auto max-h-[60vh] custom-scrollbar">
                 <table class="w-full">
                     <thead>
-                        <tr class="text-[9px] text-slate-500 uppercase tracking-wider font-bold border-b border-white/5">
+                        <tr class="text-[11px] text-slate-500 uppercase tracking-wider font-bold border-b border-white/5">
                             <th class="text-left py-3 px-4">Klient</th>
                             <th class="text-left py-3 px-4">IP / MAC</th>
                             <th class="text-right py-3 px-4">Download (Live / Suma)</th>
@@ -2017,6 +2050,7 @@ try {
             </div>
         </div>
     </div>
+    <?php include __DIR__ . '/includes/confirm_modal.php'; ?>
     <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
 </html>
