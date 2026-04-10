@@ -2386,9 +2386,9 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                     <p class="text-slate-500 text-xs mt-1">Aktywne usługi i obciążenie zasobów w czasie rzeczywistym</p>
                 </div>
                 <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
-                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span class="text-[10px] font-black uppercase tracking-widest">Live API</span>
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20">
+                        <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                        <span class="text-[10px] font-black uppercase tracking-widest">API Status</span>
                     </div>
                     <button type="button" onclick="closeProcessModal()" class="p-2 hover:bg-white/5 rounded-xl transition text-slate-500 hover:text-white">
                         <i data-lucide="x" class="w-6 h-6"></i>
@@ -2400,37 +2400,86 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                 <table class="w-full text-left border-collapse" id="processTable">
                     <thead class="sticky top-0 z-10">
                         <tr class="bg-slate-900 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] border-b border-white/5">
-                            <th class="px-8 py-4 cursor-pointer hover:text-blue-400 transition" onclick="sortProcessTable(0)">Usługa / Proces <i data-lucide="chevrons-up-down" class="w-3 h-3 inline-block ml-1 opacity-50"></i></th>
+                            <th class="px-8 py-4 cursor-pointer hover:text-blue-400 transition" onclick="sortProcessTable(0)">Usluga <i data-lucide="chevrons-up-down" class="w-3 h-3 inline-block ml-1 opacity-50"></i></th>
                             <th class="px-6 py-4 cursor-pointer hover:text-blue-400 transition" onclick="sortProcessTable(1)">Status <i data-lucide="chevrons-up-down" class="w-3 h-3 inline-block ml-1 opacity-50"></i></th>
                             <th class="px-6 py-4 text-right cursor-pointer hover:text-blue-400 transition" onclick="sortProcessTable(2)">CPU <i data-lucide="chevrons-up-down" class="w-3 h-3 inline-block ml-1 opacity-50"></i></th>
-                            <th class="px-6 py-4 text-right cursor-pointer hover:text-blue-400 transition" onclick="sortProcessTable(3)">Pamięć <i data-lucide="chevrons-up-down" class="w-3 h-3 inline-block ml-1 opacity-50"></i></th>
-                            <th class="px-6 py-4 text-right cursor-pointer hover:text-blue-400 transition" onclick="sortProcessTable(4)">PID <i data-lucide="chevrons-up-down" class="w-3 h-3 inline-block ml-1 opacity-50"></i></th>
+                            <th class="px-6 py-4 text-right cursor-pointer hover:text-blue-400 transition" onclick="sortProcessTable(3)">Info <i data-lucide="chevrons-up-down" class="w-3 h-3 inline-block ml-1 opacity-50"></i></th>
+                            <th class="px-6 py-4 text-right cursor-pointer hover:text-blue-400 transition" onclick="sortProcessTable(4)">Uwagi <i data-lucide="chevrons-up-down" class="w-3 h-3 inline-block ml-1 opacity-50"></i></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-white/[0.02]">
                         <?php 
-                        $ips_enabled = get_ips_status();
-                        $ips_status = $ips_enabled ? 'Protecting' : 'Disabled';
-                        $ips_cpu = $ips_enabled ? '18.2%' : '0.0%';
-                        $ips_mem = $ips_enabled ? '256 MB' : '0 MB';
-                        $ips_pid = $ips_enabled ? '942' : '0';
-                        $ips_color = $ips_enabled ? 'rose' : 'slate';
+                        // Build real service list from API data
+                        $sys = get_system_info();
+                        $gw_resp = fetch_api("/proxy/network/api/s/default/stat/device");
+                        $gw = null;
+                        foreach (($gw_resp['data'] ?? []) as $_d) {
+                            if (in_array($_d['type'] ?? '', ['ugw', 'udm', 'uxg'])) { $gw = $_d; break; }
+                        }
+                        $gw_cpu = $gw['system-stats']['cpu'] ?? 0;
+                        $gw_mem = $gw['system-stats']['mem'] ?? 0;
+                        $gw_mem_total = $gw['sys_stats']['mem_total'] ?? 0;
+                        $gw_mem_used = $gw['sys_stats']['mem_used'] ?? 0;
+                        $gw_uptime = $gw['uptime'] ?? 0;
+                        $gw_load = $gw['sys_stats']['loadavg_1'] ?? $gw['system-stats']['loadavg_1'] ?? '0';
 
-                        $processes = [
-                            ['name' => 'UniFi Network Application', 'status' => 'Running', 'cpu' => '12.4%', 'mem' => '842 MB', 'pid' => '1242', 'color' => 'blue'],
-                            ['name' => 'UniFi OS Core', 'status' => 'Running', 'cpu' => '2.1%', 'mem' => '156 MB', 'pid' => '842', 'color' => 'slate'],
-                            ['name' => 'PostgreSQL Engine', 'status' => 'Running', 'cpu' => '0.8%', 'mem' => '312 MB', 'pid' => '1562', 'color' => 'indigo'],
-                            ['name' => 'MongoDB Services', 'status' => 'Running', 'cpu' => '3.5%', 'mem' => '521 MB', 'pid' => '1568', 'color' => 'emerald'],
-                            ['name' => 'UniFi Identity', 'status' => 'Idle', 'cpu' => '0.0%', 'mem' => '42 MB', 'pid' => '2452', 'color' => 'slate'],
-                            ['name' => 'Intrusion Detection (IPS)', 'status' => $ips_status, 'cpu' => $ips_cpu, 'mem' => $ips_mem, 'pid' => $ips_pid, 'color' => $ips_color],
-                            ['name' => 'Device Discovery SDK', 'status' => 'Scanning', 'cpu' => '1.5%', 'mem' => '89 MB', 'pid' => '3120', 'color' => 'amber'],
-                            ['name' => 'Nginx Reverse Proxy', 'status' => 'Running', 'cpu' => '0.2%', 'mem' => '28 MB', 'pid' => '442', 'color' => 'emerald'],
-                            ['name' => 'Redis Cache', 'status' => 'Running', 'cpu' => '0.5%', 'mem' => '64 MB', 'pid' => '512', 'color' => 'rose'],
-                            ['name' => 'Log Rotation Service', 'status' => 'Idle', 'cpu' => '0.0%', 'mem' => '12 MB', 'pid' => '1102', 'color' => 'slate'],
-                            ['name' => 'Ubnt-util Helper', 'status' => 'Running', 'cpu' => '0.1%', 'mem' => '8 MB', 'pid' => '221', 'color' => 'blue'],
-                            ['name' => 'DHCP Server Daemon', 'status' => 'Running', 'cpu' => '0.1%', 'mem' => '14 MB', 'pid' => '104', 'color' => 'blue'],
-                            ['name' => 'DNS Forwarder (dnsmasq)', 'status' => 'Running', 'cpu' => '0.3%', 'mem' => '19 MB', 'pid' => '105', 'color' => 'blue'],
-                            ['name' => 'Stats Collector', 'status' => 'Working', 'cpu' => '2.8%', 'mem' => '115 MB', 'pid' => '2941', 'color' => 'amber']
+                        $ips_enabled = get_ips_status();
+                        $dhcp_leases = $gw['active_dhcp_lease_count'] ?? 0;
+                        $device_count = count($gw_resp['data'] ?? []);
+
+                        // Build services with real data where available, estimates where not
+                        $processes = [];
+
+                        // Apps from get_system_info
+                        foreach ($sys['apps'] as $app) {
+                            $processes[] = [
+                                'name' => $app['name'],
+                                'status' => $app['status'],
+                                'cpu' => '-',
+                                'mem' => 'v' . $app['version'],
+                                'pid' => $app['update'] ? 'UPDATE' : '',
+                                'color' => $app['color'],
+                            ];
+                        }
+
+                        // IPS
+                        $processes[] = [
+                            'name' => 'Intrusion Prevention (IPS)',
+                            'status' => $ips_enabled ? 'Protecting' : 'Disabled',
+                            'cpu' => '-',
+                            'mem' => '-',
+                            'pid' => '',
+                            'color' => $ips_enabled ? 'rose' : 'slate',
+                        ];
+
+                        // DHCP
+                        $processes[] = [
+                            'name' => 'DHCP Server',
+                            'status' => 'Running',
+                            'cpu' => '-',
+                            'mem' => $dhcp_leases . ' leases',
+                            'pid' => '',
+                            'color' => 'blue',
+                        ];
+
+                        // DNS
+                        $processes[] = [
+                            'name' => 'DNS Forwarder',
+                            'status' => 'Running',
+                            'cpu' => '-',
+                            'mem' => '-',
+                            'pid' => '',
+                            'color' => 'blue',
+                        ];
+
+                        // Gateway stats summary
+                        $processes[] = [
+                            'name' => 'UniFi OS (' . ($sys['model'] ?? 'Gateway') . ')',
+                            'status' => 'Uptime: ' . formatDuration($gw_uptime),
+                            'cpu' => round($gw_cpu, 1) . '%',
+                            'mem' => round($gw_mem, 1) . '%',
+                            'pid' => 'Load: ' . round((float)$gw_load, 2),
+                            'color' => 'emerald',
                         ];
                         foreach ($processes as $p): ?>
                         <tr class="hover:bg-white/[0.02] transition-colors group">
