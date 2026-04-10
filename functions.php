@@ -451,7 +451,7 @@ function get_unifi_blocked_ips() {
         if (in_array($e['src_ip'], $seen_ips)) continue;
         $seen_ips[] = $e['src_ip'];
         
-        $country = $e['country_code'] ?? '??';
+        $country = $e['srcipCountry'] ?? $e['country_code'] ?? '??';
         $time_diff = time() - ($e['time'] / 1000);
         
         if ($time_diff < 3600) $time_str = round($time_diff / 60) . 'm temu';
