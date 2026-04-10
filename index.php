@@ -47,10 +47,14 @@ try {
                 $tc = $trad_map[$c_mac];
                 // Enrich
                 $c['essid'] = $c['essid'] ?? $tc['essid'] ?? '';
-                $c['rx_rate'] = $c['rx_rate'] ?? $tc['rx_rate'] ?? 0;
-                $c['tx_rate'] = $c['tx_rate'] ?? $tc['tx_rate'] ?? 0;
-                $c['signal'] = $tc['signal'] ?? 0;
-                $c['is_wired'] = $c['is_wired'] ?? ($tc['is_wired'] ?? ($tc['type'] == 'wired'));
+                $c['rx_rate'] = $tc['rx_bytes-r'] ?? $tc['rx_rate'] ?? 0;
+                $c['tx_rate'] = $tc['tx_bytes-r'] ?? $tc['tx_rate'] ?? 0;
+                $c['rx_bytes'] = $tc['rx_bytes'] ?? 0;
+                $c['tx_bytes'] = $tc['tx_bytes'] ?? 0;
+                $c['rx_bytes_r'] = $tc['rx_bytes-r'] ?? 0;
+                $c['tx_bytes_r'] = $tc['tx_bytes-r'] ?? 0;
+                $c['signal'] = $tc['signal'] ?? $tc['rssi'] ?? 0;
+                $c['is_wired'] = $c['is_wired'] ?? ($tc['is_wired'] ?? ($tc['type'] == 'wired' || empty($tc['essid'])));
                 $c['vlan'] = $c['vlan'] ?? $tc['vlan'] ?? 0;
                 $c['uptime'] = $tc['uptime'] ?? 0;
                 $c['satisfaction'] = $tc['satisfaction'] ?? 0;
@@ -194,13 +198,17 @@ try {
         $vlan_name = get_vlan_name($vlan_id);
         $c_rx = $client['rx_rate'] ?? $client['rx_bytes-r'] ?? 0;
         $c_tx = $client['tx_rate'] ?? $client['tx_bytes-r'] ?? 0;
+        $c_rx_total = $client['rx_bytes'] ?? 0;
+        $c_tx_total = $client['tx_bytes'] ?? 0;
 
         if (!isset($vlan_stats[$vlan_name])) {
-            $vlan_stats[$vlan_name] = ['count' => 0, 'id' => (int)$vlan_id, 'rx' => 0, 'tx' => 0];
+            $vlan_stats[$vlan_name] = ['count' => 0, 'id' => (int)$vlan_id, 'rx' => 0, 'tx' => 0, 'total_rx' => 0, 'total_tx' => 0];
         }
         $vlan_stats[$vlan_name]['count']++;
         $vlan_stats[$vlan_name]['rx'] += $c_rx;
         $vlan_stats[$vlan_name]['tx'] += $c_tx;
+        $vlan_stats[$vlan_name]['total_rx'] += $c_rx_total;
+        $vlan_stats[$vlan_name]['total_tx'] += $c_tx_total;
 
         $vlan_clients[$vlan_name][] = [
             'name' => $client['name'] ?? $client['hostname'] ?? $client['macAddress'] ?? $client['mac'] ?? '?',
@@ -208,6 +216,8 @@ try {
             'mac' => $client['macAddress'] ?? $client['mac'] ?? '',
             'rx' => $c_rx,
             'tx' => $c_tx,
+            'rx_total' => $c_rx_total,
+            'tx_total' => $c_tx_total,
             'is_wired' => $client['is_wired'] ?? false,
         ];
     }
@@ -275,7 +285,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UniFi Dash Mini</title>
+    <title>MiniDash</title>
     <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -284,7 +294,7 @@ try {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="custom-scrollbar">
-    <?php render_nav("UniFi MiniDash", [
+    <?php render_nav("MiniDash", [
         'cpu' => $cpu,
         'ram' => $ram,
         'down' => $wan_rx,
@@ -367,9 +377,6 @@ try {
                 </div>
                 <div class="text-3xl font-black tracking-tighter text-white"><?= formatBps($wan_rx) ?></div>
                 <div class="text-slate-500 text-[10px] uppercase font-black tracking-[0.2em] mt-1">Internet → Router</div>
-                <div class="mt-4 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full animate-pulse" style="width: 45%"></div>
-                </div>
             </div>
 
             <!-- 5. WAN Egress (Upload) -->
@@ -382,9 +389,6 @@ try {
                 </div>
                 <div class="text-3xl font-black tracking-tighter text-white"><?= formatBps($wan_tx) ?></div>
                 <div class="text-slate-500 text-[10px] uppercase font-black tracking-[0.2em] mt-1">Router → Internet</div>
-                <div class="mt-4 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full animate-pulse" style="width: 25%"></div>
-                </div>
             </div>
 
             <!-- 6. Stalker Widget -->
@@ -480,7 +484,7 @@ try {
             </div>
 
             <!-- 9. Incoming Connections -->
-            <div class="glass-card p-6 stat-glow-blue relative overflow-hidden group">
+            <div onclick="openWanSessionsModal()" class="glass-card p-6 stat-glow-blue relative overflow-hidden group cursor-pointer hover:scale-[1.02] transition-all">
                 <div class="flex justify-between items-center mb-5">
                     <div class="p-3 bg-blue-500/10 rounded-xl text-blue-400">
                         <i data-lucide="arrow-down-to-line" class="w-6 h-6"></i>
@@ -506,7 +510,7 @@ try {
             </div>
 
             <!-- 10. Outgoing Connections -->
-            <div class="glass-card p-6 stat-glow-amber relative overflow-hidden group">
+            <div onclick="openWanSessionsModal()" class="glass-card p-6 stat-glow-amber relative overflow-hidden group cursor-pointer hover:scale-[1.02] transition-all">
                 <div class="flex justify-between items-center mb-5">
                     <div class="p-3 bg-amber-500/10 rounded-xl text-amber-400">
                         <i data-lucide="arrow-up-from-line" class="w-6 h-6"></i>
@@ -587,9 +591,22 @@ try {
                         <div class="group cursor-pointer" onclick="openVlanDetail('<?= htmlspecialchars($name, ENT_QUOTES) ?>')">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="text-xs font-bold text-slate-300 group-hover:text-blue-400 transition-colors"><?= htmlspecialchars($name) ?></span>
-                                <span class="text-[10px] font-mono text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded">
-                                    <?= $stat['count'] ?> devs
-                                </span>
+                                <div class="flex items-center gap-4">
+                                    <div class="flex items-center gap-6 text-[10px] font-mono mr-2">
+                                        <div class="flex flex-col items-end">
+                                            <span class="text-emerald-400 font-bold"><?= formatBps(($stat['rx'] ?? 0) * 8) ?> ↓</span>
+                                            <span class="text-slate-600 text-[8px] font-black uppercase tracking-tighter"><?= format_bytes($stat['total_rx'] ?? 0) ?></span>
+                                        </div>
+                                        <div class="flex flex-col items-end">
+                                            <span class="text-amber-400 font-bold"><?= formatBps(($stat['tx'] ?? 0) * 8) ?> ↑</span>
+                                            <span class="text-slate-600 text-[8px] font-black uppercase tracking-tighter"><?= format_bytes($stat['total_tx'] ?? 0) ?></span>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] font-mono text-slate-500 bg-slate-800/50 px-2 py-1 rounded flex flex-col items-center min-w-[40px]">
+                                        <span class="font-black"><?= $stat['count'] ?></span>
+                                        <span class="text-[8px] uppercase opacity-50">devs</span>
+                                    </span>
+                                </div>
                             </div>
                             <div class="vlan-bar-container bg-slate-800/50 h-2 rounded-full overflow-hidden">
                                 <div class="vlan-bar-fill h-full bg-gradient-to-r from-blue-600 to-indigo-400 rounded-full"
@@ -730,10 +747,8 @@ try {
                             
                             $type_label = $is_vpn ? 'vpn' : ($is_wired ? 'wired' : 'wifi');
                             
-                            $rx = ($client['rx_rate'] ?? 0) * 1000;
-                            if ($rx < 1000) $rx = ($client['rx_rate'] ?? 0);
-                            $tx = ($client['tx_rate'] ?? 0) * 1000;
-                            if ($tx < 1000) $tx = ($client['tx_rate'] ?? 0);
+                            $rx = ($client['rx_rate'] ?? $client['rx_bytes-r'] ?? 0) * 8;
+                            $tx = ($client['tx_rate'] ?? $client['tx_bytes-r'] ?? 0) * 8;
 
                             $speed_str = ($rx > 0 || $tx > 0) ? formatBps($rx) . " / " . formatBps($tx) : "Brak ruchu";
                         ?>
@@ -788,6 +803,10 @@ try {
                                     <div class="text-[11px] font-mono text-slate-500 mt-1.5 flex items-center gap-2">
                                         <i data-lucide="activity" class="w-3.5 h-3.5 text-blue-500/50"></i>
                                         <span class="font-bold"><?= $speed_str ?></span>
+                                    </div>
+                                    <div class="text-[9px] font-mono text-slate-600 mt-1 flex items-center gap-2">
+                                        <i data-lucide="database" class="w-3 h-3 text-slate-700"></i>
+                                        <span><?= format_bytes($client['rx_bytes'] ?? 0) ?> / <?= format_bytes($client['tx_bytes'] ?? 0) ?></span>
                                     </div>
                                 </div>
                             </td>
@@ -1289,10 +1308,11 @@ try {
             const mac = client.mac || client.macAddress || 'no-mac';
             const ip = client.ip || client.ipAddress || 'DHCP';
             const uptimeNum = client.uptime || 0;
-            const rx = client.rx_bytes || client['rx_bytes-r'] || 0;
-            const tx = client.tx_bytes || client['tx_bytes-r'] || 0;
-            const rxRate = (client.receive_rate || client['rx_rate-r'] || 0);
-            const txRate = (client.transmit_rate || client['tx_rate-r'] || 0);
+            const rx = client.rx_bytes || 0;
+            const tx = client.tx_bytes || 0;
+            // Rates from UniFi are in Bytes per second, multiply by 8 for bps
+            const rxRate = (client.rx_bytes_r || client['rx_bytes-r'] || client.rx_rate || 0) * 8;
+            const txRate = (client.tx_bytes_r || client['tx_bytes-r'] || client.tx_rate || 0) * 8;
             const signal = client.rssi || client.signal || null;
             const isWired = client.is_wired || false;
 
@@ -1852,8 +1872,8 @@ try {
             const modal = document.getElementById('vlanDetailModal');
             document.getElementById('vlan-detail-title').textContent = vlanName;
             document.getElementById('vlan-detail-count').textContent = clients.length + ' urzadzen';
-            document.getElementById('vlan-detail-rx').textContent = formatBps(stats.rx || 0);
-            document.getElementById('vlan-detail-tx').textContent = formatBps(stats.tx || 0);
+            document.getElementById('vlan-detail-rx').textContent = formatBps((stats.rx || 0) * 8);
+            document.getElementById('vlan-detail-tx').textContent = formatBps((stats.tx || 0) * 8);
 
             const tbody = document.getElementById('vlan-detail-body');
             if (clients.length === 0) {
@@ -1863,12 +1883,25 @@ try {
                 clients.sort((a,b) => (b.rx + b.tx) - (a.rx + a.tx));
                 tbody.innerHTML = clients.map(c => {
                     const icon = c.is_wired ? 'monitor' : 'wifi';
-                    return `<tr class="hover:bg-white/[0.02] transition-colors border-t border-white/5">
-                        <td class="py-3 px-4"><div class="flex items-center gap-2"><i data-lucide="${icon}" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i><span class="text-sm text-white truncate">${c.name}</span></div></td>
-                        <td class="py-3 px-4 text-xs font-mono text-slate-400">${c.ip || '—'}</td>
-                        <td class="py-3 px-4 text-xs font-mono text-slate-500">${c.mac || '—'}</td>
-                        <td class="py-3 px-4 text-right text-xs font-bold text-emerald-400">${formatBps(c.rx * 8)}</td>
-                        <td class="py-3 px-4 text-right text-xs font-bold text-amber-400">${formatBps(c.tx * 8)}</td>
+                    return `<tr class="hover:bg-white/[0.02] transition-colors border-t border-white/5 group">
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="${icon}" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
+                                <span class="text-sm font-bold text-white truncate max-w-[150px] group-hover:text-blue-400 transition-colors">${c.name}</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="text-xs font-mono text-slate-300">${c.ip || '—'}</div>
+                            <div class="text-[9px] font-mono text-slate-600 uppercase tracking-tighter">${c.mac || '—'}</div>
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                            <div class="text-xs font-bold text-emerald-400">${formatBps(c.rx * 8)}</div>
+                            <div class="text-[10px] text-slate-500 font-mono">${formatBytes(c.rx_total)}</div>
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                            <div class="text-xs font-bold text-amber-400">${formatBps(c.tx * 8)}</div>
+                            <div class="text-[10px] text-slate-500 font-mono">${formatBytes(c.tx_total)}</div>
+                        </td>
                     </tr>`;
                 }).join('');
             }
@@ -1914,10 +1947,9 @@ try {
                     <thead>
                         <tr class="text-[9px] text-slate-500 uppercase tracking-wider font-bold border-b border-white/5">
                             <th class="text-left py-3 px-4">Klient</th>
-                            <th class="text-left py-3 px-4">IP</th>
-                            <th class="text-left py-3 px-4">MAC</th>
-                            <th class="text-right py-3 px-4">Download</th>
-                            <th class="text-right py-3 px-4">Upload</th>
+                            <th class="text-left py-3 px-4">IP / MAC</th>
+                            <th class="text-right py-3 px-4">Download (Live / Suma)</th>
+                            <th class="text-right py-3 px-4">Upload (Live / Suma)</th>
                         </tr>
                     </thead>
                     <tbody id="vlan-detail-body"></tbody>
