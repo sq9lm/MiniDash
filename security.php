@@ -1800,6 +1800,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <?php
                     $direction = strtoupper($rule['direction'] ?? 'IN');
                     $countries = $rule['countries'] ?? [];
+                    $counts = $rule['counts'] ?? [];
                     $dirColor = $direction === 'OUT' ? 'bg-amber-500/20 text-amber-400' : ($direction === 'BOTH' ? 'bg-purple-500/20 text-purple-400' : 'bg-rose-500/20 text-rose-400');
                 ?>
                 <div class="bg-slate-800/50 border border-white/5 rounded-2xl p-5">
@@ -1812,10 +1813,14 @@ $top_countries = array_slice($top_countries, 0, 5);
                         <?php foreach ($countries as $cc):
                             $code = strtolower(is_string($cc) ? $cc : ($cc['code'] ?? ''));
                             if (!$code || $code === 'un') continue;
+                            $cnt = $counts[$code] ?? 0;
                         ?>
-                        <div class="flex items-center gap-1.5 bg-slate-700/50 rounded-lg px-2 py-1">
+                        <div class="flex items-center gap-1.5 bg-slate-700/50 rounded-lg px-2 py-1 hover:bg-slate-600/50 transition">
                             <img src="https://flagcdn.com/24x18/<?= $code ?>.png" class="w-5 h-3.5 rounded-sm" title="<?= strtoupper($code) ?>">
                             <span class="text-xs text-slate-300 font-mono"><?= strtoupper($code) ?></span>
+                            <?php if ($cnt > 0): ?>
+                            <span class="text-[9px] text-rose-400 font-bold"><?= number_format($cnt) ?></span>
+                            <?php endif; ?>
                         </div>
                         <?php endforeach; ?>
                     </div>
