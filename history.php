@@ -28,7 +28,8 @@ $history = array_reverse(loadDeviceHistory($mac)); // Najnowsze na górze
 
 // Fetch Live Stats from UniFi to show in Traffic Section
 $device_stats = [];
-$trad_resp = fetch_api("/proxy/network/api/s/default/stat/sta");
+$tradSite = get_trad_site_id($config['site']);
+$trad_resp = fetch_api("/proxy/network/api/s/{$tradSite}/stat/sta");
 if (!empty($trad_resp['data'])) {
     foreach ($trad_resp['data'] as $d) {
         if (normalize_mac($d['mac']) === normalize_mac($mac)) {
@@ -162,7 +163,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                     <i data-lucide="trash-2" class="w-5 h-5 group-hover/del:animate-bounce"></i>
                 </button>
                 <div class="glass-card px-5 py-3 border-white/10">
-                    <div class="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold mb-1">Adres MAC</div>
+                    <div class="text-[12px] text-slate-500 uppercase tracking-[0.2em] font-bold mb-1">Adres MAC</div>
                     <div class="text-sm font-mono text-blue-400">
                         <?php 
                             $clean_mac = normalize_mac($mac);
@@ -185,7 +186,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                         <i data-lucide="<?= $current_status === 'on' ? 'check-circle' : 'alert-circle' ?>" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <div class="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Aktualny Status</div>
+                        <div class="text-[12px] text-slate-500 uppercase font-black tracking-widest mb-1">Aktualny Status</div>
                         <div class="text-2xl font-black <?= $current_status === 'on' ? 'text-emerald-400' : 'text-red-400' ?>">
                             <?= $current_status === 'on' ? 'Online' : 'Offline' ?>
                         </div>
@@ -199,7 +200,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                         <i data-lucide="clock" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <div class="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Ostatnia zmiana</div>
+                        <div class="text-[12px] text-slate-500 uppercase font-black tracking-widest mb-1">Ostatnia zmiana</div>
                         <div class="text-base font-bold text-slate-200"><?= $last_change ?></div>
                     </div>
                 </div>
@@ -211,7 +212,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                         <i data-lucide="list" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <div class="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Liczba zdarzeń</div>
+                        <div class="text-[12px] text-slate-500 uppercase font-black tracking-widest mb-1">Liczba zdarzeń</div>
                         <div class="text-2xl font-black text-slate-200"><?= count($history) ?></div>
                     </div>
                 </div>
@@ -228,19 +229,19 @@ for ($i = 0; $i < $bar_count; $i++) {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Live -->
                 <div>
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-4">Transfer Live</span>
+                    <span class="text-[12px] font-black text-slate-500 uppercase tracking-widest block mb-4">Transfer Live</span>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex items-center gap-4 p-5 bg-slate-800/30 rounded-2xl border border-white/5">
                             <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><i data-lucide="arrow-down" class="w-6 h-6"></i></div>
                             <div class="flex flex-col">
-                                <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest">Pobieranie</span>
+                                <span class="text-[12px] text-slate-500 uppercase font-black tracking-widest">Pobieranie</span>
                                 <span class="text-2xl font-black text-white font-mono mt-1"><?= format_bps($device_stats['rx_rate'] ?? 0) ?></span>
                             </div>
                         </div>
                         <div class="flex items-center gap-4 p-5 bg-slate-800/30 rounded-2xl border border-white/5">
                             <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl"><i data-lucide="arrow-up" class="w-6 h-6"></i></div>
                             <div class="flex flex-col">
-                                <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest">Wysyłanie</span>
+                                <span class="text-[12px] text-slate-500 uppercase font-black tracking-widest">Wysyłanie</span>
                                 <span class="text-2xl font-black text-white font-mono mt-1"><?= format_bps($device_stats['tx_rate'] ?? 0) ?></span>
                             </div>
                         </div>
@@ -249,19 +250,19 @@ for ($i = 0; $i < $bar_count; $i++) {
 
                 <!-- Usage History -->
                 <div>
-                   <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-4">Zużycie Danych</span>
+                   <span class="text-[12px] font-black text-slate-500 uppercase tracking-widest block mb-4">Zużycie Danych</span>
                    <div class="grid grid-cols-3 gap-3 mb-4">
                          <div class="bg-slate-800/30 p-4 rounded-2xl border border-white/5 text-center flex flex-col justify-center">
-                             <span class="block text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">24h</span>
+                             <span class="block text-[12px] text-slate-500 font-black uppercase tracking-widest mb-1">24h</span>
                              <span class="block text-lg font-mono text-slate-400 font-bold">-</span>
                          </div>
                          <div class="bg-slate-800/30 p-4 rounded-2xl border border-white/5 text-center flex flex-col justify-center">
-                             <span class="block text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">7d</span>
+                             <span class="block text-[12px] text-slate-500 font-black uppercase tracking-widest mb-1">7d</span>
                              <span class="block text-lg font-mono text-slate-400 font-bold">-</span>
                          </div>
                          <div class="bg-slate-800/30 p-4 rounded-2xl border border-blue-500/10 text-center relative overflow-hidden flex flex-col justify-center">
                              <div class="absolute inset-0 bg-blue-500/5"></div>
-                             <span class="block text-[10px] text-blue-400 font-black uppercase tracking-widest mb-1 relative">Total</span>
+                             <span class="block text-[12px] text-blue-400 font-black uppercase tracking-widest mb-1 relative">Total</span>
                              <span class="block text-lg font-mono font-black text-blue-100 mt-1 relative">
                                 <?= format_bytes(($device_stats['rx_bytes'] ?? 0) + ($device_stats['tx_bytes'] ?? 0)) ?>
                              </span>
@@ -292,7 +293,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                     <i data-lucide="activity" class="text-blue-400 w-5 h-5"></i>
                     Zdarzenia systemowe
                 </h2>
-                <span class="text-[10px] text-slate-500 bg-slate-800 px-2 py-1 rounded">Ostatnie 50 wpisów</span>
+                <span class="text-[12px] text-slate-500 bg-slate-800 px-2 py-1 rounded">Ostatnie 50 wpisów</span>
             </div>
             
             <!-- Uptime Visualizer -->
@@ -300,7 +301,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                 <div class="flex justify-between items-end mb-4">
                      <div>
                          <div class="text-sm font-bold text-white mb-1">Ostatnie 24 godziny</div>
-                         <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                         <div class="text-[12px] text-slate-500 font-bold uppercase tracking-wider">
                             <?= $incidents ?> incydentów, <?= round($total_down / 60) ?>min offline
                          </div>
                      </div>
@@ -319,7 +320,7 @@ for ($i = 0; $i < $bar_count; $i++) {
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead>
-                        <tr class="bg-white/[0.02] text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-white/5">
+                        <tr class="bg-white/[0.02] text-[12px] font-black uppercase tracking-widest text-slate-500 border-b border-white/5">
                             <th class="px-8 py-5">Status / Akcja</th>
                             <th class="px-8 py-5">Data i Godzina</th>
                             <th class="px-8 py-5 text-right">Czas trwania</th>
@@ -347,7 +348,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                                             </div>
                                             <div>
                                                 <div class="text-sm font-bold text-emerald-400">DEVICE_UP</div>
-                                                <div class="text-[10px] text-slate-500 uppercase font-medium">Połączono z siecią</div>
+                                                <div class="text-[12px] text-slate-500 uppercase font-medium">Połączono z siecią</div>
                                             </div>
                                         <?php else: ?>
                                             <div class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center shadow-lg shadow-red-500/5">
@@ -355,7 +356,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                                             </div>
                                             <div>
                                                 <div class="text-sm font-bold text-red-400">DEVICE_DOWN</div>
-                                                <div class="text-[10px] text-slate-500 uppercase font-medium">Utrata połączenia</div>
+                                                <div class="text-[12px] text-slate-500 uppercase font-medium">Utrata połączenia</div>
                                             </div>
                                         <?php endif; ?>
                                     </div>
@@ -388,35 +389,36 @@ for ($i = 0; $i < $bar_count; $i++) {
         <div class="mt-8 flex justify-center">
             <div class="px-4 py-2 bg-slate-800/50 rounded-full border border-white/5 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                <span class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Monitorowanie aktywne</span>
+                <span class="text-[12px] text-slate-400 uppercase tracking-widest font-bold">Monitorowanie aktywne</span>
             </div>
         </div>
 
     </div>
 
+    <?php include 'includes/confirm_modal.php'; ?>
     <script>
         lucide.createIcons();
 
-        async function deleteDeviceHistory(mac) {
-            if (!confirm('Czy na pewno chcesz usunąć to urządzenie z historii i monitoringu? Ta operacja jest nieodwracalna.')) return;
+        function deleteDeviceHistory(mac) {
+            showConfirm('Czy na pewno chcesz usunąć to urządzenie z historii i monitoringu? Ta operacja jest nieodwracalna.', async () => {
+                try {
+                    const response = await fetch('api_toggle_monitor.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mac, action: 'delete' })
+                    });
 
-            try {
-                const response = await fetch('api_toggle_monitor.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mac, action: 'delete' })
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    window.location.href = 'index.php';
-                } else {
-                    alert('Błąd: ' + (result.message || 'Nieznany błąd'));
+                    const result = await response.json();
+                    if (result.success) {
+                        window.location.href = 'index.php';
+                    } else {
+                        showToast(result.message || 'Nieznany błąd', 'error');
+                    }
+                } catch (e) {
+                    console.error('Error:', e);
+                    showToast('Wystąpił błąd podczas usuwania.', 'error');
                 }
-            } catch (e) {
-                console.error('Error:', e);
-                alert('Wystąpił błąd podczas usuwania.');
-            }
+            });
         }
     </script>
     <?php include __DIR__ . '/includes/footer.php'; ?>

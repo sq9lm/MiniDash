@@ -24,6 +24,14 @@ $online_cameras = $stats_data['online'];
 $recording_cameras = $stats_data['recording'];
 $motion_detected = $stats_data['motion'];
 
+// Filter cameras for the grid view based on settings
+$grid_cameras = $cameras;
+$allowed_cameras = $config['protect']['camera_grid'] ?? [];
+if (!empty($allowed_cameras)) {
+    $grid_cameras = array_filter($cameras, fn($c) => in_array($c['id'], $allowed_cameras));
+    $grid_cameras = array_values($grid_cameras);
+}
+
 // Get Traffic Data for Camera VLAN (40) and Active Connections
 $siteId = $config['site'];
 $clients_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/clients?limit=1000");
@@ -54,7 +62,8 @@ foreach ($clients as $c) {
         }
     }
 
-    if ($detected_vlan === 40 || $is_camera) {
+    $targetVlan = (int)($config['protect']['vlan_id'] ?? 40);
+    if ($detected_vlan === $targetVlan || $is_camera) {
         $cam_vlan_rx += $c['rxRateBps'] ?? 0;
         $cam_vlan_tx += $c['txRateBps'] ?? 0;
         if (!empty($c['ipAddress']) || !empty($c['ip'])) {
@@ -126,7 +135,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                     <div class="p-2.5 bg-purple-500/10 rounded-xl text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
                         <i data-lucide="camera" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-purple-300">Kamery</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-[0.15em] group-hover:text-purple-300">Kamery</span>
                 </div>
                 <div class="text-3xl font-black tracking-tighter text-white"><?= $total_cameras ?></div>
                 <div class="flex justify-between items-end mt-1">
@@ -141,7 +150,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                     <div class="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                         <i data-lucide="network" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-emerald-300">Połączenia</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-[0.15em] group-hover:text-emerald-300">Połączenia</span>
                 </div>
                 <div class="text-3xl font-black tracking-tighter text-white"><?= $camera_connections ?></div>
                 <div class="flex justify-between items-end mt-1">
@@ -156,11 +165,11 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                     <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
                         <i data-lucide="hard-drive" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-blue-300">Magazyn</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-[0.15em] group-hover:text-blue-300">Magazyn</span>
                 </div>
-                <div class="text-3xl font-black tracking-tighter text-white">1</div>
+                <div class="text-3xl font-black tracking-tighter text-white"><?= $nvr['version'] ?: '1' ?></div>
                 <div class="flex justify-between items-end mt-1">
-                    <div class="text-slate-400 text-xs font-medium italic">Dostępne NVR</div>
+                    <div class="text-slate-400 text-xs font-medium italic">Wersja NVR • <?= round($nvr['storage']['utilization'] ?? 0) ?>% zajęte</div>
                     <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:translate-x-1 transition-transform"></i>
                 </div>
             </div>
@@ -171,7 +180,10 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                     <div class="p-2.5 bg-amber-500/10 rounded-xl text-amber-400">
                         <i data-lucide="activity" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ruch VLAN 40</span>
+                    <div class="flex flex-col items-end">
+                        <span class="text-xs font-black text-slate-400 uppercase tracking-widest leading-none"><?= htmlspecialchars(get_vlan_name($targetVlan)) ?></span>
+                        <span class="text-[12px] font-bold text-slate-500 uppercase tracking-tighter mt-1">VLAN <?= $targetVlan ?></span>
+                    </div>
                 </div>
                 <div class="flex flex-col gap-1">
                     <div class="flex items-center gap-2 text-emerald-400">
@@ -237,7 +249,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-slate-950/30 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
+                            <tr class="bg-slate-950/30 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
                                 <th class="px-6 py-4">Nazwa / Model</th>
                                 <th class="px-6 py-4">Status</th>
                                 <th class="px-6 py-4">Adres IP / MAC</th>
@@ -255,20 +267,20 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                                         </div>
                                         <div>
                                             <div class="font-bold text-white text-sm"><?= htmlspecialchars($c['name']) ?></div>
-                                            <div class="text-[10px] text-slate-500"><?= htmlspecialchars($c['model']) ?></div>
+                                            <div class="text-[12px] text-slate-500"><?= htmlspecialchars($c['model']) ?></div>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
                                     <?php if ($c['status'] === 'online'): ?>
-                                        <span class="px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded text-[10px] font-black uppercase tracking-wider border border-emerald-500/20">Online</span>
+                                        <span class="px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded text-[12px] font-black uppercase tracking-wider border border-emerald-500/20">Online</span>
                                     <?php else: ?>
-                                        <span class="px-2 py-1 bg-red-500/10 text-red-400 rounded text-[10px] font-black uppercase tracking-wider border border-red-500/20">Offline</span>
+                                        <span class="px-2 py-1 bg-red-500/10 text-red-400 rounded text-[12px] font-black uppercase tracking-wider border border-red-500/20">Offline</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="font-mono text-xs text-slate-300"><?= $c['ip'] ?></div>
-                                    <div class="font-mono text-[10px] text-slate-600 uppercase"><?= $c['mac'] ?></div>
+                                    <div class="font-mono text-[12px] text-slate-600 uppercase"><?= $c['mac'] ?></div>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400"><?= $c['resolution'] ?> @ <?= $c['fps'] ?> FPS</td>
                                 <td class="px-6 py-4 text-right text-xs text-slate-500">
@@ -307,7 +319,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                         </div>
                         <div>
                             <div class="font-bold text-white text-sm"><?= htmlspecialchars($c['name']) ?></div>
-                            <div class="text-[10px] text-slate-500 font-mono"><?= $c['ip'] ?> • Stabilne</div>
+                            <div class="text-[12px] text-slate-500 font-mono"><?= $c['ip'] ?> • Stabilne</div>
                         </div>
                      </div>
                      <?php endforeach; ?>
@@ -337,7 +349,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                     <div>
                         <h3 class="text-2xl font-black text-white">UniFi Cloud Key / NVR</h3>
                         <div class="flex items-center gap-3 mt-2">
-                             <span class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg text-[10px] font-black uppercase tracking-wider border border-emerald-500/20">ONLINE</span>
+                             <span class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg text-[12px] font-black uppercase tracking-wider border border-emerald-500/20">ONLINE</span>
                              <span class="text-xs text-slate-500 font-mono">v<?= $nvr['version'] ?></span>
                         </div>
                     </div>
@@ -354,15 +366,15 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                     
                     <div class="grid grid-cols-3 gap-4 text-center">
                         <div>
-                            <div class="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">Całkowite</div>
+                            <div class="text-[12px] uppercase font-black text-slate-500 tracking-widest mb-1">Całkowite</div>
                             <div class="text-lg font-mono font-bold text-white"><?= format_bytes($nvr_total) ?></div>
                         </div>
                         <div>
-                            <div class="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">Użyte</div>
+                            <div class="text-[12px] uppercase font-black text-slate-500 tracking-widest mb-1">Użyte</div>
                             <div class="text-lg font-mono font-bold text-blue-400"><?= format_bytes($nvr_used) ?></div>
                         </div>
                         <div>
-                            <div class="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-1">Wolne</div>
+                            <div class="text-[12px] uppercase font-black text-slate-500 tracking-widest mb-1">Wolne</div>
                             <div class="text-lg font-mono font-bold text-emerald-400"><?= format_bytes($nvr_free) ?></div>
                         </div>
                     </div>
@@ -387,11 +399,84 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
             </div>
         </div>
     </div>
+    
+    <!-- Protect Settings Modal -->
+    <div id="protectSettingsModal" class="modal-overlay" onclick="closeModal('protectSettingsModal')">
+        <div class="modal-container max-w-lg" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-purple-600/10 text-purple-400 flex items-center justify-center">
+                        <i data-lucide="settings" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-black text-white uppercase tracking-widest">Ustawienia Protect</h2>
+                        <p class="text-[12px] text-slate-500 font-bold uppercase tracking-tighter">Konfiguracja siatki i monitoringu VLAN</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('protectSettingsModal')" class="p-2 hover:bg-white/5 rounded-xl transition text-slate-500 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="protectSettingsForm" onsubmit="saveProtectSettings(event)" class="modal-body p-6 space-y-6">
+                <!-- VLAN ID Setting -->
+                <div>
+                    <label class="block text-[12px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">VLAN Monitorowania Kamer</label>
+                    <div class="relative">
+                        <i data-lucide="network" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+                        <select name="vlan_id" 
+                               class="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition shadow-inner appearance-none">
+                            <?php 
+                            $available_vlans = get_vlans();
+                            $current_vlan_id = (int)($config['protect']['vlan_id'] ?? 40);
+                            foreach ($available_vlans as $vid => $name): ?>
+                                <option value="<?= $vid ?>" <?= $vid === $current_vlan_id ? 'selected' : '' ?>>
+                                    [VLAN <?= $vid ?>] <?= htmlspecialchars($name) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"></i>
+                    </div>
+                    <p class="mt-2 text-[12px] text-slate-500 leading-relaxed italic">Wybierz sieć w której znajdują się Twoje kamery.</p>
+                </div>
+
+                <div class="h-[1px] bg-white/5"></div>
+
+                <!-- Camera Visibility Grid -->
+                <div>
+                    <label class="block text-[12px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Widoczność kamer w siatce</label>
+                    <div class="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                        <?php foreach ($cameras as $c): 
+                            $isSelected = in_array($c['id'], $config['protect']['camera_grid'] ?? []);
+                            // If grid is empty, all are shown by default
+                            if (empty($config['protect']['camera_grid'])) $isSelected = true;
+                        ?>
+                        <label class="flex items-center gap-3 p-3 bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/5 cursor-pointer transition group">
+                            <input type="checkbox" name="camera_grid[]" value="<?= $c['id'] ?>" <?= $isSelected ? 'checked' : '' ?>
+                                   class="w-4 h-4 rounded border-white/10 bg-slate-800 text-purple-600 focus:ring-purple-500/30 transition">
+                            <span class="text-xs font-bold text-slate-300 group-hover:text-white transition"><?= htmlspecialchars($c['name']) ?></span>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-white/5 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('protectSettingsModal')" class="px-6 py-2.5 text-[12px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition">
+                        Anuluj
+                    </button>
+                    <button type="submit" class="px-8 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-[12px] font-black uppercase tracking-widest transition shadow-lg shadow-purple-600/20 flex items-center gap-2">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        Zapisz zmiany
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 
     <script>
         // Data from PHP
-        const cameras = <?= json_encode($cameras) ?>;
+        const cameras = <?= json_encode($grid_cameras) ?>;
+        const allAvailableCameras = <?= json_encode($cameras) ?>;
         
         // Grid State (Slot ID -> Camera ID)
         let gridState = new Array(16).fill(null); // Max 16 slots support
@@ -480,7 +565,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                                 <div class="text-xs font-bold text-white drop-shadow-md">${cam.name}</div>
                                 <div class="flex items-center gap-2 mt-0.5">
                                     <span class="w-1.5 h-1.5 rounded-full ${cam.status === 'online' ? 'bg-emerald-500' : 'bg-red-500'}"></span>
-                                    <span class="text-[9px] font-mono text-slate-300 uppercase">${cam.status}</span>
+                                    <span class="text-[11px] font-mono text-slate-300 uppercase">${cam.status}</span>
                                 </div>
                             </div>
                         </div>
@@ -488,7 +573,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                         <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
                             <div class="flex flex-col items-center gap-2 text-white">
                                 <i data-lucide="refresh-cw" class="w-6 h-6"></i>
-                                <span class="text-[10px] font-bold uppercase tracking-widest">Zmień kamerę</span>
+                                <span class="text-[12px] font-bold uppercase tracking-widest">Zmień kamerę</span>
                             </div>
                         </div>
                     </div>
@@ -554,6 +639,53 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
         }
 
         // Modal Helpers
+        function openSettings() {
+            document.getElementById('protectSettingsModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            lucide.createIcons();
+        }
+
+        async function saveProtectSettings(e) {
+            e.preventDefault();
+            const form = e.target;
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            
+            const formData = new FormData(form);
+            const data = {
+                vlan_id: formData.get('vlan_id'),
+                camera_grid: formData.getAll('camera_grid[]')
+            };
+
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4 animate-spin"></i> Zapisywanie...';
+            lucide.createIcons();
+
+            try {
+                const response = await fetch('api_save_protect_settings.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Zapisano!';
+                    btn.style.backgroundColor = '#10b981';
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    alert('Błąd: ' + result.message);
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Wystąpił błąd podczas zapisu.');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
         function openCamerasModal() {
             document.getElementById('camerasModal').classList.add('active');
             document.body.style.overflow = 'hidden';
@@ -576,6 +708,16 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
 
         window.addEventListener('DOMContentLoaded', () => {
              setGridSize(9); // Default
+             
+             // Auto-refresh thumbnails every 30 seconds
+             setInterval(() => {
+                 const now = Math.floor(Date.now() / 1000);
+                 document.querySelectorAll('#camera-grid img').forEach(img => {
+                     const url = new URL(img.src, window.location.href);
+                     url.searchParams.set('t', now);
+                     img.src = url.toString();
+                 });
+             }, 30000);
         });
         
         lucide.createIcons();

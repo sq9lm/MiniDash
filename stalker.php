@@ -255,13 +255,13 @@ $navbar_stats = get_navbar_stats();
                         </div>
                         <div class="min-w-0">
                             <div class="font-bold text-sm text-white truncate">${escHtml(hostname)}</div>
-                            <div class="text-[10px] text-slate-500 font-mono">${escHtml(s.mac || '')}</div>
+                            <div class="text-[12px] text-slate-500 font-mono">${escHtml(s.mac || '')}</div>
                         </div>
                     </div>
                 </td>
                 <td class="py-4 px-4">
                     <div class="text-sm text-slate-300">${escHtml(s.ap_name || '—')}</div>
-                    <div class="text-[10px] text-slate-500">${escHtml(s.ssid || '—')}</div>
+                    <div class="text-[12px] text-slate-500">${escHtml(s.ssid || '—')}</div>
                 </td>
                 <td class="py-4 px-4 whitespace-nowrap">
                     <span class="text-xs font-mono text-purple-400">${escHtml(s.band || '—')}</span>
@@ -325,7 +325,7 @@ $navbar_stats = get_navbar_stats();
                         <i data-lucide="arrow-right" class="w-3 h-3 text-amber-400 shrink-0"></i>
                         <span class="text-xs text-slate-300 font-mono">${escHtml(r.to_ap || '—')}</span>
                     </div>
-                    <div class="text-[10px] text-slate-500 mt-0.5 font-mono">
+                    <div class="text-[12px] text-slate-500 mt-0.5 font-mono">
                         RSSI: ${r.rssi_before || 0}dBm &rarr; ${r.rssi_after || 0}dBm
                         &middot; Ch${r.from_channel || '?'} &rarr; Ch${r.to_channel || '?'}
                         &middot; <span class="font-mono text-slate-400">${escHtml(r.mac || '')}</span>

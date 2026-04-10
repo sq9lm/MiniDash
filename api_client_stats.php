@@ -20,8 +20,9 @@ $end = time();
 $start_24h = $end - (24 * 3600);
 $start_7d = $end - (7 * 24 * 3600);
 
+$tradSite = get_trad_site_id($config['site']);
 // Fetch 24h stats
-$resp_24h = fetch_api("/proxy/network/api/s/default/stat/report/daily.user?mac=$mac&start=$start_24h&end=$end");
+$resp_24h = fetch_api("/proxy/network/api/s/{$tradSite}/stat/report/daily.user?mac=$mac&start=$start_24h&end=$end");
 $data_24h = $resp_24h['data'] ?? [];
 $rx_24h = 0;
 $tx_24h = 0;
@@ -31,7 +32,7 @@ foreach ($data_24h as $day) {
 }
 
 // Fetch 7d stats
-$resp_7d = fetch_api("/proxy/network/api/s/default/stat/report/daily.user?mac=$mac&start=$start_7d&end=$end");
+$resp_7d = fetch_api("/proxy/network/api/s/{$tradSite}/stat/report/daily.user?mac=$mac&start=$start_7d&end=$end");
 $data_7d = $resp_7d['data'] ?? [];
 $rx_7d = 0;
 $tx_7d = 0;

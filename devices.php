@@ -15,9 +15,36 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
 }
 session_write_close();
 
+// Auto-detect UniFi Protect if not set
+if ($config['protect']['enabled'] === null) {
+    $isAvailable = is_protect_available();
+    $config['protect']['enabled'] = $isAvailable;
+    
+    // Save the detected state to config.json
+    $currentConfig = json_decode(file_get_contents(__DIR__ . '/data/config.json'), true) ?: [];
+    if (!isset($currentConfig['protect'])) $currentConfig['protect'] = [];
+    $currentConfig['protect']['enabled'] = $isAvailable;
+    file_put_contents(__DIR__ . '/data/config.json', json_encode($currentConfig, JSON_PRETTY_PRINT));
+}
+
 // Obsługa operacji CRUD i Konfiguracji
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $devices = loadDevices();
+
+    // Akcja: Zapis modułów (Protect, Monitoring ON/OFF)
+    if (isset($_POST['action']) && $_POST['action'] === 'save_modules') {
+        $currentConfig = json_decode(file_get_contents(__DIR__ . '/data/config.json'), true) ?: [];
+        if (!isset($currentConfig['protect'])) $currentConfig['protect'] = [];
+        $currentConfig['protect']['enabled'] = isset($_POST['protect_enabled']);
+        
+        if (!isset($currentConfig['modules'])) $currentConfig['modules'] = [];
+        $currentConfig['modules']['monitoring_enabled'] = isset($_POST['monitoring_enabled']);
+        
+        file_put_contents(__DIR__ . '/data/config.json', json_encode($currentConfig, JSON_PRETTY_PRINT));
+        $_SESSION['success'] = "Ustawienia modułów zostały zapisane.";
+        header('Location: devices.php');
+        exit;
+    }
     
     // Akcja: Zapis konfiguracji
     if (isset($_POST['action']) && $_POST['action'] === 'save_config') {
@@ -154,23 +181,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $devices = loadDevices();
 
+$siteId = $_SESSION['site_id'] ?? $config['site'] ?? 'default';
+
 // Pobieranie informacji o systemie
 $sysinfo = [];
 $gateway = null;
 try {
-    $sys_resp = fetch_api("/proxy/network/api/s/default/stat/sysinfo");
-    $sysinfo = $sys_resp['data'][0] ?? [];
+    $tradSite = get_trad_site_id($siteId);
+    $sys_resp = fetch_api("/proxy/network/api/s/$tradSite/stat/sysinfo");
+    $sysinfo = $sys_resp['data'][0] ?? $sys_resp['data'] ?? [];
     
-    $dev_resp = fetch_api("/proxy/network/integration/v1/sites/" . $config['site'] . "/devices");
+    $dev_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/devices");
     foreach (($dev_resp['data'] ?? []) as $d) {
-        if (isset($d['wan1']) || in_array($d['model'] ?? '', ['UDR', 'UDM', 'UXG', 'USG'])) {
+        $m = $d['model'] ?? '';
+        if (isset($d['wan1']) || in_array($m, ['UDR', 'UDM', 'UXG', 'USG', 'UCG', 'UX', 'UXG-LITE', 'UXG-MAX', 'UDMPRO', 'UDMSE', 'UDM-SE', 'UDM-PRO-MAX'])) {
             $gateway = $d;
             break;
         }
     }
 } catch (Throwable $e) {
-    $error_msg = $e->getMessage();
-    echo "<div style='background: red; color: white; padding: 20px; z-index: 9999; position: relative;'>PHP Error: $error_msg<br>File: " . $e->getFile() . " line " . $e->getLine() . "</div>";
+    // Silent fail for background stats
 }
 
 // GET: Vacuum
@@ -206,7 +236,11 @@ $db_tables = ['wan_stats', 'client_history', 'events', 'stalker_sessions', 'stal
 $db_counts = [];
 $db_total = 0;
 foreach ($db_tables as $t) {
-    try { $c = $db->query("SELECT COUNT(*) FROM $t")->fetchColumn(); } catch(Exception $e) { $c = 0; }
+    try { 
+        $c = $db->query("SELECT COUNT(*) FROM $t")->fetchColumn(); 
+    } catch(Exception $e) { 
+        $c = 0; 
+    }
     $db_counts[$t] = $c;
     $db_total += $c;
 }
@@ -230,12 +264,7 @@ foreach ($db_tables as $t) {
 
     <div class="max-w-6xl mx-auto p-4 md:p-8">
 
-        <?php if (isset($_SESSION['success'])): ?>
-            <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-xl mb-6 flex items-center gap-3">
-                <i data-lucide="check-circle" class="w-5 h-5"></i>
-                <span class="text-sm font-medium"><?= htmlspecialchars($_SESSION['success']); unset($_SESSION['success']); ?></span>
-            </div>
-        <?php endif; ?>
+        <?php // Session alerts are now handled by global toast system in footer.php ?>
 
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-10">
             <!-- Karta 1: Ustawienia API -->
@@ -250,9 +279,9 @@ foreach ($db_tables as $t) {
                                  <i data-lucide="shield-check" class="w-6 h-6"></i>
                                  Połączenie z Kontrolerem
                             </h2>
-                            <p class="text-slate-500 text-[10px] mt-1 font-bold uppercase tracking-widest">Klucze dostępu i adresacja</p>
+                            <p class="text-slate-500 text-[12px] mt-1 font-bold uppercase tracking-widest">Klucze dostępu i adresacja</p>
                         </div>
-                        <span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-black rounded-full border border-emerald-500/20 flex items-center gap-2">
+                        <span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[12px] font-black rounded-full border border-emerald-500/20 flex items-center gap-2">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                             ACTIVE
                         </span>
@@ -261,17 +290,17 @@ foreach ($db_tables as $t) {
                     <div class="space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="md:col-span-2">
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Controller URL</label>
+                                <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Controller URL</label>
                                 <input type="text" name="controller_url" value="<?= htmlspecialchars($config['controller_url']) ?>" required
                                     class="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-mono transition-all">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Site ID</label>
+                                <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Site ID</label>
                                 <input type="text" name="site" value="<?= htmlspecialchars($config['site']) ?>" required
                                     class="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-mono transition-all">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">API Key</label>
+                                <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">API Key</label>
                                 <input type="password" name="api_key" value="<?= htmlspecialchars($config['api_key']) ?>"
                                     class="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-mono transition-all">
                             </div>
@@ -297,7 +326,7 @@ foreach ($db_tables as $t) {
                                  <i data-lucide="activity" class="w-6 h-6"></i>
                                  Monitoring Opóźnień (Ping)
                             </h2>
-                            <p class="text-slate-500 text-[10px] mt-1 font-bold uppercase tracking-widest">Definicja hostów do sprawdzania pingu</p>
+                            <p class="text-slate-500 text-[12px] mt-1 font-bold uppercase tracking-widest">Definicja hostów do sprawdzania pingu</p>
                         </div>
                     </div>
                     
@@ -332,6 +361,74 @@ foreach ($db_tables as $t) {
             </div>
         </div>
 
+        <!-- Sekcja: Moduły Systemowe -->
+        <div class="glass-card p-8 mb-8 border-indigo-500/20 shadow-[0_0_40px_rgba(79,70,229,0.08)] relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-40 h-40 bg-indigo-600/5 blur-3xl -mr-20 -mt-20 group-hover:bg-indigo-600/10 transition-all duration-700"></div>
+            <form method="POST" class="relative z-10">
+                <input type="hidden" name="action" value="save_modules">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-lg font-black uppercase tracking-[0.2em] text-indigo-400 flex items-center gap-3">
+                            <i data-lucide="layout" class="w-6 h-6"></i>
+                            Moduły Systemowe
+                        </h2>
+                        <p class="text-slate-500 text-[12px] mt-1 font-bold uppercase tracking-widest">Włącz lub wyłącz wybrane funkcje MiniDash</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="flex items-center justify-between p-4 bg-slate-900/50 border border-white/5 rounded-2xl hover:bg-slate-900/80 transition-all">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-purple-600/10 flex items-center justify-center text-purple-400">
+                                <i data-lucide="video" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-black text-white uppercase tracking-wider">UniFi Protect</p>
+                                <p class="text-[12px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Kamery i podgląd na żywo</p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="protect_enabled" class="sr-only peer" <?= ($config['protect']['enabled'] ?? false) ? 'checked' : '' ?>>
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-slate-900/50 border border-white/5 rounded-2xl hover:bg-slate-900/80 transition-all">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-emerald-600/10 flex items-center justify-center text-emerald-400">
+                                <i data-lucide="activity" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-black text-white uppercase tracking-wider">Monitor Zasobów</p>
+                                <p class="text-[12px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Śledzenie wybranych urządzeń</p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="monitoring_enabled" class="sr-only peer" <?= ($config['modules']['monitoring_enabled'] ?? true) ? 'checked' : '' ?>>
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-slate-900/20 border border-dashed border-white/5 rounded-2xl mt-4 opacity-50">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-600">
+                            <i data-lucide="phone" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-black text-slate-500 uppercase tracking-wider">UniFi Talk</p>
+                            <p class="text-[12px] text-slate-700 font-bold uppercase tracking-widest mt-0.5">Wkrótce w MiniDash</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-8">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 px-8 rounded-xl transition shadow-xl shadow-indigo-600/20 text-xs uppercase tracking-[0.2em] flex items-center gap-3">
+                        <i data-lucide="save" class="w-4 h-4"></i> Zapisz Aktywne Moduły
+                    </button>
+                </div>
+            </form>
+        </div>
+
         <!-- Sekcja: Retencja Danych -->
         <div class="glass-card p-8 mb-8 border-amber-500/20 shadow-[0_0_40px_rgba(245,158,11,0.08)] relative overflow-hidden group">
             <div class="absolute top-0 right-0 w-40 h-40 bg-amber-600/5 blur-3xl -mr-20 -mt-20 group-hover:bg-amber-600/10 transition-all duration-700"></div>
@@ -343,7 +440,7 @@ foreach ($db_tables as $t) {
                             <i data-lucide="database" class="w-6 h-6"></i>
                             Retencja Danych
                         </h2>
-                        <p class="text-slate-500 text-[10px] mt-1 font-bold uppercase tracking-widest">Automatyczne czyszczenie starych rekordow</p>
+                        <p class="text-slate-500 text-[12px] mt-1 font-bold uppercase tracking-widest">Automatyczne czyszczenie starych rekordow</p>
                     </div>
                 </div>
 
@@ -362,7 +459,7 @@ foreach ($db_tables as $t) {
                         $val = $config['purge_days'][$f['key']] ?? $f['def'];
                     ?>
                     <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1"><?= $f['label'] ?></label>
+                        <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1"><?= $f['label'] ?></label>
                         <div class="flex items-center gap-4">
                             <input type="range" name="<?= $f['name'] ?>" min="<?= $f['min'] ?>" max="<?= $f['max'] ?>" value="<?= $val ?>"
                                 class="flex-grow accent-amber-500"
@@ -395,25 +492,25 @@ foreach ($db_tables as $t) {
                                 <i data-lucide="shield" class="w-6 h-6"></i>
                                 Sesja i Bezpieczenstwo
                             </h2>
-                            <p class="text-slate-500 text-[10px] mt-1 font-bold uppercase tracking-widest">Limity dostepu i czas wygasniecia</p>
+                            <p class="text-slate-500 text-[12px] mt-1 font-bold uppercase tracking-widest">Limity dostepu i czas wygasniecia</p>
                         </div>
                     </div>
 
                     <div class="space-y-6 flex-grow">
                         <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Timeout sesji (minuty)</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Timeout sesji (minuty)</label>
                             <input type="number" name="session_timeout" min="5" max="1440"
                                 value="<?= (int)($config['session_timeout'] ?? 60) ?>"
                                 class="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 text-xs font-mono transition-all">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Maks. prob logowania</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Maks. prob logowania</label>
                             <input type="number" name="max_login_attempts" min="1" max="20"
                                 value="<?= (int)($config['max_login_attempts'] ?? 5) ?>"
                                 class="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 text-xs font-mono transition-all">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Czas blokady (minuty)</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Czas blokady (minuty)</label>
                             <input type="number" name="lock_duration" min="1" max="1440"
                                 value="<?= (int)($config['lock_duration'] ?? 15) ?>"
                                 class="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 text-xs font-mono transition-all">
@@ -439,13 +536,13 @@ foreach ($db_tables as $t) {
                                 <i data-lucide="refresh-cw" class="w-6 h-6"></i>
                                 Odswiezanie Dashboardu
                             </h2>
-                            <p class="text-slate-500 text-[10px] mt-1 font-bold uppercase tracking-widest">Interwal pollingu danych w czasie rzeczywistym</p>
+                            <p class="text-slate-500 text-[12px] mt-1 font-bold uppercase tracking-widest">Interwal pollingu danych w czasie rzeczywistym</p>
                         </div>
                     </div>
 
                     <div class="flex-grow flex flex-col justify-center">
                         <?php $poll_val = (int)($config['poll_interval'] ?? 30); ?>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 px-1">Interwal odpytywania (sekundy)</label>
+                        <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-4 px-1">Interwal odpytywania (sekundy)</label>
                         <div class="flex items-center gap-4">
                             <input type="range" name="poll_interval" min="5" max="120" value="<?= $poll_val ?>"
                                 class="flex-grow accent-cyan-500"
@@ -454,7 +551,7 @@ foreach ($db_tables as $t) {
                                 <?= $poll_val ?> s
                             </span>
                         </div>
-                        <div class="flex justify-between text-[10px] text-slate-600 font-mono mt-1 px-1">
+                        <div class="flex justify-between text-[12px] text-slate-600 font-mono mt-1 px-1">
                             <span>5s</span><span>120s</span>
                         </div>
                     </div>
@@ -478,18 +575,18 @@ foreach ($db_tables as $t) {
                             <i data-lucide="database" class="w-6 h-6"></i>
                             Baza Danych
                         </h2>
-                        <p class="text-slate-500 text-[10px] mt-1 font-bold uppercase tracking-widest">Statystyki, optymalizacja i eksport</p>
+                        <p class="text-slate-500 text-[12px] mt-1 font-bold uppercase tracking-widest">Statystyki, optymalizacja i eksport</p>
                     </div>
                 </div>
 
                 <!-- Stats grid -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div class="bg-slate-900/50 border border-white/5 rounded-xl p-4">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Rozmiar pliku</p>
+                        <p class="text-[12px] font-black text-slate-500 uppercase tracking-widest mb-1">Rozmiar pliku</p>
                         <p class="text-lg font-black text-emerald-400"><?= format_bytes($db_size) ?></p>
                     </div>
                     <div class="bg-slate-900/50 border border-white/5 rounded-xl p-4">
-                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Lacznie rekordow</p>
+                        <p class="text-[12px] font-black text-slate-500 uppercase tracking-widest mb-1">Lacznie rekordow</p>
                         <p class="text-lg font-black text-emerald-400"><?= number_format($db_total) ?></p>
                     </div>
                 </div>
@@ -509,7 +606,7 @@ foreach ($db_tables as $t) {
                     ];
                     foreach ($db_tables as $t): ?>
                     <div class="bg-slate-900/30 border border-white/5 rounded-lg px-4 py-3 flex items-center justify-between">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest"><?= $table_labels[$t] ?></span>
+                        <span class="text-[12px] font-bold text-slate-500 uppercase tracking-widest"><?= $table_labels[$t] ?></span>
                         <span class="text-xs font-black text-slate-300 font-mono"><?= number_format($db_counts[$t]) ?></span>
                     </div>
                     <?php endforeach; ?>
@@ -552,6 +649,3 @@ foreach ($db_tables as $t) {
     <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
 </html>
-
-
-

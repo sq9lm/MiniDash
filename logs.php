@@ -17,8 +17,8 @@ $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
 if (!in_array($limit, [25, 50, 100, 500])) $limit = 100;
 
-$offset = ($page - 1) * $limit;
 $site_id = $config['site'] ?? 'default';
+$tradSite = get_trad_site_id($site_id);
 
 // Helper to fetch keys
 function fetch_logs($site, $type, $limit, $offset) {
@@ -31,17 +31,18 @@ function fetch_logs($site, $type, $limit, $offset) {
 }
 
 // Fetch Events
+$offset = ($page - 1) * $limit;
 $api_limit = $limit + 1; 
-$raw_events = fetch_logs($site_id, 'event', $api_limit, $offset);
+$raw_events = fetch_logs($tradSite, 'event', $api_limit, $offset);
 
 // If empty and site is specific UUID, try 'default'
-if (empty($raw_events) && $site_id !== 'default') {
+if (empty($raw_events) && $tradSite !== 'default') {
     $raw_events = fetch_logs('default', 'event', $api_limit, $offset);
 }
 
 // Fetch Alarms (Threats, Errors) - merge often useful
-$raw_alarms = fetch_logs($site_id, 'alarm', $api_limit, $offset);
-if (empty($raw_alarms) && $site_id !== 'default') {
+$raw_alarms = fetch_logs($tradSite, 'alarm', $api_limit, $offset);
+if (empty($raw_alarms) && $tradSite !== 'default') {
     $raw_alarms = fetch_logs('default', 'alarm', $api_limit, $offset);
 }
 
@@ -201,7 +202,7 @@ $log_lines = array_slice($processed_logs, 0, $limit);
             <div class="flex-grow overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="bg-slate-950/50 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
+                        <tr class="bg-slate-950/50 text-[12px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
                             <th class="px-6 py-3 w-48">Data / Czas</th>
                             <th class="px-6 py-3 w-32">Kategoria</th>
                             <th class="px-6 py-3 w-32">Poziom</th>
@@ -230,7 +231,7 @@ $log_lines = array_slice($processed_logs, 0, $limit);
                                     elseif($l['severity'] === 'DEBUG') $bg = 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
                                     elseif($l['severity'] === 'INFO') $bg = 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
                                     ?>
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider <?= $bg ?> inline-block min-w-[60px] text-center">
+                                    <span class="px-2 py-0.5 rounded text-[12px] font-bold uppercase tracking-wider <?= $bg ?> inline-block min-w-[60px] text-center">
                                         <?= $l['severity'] ?>
                                     </span>
                                 </td>
@@ -307,7 +308,7 @@ $log_lines = array_slice($processed_logs, 0, $limit);
 
                 <!-- Message / Details -->
                 <div class="bg-slate-950/50 rounded-xl p-4 border border-white/5">
-                    <h3 class="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">Pełna treść</h3>
+                    <h3 class="text-slate-500 text-[12px] font-bold uppercase tracking-widest mb-2">Pełna treść</h3>
                     <p id="modal-message" class="text-slate-300 font-mono text-xs break-all leading-relaxed"></p>
                 </div>
 

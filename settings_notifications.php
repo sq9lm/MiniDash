@@ -158,27 +158,27 @@ foreach ($notif_keys as $key => $defaults) {
                 <div class="notif-fields mt-8 <?= !$config['email_notifications']['enabled'] ? 'collapsed' : '' ?>">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div class="lg:col-span-3">
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Host SMTP</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Host SMTP</label>
                             <input type="text" name="email_host" value="<?= htmlspecialchars($config['email_notifications']['smtp_host']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="e.g. smtp.gmail.com">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Port</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Port</label>
                             <input type="number" name="email_port" value="<?= htmlspecialchars($config['email_notifications']['smtp_port']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="587">
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Użytkownik / Login</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Użytkownik / Login</label>
                             <input type="text" name="email_user" value="<?= htmlspecialchars($config['email_notifications']['smtp_username']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="user@gmail.com">
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Hasło (lub hasło aplikacji)</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Hasło (lub hasło aplikacji)</label>
                             <input type="password" name="email_pass" value="<?= htmlspecialchars($config['email_notifications']['smtp_password']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="••••••••••••">
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Email nadawcy</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Email nadawcy</label>
                             <input type="text" name="email_from" value="<?= htmlspecialchars($config['email_notifications']['from_email']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="alert@domena.pl">
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Gdzie wysłać alerty?</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Gdzie wysłać alerty?</label>
                             <input type="text" name="email_to" value="<?= htmlspecialchars($config['email_notifications']['to_email']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="twoj@email.com">
                         </div>
                     </div>
@@ -206,11 +206,11 @@ foreach ($notif_keys as $key => $defaults) {
                 <div class="notif-fields mt-8 <?= !$config['telegram_notifications']['enabled'] ? 'collapsed' : '' ?>">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="md:col-span-2">
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Bot Token</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Bot Token</label>
                             <input type="text" name="tg_token" value="<?= htmlspecialchars($config['telegram_notifications']['bot_token']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="123456789:ABCDEF....">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Chat ID</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Chat ID</label>
                             <input type="text" name="tg_chatid" value="<?= htmlspecialchars($config['telegram_notifications']['chat_id']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="12345678">
                         </div>
                     </div>
@@ -237,15 +237,15 @@ foreach ($notif_keys as $key => $defaults) {
                     <div class="notif-fields mt-8 <?= !$config['whatsapp_notifications']['enabled'] ? 'collapsed' : '' ?>">
                         <div class="space-y-6">
                             <div>
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">WhatsApp API URL</label>
+                                <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">WhatsApp API URL</label>
                                 <input type="text" name="wa_url" value="<?= htmlspecialchars($config['whatsapp_notifications']['api_url']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://api.whatsapp.com/...">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Key / Token</label>
+                                <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">API Key / Token</label>
                                 <input type="password" name="wa_key" value="<?= htmlspecialchars($config['whatsapp_notifications']['api_key']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="WA_SECRET_TOKEN">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer Telefonu Docelowy</label>
+                                <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer Telefonu Docelowy</label>
                                 <input type="text" name="wa_phone" value="<?= htmlspecialchars($config['whatsapp_notifications']['phone_number']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="+48123456789">
                             </div>
                         </div>
@@ -271,7 +271,7 @@ foreach ($notif_keys as $key => $defaults) {
                     <div class="notif-fields mt-8 <?= !$config['slack_notifications']['enabled'] ? 'collapsed' : '' ?>">
                         <div class="space-y-6">
                             <div>
-                                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
+                                <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
                                 <input type="text" name="slack_url" value="<?= htmlspecialchars($config['slack_notifications']['webhook_url']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://hooks.slack.com/services/...">
                             </div>
                         </div>
@@ -300,15 +300,15 @@ foreach ($notif_keys as $key => $defaults) {
                 <div class="notif-fields mt-8 <?= !$config['sms_notifications']['enabled'] ? 'collapsed' : '' ?>">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="md:col-span-2">
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Gateway URL</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">API Gateway URL</label>
                             <input type="text" name="sms_url" value="<?= htmlspecialchars($config['sms_notifications']['api_url']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://api.sms-gateway.com/send">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">API Key</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">API Key</label>
                             <input type="password" name="sms_key" value="<?= htmlspecialchars($config['sms_notifications']['api_key']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="SMS_API_SECRET">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer Telefonu Docelowy</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer Telefonu Docelowy</label>
                             <input type="text" name="sms_phone" value="<?= htmlspecialchars($config['sms_notifications']['to_number']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="+48999888777">
                         </div>
                     </div>
@@ -336,11 +336,11 @@ foreach ($notif_keys as $key => $defaults) {
                 <div class="notif-fields mt-8 <?= empty($config['discord_notifications']['enabled']) ? 'collapsed' : '' ?>">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
                             <input type="text" name="discord_webhook_url" value="<?= htmlspecialchars($config['discord_notifications']['webhook_url'] ?? '') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://discord.com/api/webhooks/...">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nazwa bota</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Nazwa bota</label>
                             <input type="text" name="discord_username" value="<?= htmlspecialchars($config['discord_notifications']['username'] ?? 'MiniDash') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="MiniDash">
                         </div>
                     </div>
@@ -368,7 +368,7 @@ foreach ($notif_keys as $key => $defaults) {
                 <div class="notif-fields mt-8 <?= empty($config['n8n_notifications']['enabled']) ? 'collapsed' : '' ?>">
                     <div class="grid grid-cols-1 gap-6">
                         <div>
-                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Webhook URL</label>
                             <input type="text" name="n8n_webhook_url" value="<?= htmlspecialchars($config['n8n_notifications']['webhook_url'] ?? '') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://n8n.example.com/webhook/...">
                         </div>
                     </div>

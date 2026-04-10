@@ -13,12 +13,14 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
 
 header('Content-Type: application/json');
 
+$siteId = $_SESSION['site_id'] ?? $config['site'] ?? 'default';
+$tradSite = get_trad_site_id($siteId);
 // Fetch active clients with real-time transfer rates
-$sta_resp = fetch_api('/proxy/network/api/s/default/stat/sta');
+$sta_resp = fetch_api("/proxy/network/api/s/{$tradSite}/stat/sta");
 $clients = $sta_resp['data'] ?? [];
 
 // Fetch recent active station DPI for broader context
-$stadpi_resp = fetch_api("/proxy/network/api/s/default/stat/stadpi");
+$stadpi_resp = fetch_api("/proxy/network/api/s/{$tradSite}/stat/stadpi");
 $stadp_data = $stadpi_resp['data'] ?? [];
 
 // Build a map of local IP -> Details from DPI and sessions
@@ -43,13 +45,13 @@ foreach ($clients as $c) {
 foreach ($stadp_data as $d) {
     if (empty($d['by_app'])) continue;
     $mac = strtolower($d['mac'] ?? '');
-    usort($d['by_app'], fn($a, $b) => ($b['rx_bytes'] + $b['tx_bytes']) <=> ($a['rx_bytes'] + $a['tx_bytes']));
+    usort($d['by_app'], function($a, $b) { return ($b['rx_bytes'] + $b['tx_bytes']) <=> ($a['rx_bytes'] + $a['tx_bytes']); });
     $top_app = $d['by_app'][0];
     $dpi_map[$mac] = $top_app['app_display'] ?? $top_app['app'] ?? $top_app['cat'] ?? '';
 }
 
 // Fetch IPS events for external IPs (often the only source for real-time external flows)
-$ips_resp = fetch_api("/proxy/network/api/s/default/stat/ips/event?limit=100");
+$ips_resp = fetch_api("/proxy/network/api/s/{$tradSite}/stat/ips/event?limit=100");
 $ips_events = $ips_resp['data'] ?? [];
 foreach ($ips_events as $e) {
     $src = $e['src_ip'] ?? ''; $dst = $e['dst_ip'] ?? '';
@@ -110,7 +112,8 @@ foreach ($clients as $c) {
 }
 
 // Final sort and slice
-usort($active_flows, fn($a, $b) => $b['total_bps'] <=> $a['total_bps']);
+usort($active_flows, function($a, $b) { return $b['total_bps'] <=> $a['total_bps']; });
 $active_flows = array_slice($active_flows, 0, 20);
 
+ob_clean();
 echo json_encode(['success' => true, 'data' => $active_flows]);

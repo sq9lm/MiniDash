@@ -1,5 +1,61 @@
 # MiniDash — Release Notes
 
+## v2.1.0 (2026-04-10)
+
+Rozbudowa dashboardu, security, ustawien systemowych i optymalizacje.
+
+### Dashboard
+- Dynamiczne sesje WAN z API (zamiast hardcoded)
+- VLAN detection z UniFi API networkconf (zamiast hardcoded mapy IP)
+- VLAN detail modal — klik na VLAN pokazuje klientow z transferem
+- AP drilldown — klienci wired i wireless z sw_mac/ap_mac
+- Navbar upload kolor amber (spojny z Egress)
+- formatBps obsluguje Tbps/Gbps
+- WAN units fix (rx_bytes-r * 8 dla bps)
+- Stalker widget pokazuje aktywne sesje WiFi
+
+### Security
+- IPS config dropdown — klikalne modale (rules, threat intel, geo-blocking)
+- Geo-blocking modal z flagami krajow + liczba blokad (z IPS events)
+- Security score fix — blocked threats to plus, nie minus
+- VPN detection z networkconf (+10 pkt score)
+- Firewall rules detection fix (meta.rc → !empty data)
+- MongoDB ObjectId w get_trad_site_id
+- Blocked IPs country code z srcipCountry
+- Security events paginacja (MiniPagination)
+- Cache TTL zwiekszony (5min settings, 2min events)
+
+### Inteligentne Wyzwalacze
+- Nowe urzadzenie — alert przy nieznanym MAC (z learning phase)
+- IPS Alert — powiadomienie o zablokowanym ataku
+- Wysoki ping — latency > konfigurowalny prog
+
+### Ustawienia Systemu
+- Retencja danych — suwaki per tabela (7-730 dni)
+- Sesja i bezpieczenstwo — timeout, max prob logowania, lock duration
+- Odswiezanie dashboardu — konfigurowalny interwal pollingu
+- Baza danych — rozmiar, rekordy, VACUUM, eksport config/DB
+
+### O Systemie
+- CPU, RAM, Disk, Uptime w modalu
+- Kanal aktualizacji
+- Dynamiczne wykrywanie zainstalowanych aplikacji (Network, Protect, Talk, Access)
+- VPN lista z networkconf (OpenVPN + WireGuard)
+
+### Powiadomienia
+- Alerty widoczne w panelu dzwonka (sendAlert → SQLite events)
+- Zarządca Procesow — prawdziwe dane z API
+- WAN health — latency, packet_loss z gateway device stats
+
+### Inne
+- Globalna paginacja (MiniPagination) — reusable komponent
+- Usunięto fake progress bars z Ingress/Egress
+- Usunięto hardcoded Zarządca Procesow
+- Monitored.php — modal szczegółow naprawiony
+- Protect.php — poprawki
+
+---
+
 ## v2.0.0 (2026-04-10)
 
 Duza aktualizacja: migracja na SQLite, Wi-Fi Stalker, ulepszenia Threat Watch, nowe kanaly powiadomien, szyfrowanie danych.

@@ -1,4 +1,4 @@
-﻿/* Created by Łukasz Misiura (c) 2026 | www.lm-ads.com */
+/* Created by Łukasz Misiura (c) 2026 | www.lm-ads.com */
 :root {
   --primary: #3b82f6;
   --primary-glow: rgba(59, 130, 246, 0.5);
@@ -62,24 +62,6 @@ body {
   box-shadow: 0 0 35px -10px rgba(236, 72, 153, 0.3);
 }
 
-/* Resource Grid Premium */
-.resource-grid {
-  display: grid;
-  grid-template-columns: repeat(1, 1fr);
-  gap: 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .resource-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .resource-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
 
 .resource-card {
   position: relative;
@@ -280,11 +262,23 @@ body {
   border-bottom: none;
 }
 
-/* Resource Grid (monitored.php) */
+/* Resource Grid Premium */
 .resource-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .resource-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .resource-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .resource-card {

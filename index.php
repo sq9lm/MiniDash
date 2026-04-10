@@ -447,7 +447,7 @@ try {
                     </div>
                     <div class="text-[12px] font-mono text-blue-400 font-black uppercase tracking-widest">SUMA IN</div>
                 </div>
-                <div class="text-[18px] font-black tracking-tight text-white"><?= formatBps($total_clients_rx) ?></div>
+                <div class="text-[18px] font-black tracking-tight text-white" id="local-rx-val"><?= formatBps($total_clients_rx) ?></div>
                 <div class="text-slate-500 text-[12px] mt-1 font-black uppercase tracking-[0.15em]">Ruch Lokalny (IN)</div>
                 
                 <?php if ($top_downloader && $max_rx_rate > 50000): ?>
@@ -473,7 +473,7 @@ try {
                     </div>
                     <div class="text-[12px] font-mono text-amber-400 font-black uppercase tracking-widest">SUMA OUT</div>
                 </div>
-                <div class="text-[18px] font-black tracking-tight text-white"><?= formatBps($total_clients_tx) ?></div>
+                <div class="text-[18px] font-black tracking-tight text-white" id="local-tx-val"><?= formatBps($total_clients_tx) ?></div>
                 <div class="text-slate-500 text-[12px] mt-1 font-black uppercase tracking-[0.15em]">Ruch Lokalny (OUT)</div>
 
                 <?php if ($top_uploader && $max_tx_rate > 50000): ?>

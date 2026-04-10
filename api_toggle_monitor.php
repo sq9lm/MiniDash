@@ -1,6 +1,7 @@
 <?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 require_once 'config.php';
+require_once 'db.php';
 require_once 'functions.php';
 
 ob_start();
@@ -47,22 +48,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     } 
     elseif ($action === 'delete') {
-        if (isset($devices[$mac])) {
-            unset($devices[$mac]);
-            saveDevices($devices);
-            
-            // Also remove from history
-            $historyFile = __DIR__ . '/data/history.json';
-            if (file_exists($historyFile)) {
-                $allHistory = json_decode(file_get_contents($historyFile), true);
-                if (isset($allHistory[$mac])) {
-                    unset($allHistory[$mac]);
-                    file_put_contents($historyFile, json_encode($allHistory, JSON_PRETTY_PRINT));
-                }
-            }
-            
+        if (deleteDeviceCompletely($mac)) {
             ob_clean();
-            echo json_encode(['success' => true, 'message' => 'Device and history removed']);
+            echo json_encode(['success' => true, 'message' => 'Device and its entire history removed successfully']);
+            exit;
+        } else {
+            ob_clean();
+            echo json_encode(['success' => false, 'message' => 'Failed to remove device']);
             exit;
         }
     }
