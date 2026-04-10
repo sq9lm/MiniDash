@@ -682,13 +682,21 @@ function get_unifi_security_settings() {
     $threats_resp = fetch_api("/proxy/network/api/s/$site_to_use_trad/stat/ips/event?period=3600");
     $threats_count = count($threats_resp['data'] ?? []);
     
-    // 3a. VPN Check
+    // 3a. VPN Check — use networkconf (rest/vpn and rest/vpnserver are empty on UDR)
     $vpn_active = false;
-    $vpn_resp = fetch_api("/proxy/network/api/s/$site_to_use_trad/rest/vpn");
-    if (!empty($vpn_resp['data'])) $vpn_active = true;
-    else {
-        $vpn_server = fetch_api("/proxy/network/api/s/$site_to_use_trad/rest/vpnserver");
-        if (!empty($vpn_server['data'])) $vpn_active = true;
+    $vpn_list = [];
+    $net_resp = fetch_api("/proxy/network/api/s/$site_to_use_trad/rest/networkconf");
+    foreach (($net_resp['data'] ?? []) as $net) {
+        $purpose = $net['purpose'] ?? '';
+        if ($purpose === 'remote-user-vpn' || $purpose === 'site-vpn') {
+            $vpn_active = true;
+            $vpn_list[] = [
+                'name' => $net['name'] ?? 'VPN',
+                'type' => $net['vpn_type'] ?? $purpose,
+                'subnet' => $net['ip_subnet'] ?? '',
+                'enabled' => $net['enabled'] ?? true,
+            ];
+        }
     }
     
     // 4. Rule List Construction
@@ -798,7 +806,8 @@ function get_unifi_security_settings() {
         'blocked_countries' => $geo_countries,
         'geo_rules' => $geo_rules,
         'monitoring_active' => true,
-        'vpn_secure' => $vpn_active
+        'vpn_secure' => $vpn_active,
+        'vpn_list' => $vpn_list
     ];
     
     minidash_cache_set('security_settings', $settings);
