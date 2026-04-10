@@ -66,6 +66,28 @@ try {
         }
     }
 
+    // Merge traditional clients into $clients if not already present (by MAC)
+    // This fixes detection for devices not in Integration API (e.g. randomized MAC phones)
+    $existing_macs = [];
+    foreach ($clients as $c) {
+        $existing_macs[] = normalize_mac($c['macAddress'] ?? $c['mac'] ?? '');
+    }
+    foreach ($trad_resp['data'] ?? [] as $tc) {
+        $tc_mac = normalize_mac($tc['mac'] ?? '');
+        if ($tc_mac && !in_array($tc_mac, $existing_macs)) {
+            $clients[] = [
+                'mac' => $tc_mac,
+                'macAddress' => $tc['mac'] ?? '',
+                'name' => $tc['name'] ?? $tc['hostname'] ?? $tc_mac,
+                'ipAddress' => $tc['ip'] ?? $tc['last_ip'] ?? '',
+                'vlan' => $tc['vlan'] ?? 0,
+                'rx_rate' => $tc['rx_rate'] ?? 0,
+                'tx_rate' => $tc['tx_rate'] ?? 0,
+                'uptime' => $tc['uptime'] ?? 0,
+            ];
+        }
+    }
+
     // Grupowanie monitorowanych urządzeń
     $grouped_monitored = group_devices_by_vlan($devices_config, $clients);
 
