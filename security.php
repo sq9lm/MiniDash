@@ -160,13 +160,13 @@ $top_countries = array_slice($top_countries, 0, 5);
                         UniFi Security
                     </h1>
                     <div class="flex items-center gap-2 mb-2">
-                        <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border transition-all <?= $ips_enabled ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-white/5 opacity-50' ?>" title="Intrusion Prevention System">
+                        <span class="px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-widest border transition-all <?= $ips_enabled ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-white/5 opacity-50' ?>" title="Intrusion Prevention System">
                             <i data-lucide="shield-check" class="w-3 h-3 inline mr-1"></i> IPS: <?= $ips_enabled ? 'Uzbrojony' : 'Wyłączony' ?>
                         </span>
-                        <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border transition-all <?= $honeypot ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-slate-800 text-slate-500 border-white/5 opacity-50' ?>" title="Network Honeypot Detection">
+                        <span class="px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-widest border transition-all <?= $honeypot ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-slate-800 text-slate-500 border-white/5 opacity-50' ?>" title="Network Honeypot Detection">
                             <i data-lucide="ghost" class="w-3 h-3 inline mr-1"></i> Honeypot: <?= $honeypot ? 'Aktywny' : 'Wyłączony' ?>
                         </span>
-                        <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border transition-all <?= $ad_blocking ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-slate-800 text-slate-500 border-white/5 opacity-50' ?>" title="Ad & Tracker Blocking">
+                        <span class="px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-widest border transition-all <?= $ad_blocking ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-slate-800 text-slate-500 border-white/5 opacity-50' ?>" title="Ad & Tracker Blocking">
                             <i data-lucide="ban" class="w-3 h-3 inline mr-1"></i> Ad-block: <?= $ad_blocking ? 'Aktywny' : 'Wyłączony' ?>
                         </span>
                     </div>
@@ -194,11 +194,11 @@ $top_countries = array_slice($top_countries, 0, 5);
                                     <div class="flex-grow min-w-0">
                                         <div class="flex items-center gap-2">
                                             <p class="text-sm font-bold text-white">Reguły IPS</p>
-                                            <span class="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter <?= $ips_enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400' ?>">
+                                            <span class="px-1.5 py-0.5 rounded text-[12px] font-black uppercase tracking-tighter <?= $ips_enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400' ?>">
                                                 <?= $ips_enabled ? 'AKTYWNE' : 'WYŁĄCZONE' ?>
                                             </span>
                                         </div>
-                                        <p class="text-[10px] text-slate-500 mt-0.5">Zarządzaj regułami wykrywania zagrożeń</p>
+                                        <p class="text-[12px] text-slate-500 mt-0.5">Zarządzaj regułami wykrywania zagrożeń</p>
                                     </div>
                                 </a>
                                 
@@ -209,39 +209,37 @@ $top_countries = array_slice($top_countries, 0, 5);
                                     <div class="flex-grow min-w-0">
                                         <div class="flex items-center gap-2">
                                             <p class="text-sm font-bold text-white">Threat Intelligence</p>
-                                            <span class="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter <?= $threat_detection_enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400' ?>">
+                                            <span class="px-1.5 py-0.5 rounded text-[12px] font-black uppercase tracking-tighter <?= $threat_detection_enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400' ?>">
                                                 <?= $threat_detection_enabled ? 'AKTYWNE' : 'WYŁĄCZONE' ?>
                                             </span>
                                         </div>
-                                        <p class="text-[10px] text-slate-500 mt-0.5">Źródła danych o zagrożeniach</p>
+                                        <p class="text-[12px] text-slate-500 mt-0.5">Źródła danych o zagrożeniach</p>
                                     </div>
                                 </a>
                                 
-                                 <a href="#" class="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/item">
+                                 <a href="#" onclick="event.preventDefault(); openGeoBlockModal();" class="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group/item">
                                     <div class="p-2 bg-purple-500/10 rounded-lg text-purple-400 shrink-0">
                                         <i data-lucide="globe" class="w-4 h-4"></i>
                                     </div>
                                     <div class="flex-grow min-w-0">
                                         <div class="flex items-center gap-2">
                                             <p class="text-sm font-bold text-white">Geo-blocking</p>
-                                            <span class="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter <?= $geoblocking_enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400' ?>">
+                                            <span class="px-1.5 py-0.5 rounded text-[12px] font-black uppercase tracking-tighter <?= $geoblocking_enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400' ?>">
                                                 <?= $geoblocking_enabled ? 'AKTYWNE' : 'WYŁĄCZONE' ?>
                                             </span>
                                         </div>
-                                        <p class="text-[10px] text-slate-500 mt-0.5">Blokada ruchu z wybranych krajów</p>
-                                        
+                                        <p class="text-[12px] text-slate-500 mt-0.5">Blokada ruchu z wybranych krajów</p>
+
                                         <?php if ($geoblocking_enabled && !empty($security_settings['blocked_countries'])): ?>
                                         <div class="mt-2 flex flex-wrap gap-1 items-center">
-                                            <?php 
-                                            // Handle different UniFi formats (ISO codes vs numbers)
-                                            foreach (array_slice($security_settings['blocked_countries'], 0, 12) as $country): 
+                                            <?php foreach (array_slice($security_settings['blocked_countries'], 0, 12) as $country):
                                                 $code = is_numeric($country) ? 'un' : strtolower($country);
-                                                if ($code === 'un') continue; 
+                                                if ($code === 'un') continue;
                                             ?>
                                                 <img src="https://flagcdn.com/24x18/<?= $code ?>.png" class="w-4 h-3 rounded-sm opacity-50 hover:opacity-100 transition-opacity" title="<?= strtoupper($code) ?>">
                                             <?php endforeach; ?>
                                             <?php if (count($security_settings['blocked_countries']) > 12): ?>
-                                                <span class="text-[8px] text-slate-600 font-bold">+<?= count($security_settings['blocked_countries']) - 12 ?></span>
+                                                <span class="text-[12px] text-slate-600 font-bold">+<?= count($security_settings['blocked_countries']) - 12 ?></span>
                                             <?php endif; ?>
                                         </div>
                                         <?php endif; ?>
@@ -254,7 +252,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                     </div>
                                     <div class="flex-grow min-w-0">
                                         <p class="text-sm font-bold text-white">Ochrona DDoS</p>
-                                        <p class="text-[10px] text-slate-500 mt-0.5">Konfiguracja limitów i progów</p>
+                                        <p class="text-[12px] text-slate-500 mt-0.5">Konfiguracja limitów i progów</p>
                                     </div>
                                 </a>
                                 
@@ -264,7 +262,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                     </div>
                                     <div class="flex-grow min-w-0">
                                         <p class="text-sm font-bold text-white">Blacklist / Whitelist</p>
-                                        <p class="text-[10px] text-slate-500 mt-0.5">Własne listy IP i domen</p>
+                                        <p class="text-[12px] text-slate-500 mt-0.5">Własne listy IP i domen</p>
                                     </div>
                                 </a>
                                 
@@ -275,8 +273,8 @@ $top_countries = array_slice($top_countries, 0, 5);
                                         <i data-lucide="bell" class="w-4 h-4"></i>
                                     </div>
                                     <div class="flex-grow min-w-0">
-                                        <p class="text-sm font-bold text-white">Alerty i powiadomienia</p>
-                                        <p class="text-[10px] text-slate-500 mt-0.5">Konfiguracja alertów bezpieczeństwa</p>
+                                        <p class="text-xs font-bold text-white">Alerty i powiadomienia</p>
+                                        <p class="text-[11px] text-slate-500 mt-0.5">Konfiguracja alertów bezpieczeństwa</p>
                                     </div>
                                 </a>
                             </div>
@@ -294,7 +292,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                     <div class="p-2.5 bg-rose-500/10 rounded-xl text-rose-400">
                         <i data-lucide="shield-x" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">24h</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-widest">24h</span>
                 </div>
                 <div class="text-3xl font-black tracking-tighter"><?= $stats['threats_blocked'] ?></div>
                 <div class="text-slate-400 text-xs mt-1 font-medium italic">Zablokowane zagrożenia</div>
@@ -306,12 +304,12 @@ $top_countries = array_slice($top_countries, 0, 5);
                     <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400">
                         <i data-lucide="list-checks" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Aktywne</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Aktywne</span>
                 </div>
                 <div class="text-3xl font-black tracking-tighter"><?= number_format($stats['active_rules']) ?></div>
                 <div class="flex items-center justify-between mt-2">
                     <div class="text-slate-400 text-xs font-medium italic">Reguły bezpieczeństwa</div>
-                    <button class="text-[10px] font-black text-blue-400 uppercase tracking-widest hover:text-blue-300 transition flex items-center gap-1">
+                    <button class="text-xs font-black text-blue-400 uppercase tracking-widest hover:text-blue-300 transition flex items-center gap-1">
                         Szczegóły
                         <i data-lucide="chevron-right" class="w-3 h-3"></i>
                     </button>
@@ -323,12 +321,12 @@ $top_countries = array_slice($top_countries, 0, 5);
                     <div class="p-2.5 bg-amber-500/10 rounded-xl text-amber-400">
                         <i data-lucide="ban" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Blacklist</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Blacklist</span>
                 </div>
                 <div class="text-3xl font-black tracking-tighter"><?= $stats['blocked_ips'] ?></div>
                 <div class="flex items-center justify-between mt-2">
                     <div class="text-slate-400 text-xs font-medium italic">Zablokowane IP</div>
-                    <button class="text-[10px] font-black text-amber-400 uppercase tracking-widest hover:text-amber-300 transition flex items-center gap-1">
+                    <button class="text-xs font-black text-amber-400 uppercase tracking-widest hover:text-amber-300 transition flex items-center gap-1">
                         Szczegóły
                         <i data-lucide="chevron-right" class="w-3 h-3"></i>
                     </button>
@@ -344,13 +342,13 @@ $top_countries = array_slice($top_countries, 0, 5);
                     </svg>
                     <div class="absolute inset-0 flex flex-col items-center justify-center">
                         <span class="text-4xl font-black text-white leading-none"><?= $stats['security_score'] ?></span>
-                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">Score</span>
+                        <span class="text-[11px] font-black text-slate-500 uppercase tracking-widest mt-1">Score</span>
                     </div>
                 </div>
                 
                 <div class="text-center">
-                    <p class="text-[10px] font-black <?= $stats['security_score'] >= 80 ? 'text-emerald-400' : 'text-rose-400' ?> uppercase tracking-widest mb-1">Poziom Bezpieczeństwa</p>
-                    <p class="text-slate-500 text-[10px] font-medium italic">Kliknij po szczegóły</p>
+                    <p class="text-[12px] font-black <?= $stats['security_score'] >= 80 ? 'text-emerald-400' : 'text-rose-400' ?> uppercase tracking-widest mb-1">Poziom Bezpieczeństwa</p>
+                    <p class="text-slate-500 text-[12px] font-medium italic">Kliknij po szczegóły</p>
                 </div>
             </div>
         </div>
@@ -380,7 +378,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                         
                         <!-- Time Range Selector -->
                         <div class="flex items-center gap-2 p-3 bg-slate-900/50 rounded-2xl border border-white/5">
-                            <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest mr-2">Zakres:</span>
+                            <span class="text-[12px] font-black text-slate-500 uppercase tracking-widest mr-2">Zakres:</span>
                             <button onclick="selectTimeRange('1h')" class="time-range-btn px-4 py-2 bg-slate-800 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="1h">1h</button>
                             <button onclick="selectTimeRange('24h')" class="time-range-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold transition border border-blue-500/50 shadow-lg shadow-blue-600/20" data-range="24h">1D</button>
                             <button onclick="selectTimeRange('7d')" class="time-range-btn px-4 py-2 bg-slate-800 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="7d">1W</button>
@@ -425,7 +423,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                                  <img src="https://flagcdn.com/24x18/<?= $cc ?>.png" class="w-4 h-3 rounded-sm opacity-80" title="<?= strtoupper($cc) ?>">
                                                  <h3 class="font-bold text-white text-sm truncate"><?= htmlspecialchars($event['signature'] ?? 'Zagrożenie bezpieczeństwa') ?></h3>
                                             </div>
-                                            <div class="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] font-medium italic">
+                                            <div class="flex items-center flex-wrap gap-x-4 gap-y-1 text-[12px] font-medium italic">
                                                 <span class="flex items-center gap-1.5 text-slate-400">
                                                     <i data-lucide="clock" class="w-3 h-3 text-slate-500"></i>
                                                     <?= $event['time'] ?>
@@ -439,7 +437,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                         </div>
                                         <div class="flex items-center gap-3 shrink-0">
                                             <div class="text-right hidden sm:block">
-                                                <p class="text-[9px] font-black <?= $colors['text'] ?> uppercase tracking-widest"><?= strtoupper($event['severity']) ?></p>
+                                                <p class="text-[11px] font-black <?= $colors['text'] ?> uppercase tracking-widest"><?= strtoupper($event['severity']) ?></p>
                                             </div>
                                             <button class="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-white/5 text-slate-400 hover:text-white">
                                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
@@ -458,14 +456,14 @@ $top_countries = array_slice($top_countries, 0, 5);
             <div class="space-y-8">
                 <!-- Top Sources -->
                 <div class="glass-card p-6 border-amber-500/10">
-                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center justify-between">
+                    <h3 class="text-sm font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center justify-between">
                         Najwyższe ryzyko wg kraju
                         <i data-lucide="globe" class="w-4 h-4 text-amber-400"></i>
                     </h3>
                     <div class="space-y-4">
                         <?php if (empty($top_countries)): ?>
                         <div class="text-center py-8">
-                            <p class="text-[10px] text-slate-600 italic">Brak danych o pochodzeniu ataków</p>
+                            <p class="text-[12px] text-slate-600 italic">Brak danych o pochodzeniu ataków</p>
                         </div>
                         <?php else: ?>
                         <?php foreach ($top_countries as $cc => $data): ?>
@@ -489,15 +487,15 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <!-- Active Protection Pillars -->
                 <div class="glass-card p-6 overflow-hidden relative">
                     <div class="absolute -right-8 -top-8 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full"></div>
-                    <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-6">Filary ochrony</h3>
+                    <h3 class="text-sm font-black text-slate-500 uppercase tracking-widest mb-6">Filary ochrony</h3>
                     <div class="space-y-4">
                         <div class="flex items-start gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
                             <div class="p-2 bg-emerald-500/10 rounded-xl text-emerald-400">
                                 <i data-lucide="check-circle-2" class="w-4 h-4"></i>
                             </div>
                             <div>
-                                <p class="text-[10px] font-bold text-white mb-0.5">Automatyczne blokowanie</p>
-                                <p class="text-[9px] text-slate-500 italic">Aktywne odpieranie ataków w czasie rzeczywistym</p>
+                                <p class="text-xs font-bold text-white mb-0.5">Automatyczne blokowanie</p>
+                                <p class="text-[11px] text-slate-500 italic">Aktywne odpieranie ataków w czasie rzeczywistym</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
@@ -505,8 +503,8 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 <i data-lucide="zap" class="w-4 h-4"></i>
                             </div>
                             <div>
-                                <p class="text-[10px] font-bold text-white mb-0.5">Analiza DPI</p>
-                                <p class="text-[9px] text-slate-500 italic">Głęboka inspekcja pakietów aktywna w WAN</p>
+                                <p class="text-xs font-bold text-white mb-0.5">Analiza DPI</p>
+                                <p class="text-[11px] text-slate-500 italic">Głęboka inspekcja pakietów aktywna w WAN</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 opacity-50">
@@ -514,8 +512,8 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 <i data-lucide="shield" class="w-4 h-4"></i>
                             </div>
                             <div>
-                                <p class="text-[10px] font-bold text-white mb-0.5">AI Threat Defense</p>
-                                <p class="text-[9px] text-slate-500 italic">Wkrótce: uczenie maszynowe wzorców</p>
+                                <p class="text-xs font-bold text-white mb-0.5">AI Threat Defense</p>
+                                <p class="text-[11px] text-slate-500 italic">Wkrótce: uczenie maszynowe wzorców</p>
                             </div>
                         </div>
                     </div>
@@ -555,13 +553,13 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </button>
                             </div>
                             <div class="grid grid-cols-7 gap-1 mb-2">
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">Pn</div>
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">Wt</div>
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">Śr</div>
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">Cz</div>
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">Pt</div>
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">So</div>
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">Nd</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Pn</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Wt</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Śr</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Cz</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Pt</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">So</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Nd</div>
                             </div>
                             <div class="grid grid-cols-7 gap-1">
                                 <?php for ($i = 1; $i <= 31; $i++): ?>
@@ -571,7 +569,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 <?php endfor; ?>
                             </div>
                             <div class="mt-4 pt-4 border-t border-white/5">
-                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Godzina rozpoczęcia</label>
+                                <label class="text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Godzina rozpoczęcia</label>
                                 <div class="flex items-center gap-2">
                                     <select class="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none">
                                         <?php for ($h = 0; $h < 24; $h++): ?>
@@ -603,13 +601,13 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </button>
                             </div>
                             <div class="grid grid-cols-7 gap-1 mb-2">
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">Pn</div>
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">Wt</div>
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">Śr</div>
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">Cz</div>
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">Pt</div>
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">So</div>
-                                <div class="text-center text-[9px] font-black text-slate-600 uppercase">Nd</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Pn</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Wt</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Śr</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Cz</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Pt</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">So</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Nd</div>
                             </div>
                             <div class="grid grid-cols-7 gap-1">
                                 <?php for ($i = 1; $i <= 28; $i++): ?>
@@ -619,7 +617,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 <?php endfor; ?>
                             </div>
                             <div class="mt-4 pt-4 border-t border-white/5">
-                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Godzina zakończenia</label>
+                                <label class="text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Godzina zakończenia</label>
                                 <div class="flex items-center gap-2">
                                     <select class="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none">
                                         <?php for ($h = 0; $h < 24; $h++): ?>
@@ -748,7 +746,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <div class="bg-slate-900/50 rounded-2xl border border-white/5 overflow-hidden">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-slate-950/30 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
+                            <tr class="bg-slate-950/30 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
                                 <th class="px-6 py-4">Kraj</th>
                                 <th class="px-6 py-4">Adres IP</th>
                                 <th class="px-6 py-4">Typ zagrożenia</th>
@@ -768,7 +766,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white"><?= $ip['ip'] ?></td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[10px] font-mono text-rose-400 border border-rose-500/20"><?= $ip['type'] ?></span>
+                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[12px] font-mono text-rose-400 border border-rose-500/20"><?= $ip['type'] ?></span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400"><?= $ip['reason'] ?></td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500"><?= $ip['time'] ?></td>
@@ -799,7 +797,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">192.168.45.12</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[10px] font-mono text-purple-400 border border-purple-500/20">Port Scan</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[12px] font-mono text-purple-400 border border-purple-500/20">Port Scan</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Aggressive port scanning</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">3d 2h temu</td>
@@ -814,7 +812,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">83.12.45.78</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[10px] font-mono text-rose-400 border border-rose-500/20">Brute Force</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[12px] font-mono text-rose-400 border border-rose-500/20">Brute Force</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">FTP brute force attack</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">3d 8h temu</td>
@@ -829,7 +827,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">95.142.33.21</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-mono text-amber-400 border border-amber-500/20">DDoS</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-[12px] font-mono text-amber-400 border border-amber-500/20">DDoS</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">HTTP flood attack</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">3d 14h temu</td>
@@ -844,7 +842,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">51.89.12.45</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-[10px] font-mono text-blue-400 border border-blue-500/20">SQL Injection</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-[12px] font-mono text-blue-400 border border-blue-500/20">SQL Injection</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Database injection attempt</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">4d 6h temu</td>
@@ -859,7 +857,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">185.107.56.23</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-red-500/10 text-[10px] font-mono text-red-400 border border-red-500/20">Malware</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-red-500/10 text-[12px] font-mono text-red-400 border border-red-500/20">Malware</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Trojan distribution</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">4d 12h temu</td>
@@ -874,7 +872,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">81.143.22.67</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[10px] font-mono text-purple-400 border border-purple-500/20">Port Scan</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[12px] font-mono text-purple-400 border border-purple-500/20">Port Scan</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Service enumeration</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">5d 3h temu</td>
@@ -889,7 +887,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">153.126.45.89</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[10px] font-mono text-rose-400 border border-rose-500/20">Brute Force</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[12px] font-mono text-rose-400 border border-rose-500/20">Brute Force</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">RDP brute force</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">5d 18h temu</td>
@@ -904,7 +902,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">121.162.78.34</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-mono text-amber-400 border border-amber-500/20">DDoS</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-[12px] font-mono text-amber-400 border border-amber-500/20">DDoS</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">UDP flood</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">6d 4h temu</td>
@@ -919,7 +917,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">203.45.12.78</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-[10px] font-mono text-blue-400 border border-blue-500/20">XSS Attack</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-[12px] font-mono text-blue-400 border border-blue-500/20">XSS Attack</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Reflected XSS attempt</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">6d 16h temu</td>
@@ -934,7 +932,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">128.199.45.23</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-red-500/10 text-[10px] font-mono text-red-400 border border-red-500/20">Malware</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-red-500/10 text-[12px] font-mono text-red-400 border border-red-500/20">Malware</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Cryptominer detected</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">7d 8h temu</td>
@@ -949,7 +947,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">142.93.12.56</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[10px] font-mono text-purple-400 border border-purple-500/20">Port Scan</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[12px] font-mono text-purple-400 border border-purple-500/20">Port Scan</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Vulnerability scanning</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">8d 2h temu</td>
@@ -964,7 +962,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">187.45.78.23</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[10px] font-mono text-rose-400 border border-rose-500/20">Brute Force</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[12px] font-mono text-rose-400 border border-rose-500/20">Brute Force</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">WordPress admin attack</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">8d 14h temu</td>
@@ -979,7 +977,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">190.12.45.89</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-mono text-amber-400 border border-amber-500/20">DDoS</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-[12px] font-mono text-amber-400 border border-amber-500/20">DDoS</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">ICMP flood</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">9d 6h temu</td>
@@ -994,7 +992,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">102.67.34.12</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-[10px] font-mono text-blue-400 border border-blue-500/20">SQL Injection</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-[12px] font-mono text-blue-400 border border-blue-500/20">SQL Injection</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Blind SQL injection</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">9d 18h temu</td>
@@ -1009,7 +1007,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">94.142.56.78</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-red-500/10 text-[10px] font-mono text-red-400 border border-red-500/20">Malware</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-red-500/10 text-[12px] font-mono text-red-400 border border-red-500/20">Malware</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Phishing site hosting</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">10d 4h temu</td>
@@ -1024,7 +1022,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">85.167.23.45</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[10px] font-mono text-purple-400 border border-purple-500/20">Port Scan</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[12px] font-mono text-purple-400 border border-purple-500/20">Port Scan</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Stealth SYN scan</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">10d 16h temu</td>
@@ -1039,7 +1037,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">87.56.12.34</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[10px] font-mono text-rose-400 border border-rose-500/20">Brute Force</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[12px] font-mono text-rose-400 border border-rose-500/20">Brute Force</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">SMTP authentication attack</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">11d 8h temu</td>
@@ -1054,7 +1052,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">91.152.34.67</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-mono text-amber-400 border border-amber-500/20">DDoS</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-[12px] font-mono text-amber-400 border border-amber-500/20">DDoS</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">DNS amplification</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">12d 2h temu</td>
@@ -1069,7 +1067,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">88.23.45.12</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-[10px] font-mono text-blue-400 border border-blue-500/20">XSS Attack</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-[12px] font-mono text-blue-400 border border-blue-500/20">XSS Attack</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Stored XSS injection</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">12d 14h temu</td>
@@ -1084,7 +1082,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">93.45.78.23</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-red-500/10 text-[10px] font-mono text-red-400 border border-red-500/20">Malware</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-red-500/10 text-[12px] font-mono text-red-400 border border-red-500/20">Malware</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Spyware distribution</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">13d 6h temu</td>
@@ -1099,7 +1097,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">89.152.12.45</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[10px] font-mono text-purple-400 border border-purple-500/20">Port Scan</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[12px] font-mono text-purple-400 border border-purple-500/20">Port Scan</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Network reconnaissance</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">13d 18h temu</td>
@@ -1114,7 +1112,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">95.67.23.89</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[10px] font-mono text-rose-400 border border-rose-500/20">Brute Force</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-[12px] font-mono text-rose-400 border border-rose-500/20">Brute Force</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Telnet brute force</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">14d 10h temu</td>
@@ -1129,7 +1127,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">78.45.12.34</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-mono text-amber-400 border border-amber-500/20">DDoS</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-[12px] font-mono text-amber-400 border border-amber-500/20">DDoS</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">NTP amplification</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">15d 4h temu</td>
@@ -1144,7 +1142,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">84.23.56.78</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-[10px] font-mono text-blue-400 border border-blue-500/20">SQL Injection</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-[12px] font-mono text-blue-400 border border-blue-500/20">SQL Injection</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Time-based SQL injection</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">15d 16h temu</td>
@@ -1159,7 +1157,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </td>
                                 <td class="px-6 py-4 font-mono text-sm text-white">77.116.45.23</td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-red-500/10 text-[10px] font-mono text-red-400 border border-red-500/20">Malware</span>
+                                    <span class="px-2 py-0.5 rounded-md bg-red-500/10 text-[12px] font-mono text-red-400 border border-red-500/20">Malware</span>
                                 </td>
                                 <td class="px-6 py-4 text-xs text-slate-400">Keylogger detected</td>
                                 <td class="px-6 py-4 text-right text-xs font-mono text-slate-500">16d 8h temu</td>
@@ -1170,10 +1168,10 @@ $top_countries = array_slice($top_countries, 0, 5);
             </div>
             
             <div class="modal-footer p-6 border-t border-white/5 bg-slate-900/30 flex justify-between items-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                <p class="text-[12px] text-slate-500 font-bold uppercase tracking-widest">
                     Łącznie zablokowanych: <span class="text-amber-400">34 adresy IP</span>
                 </p>
-                <button type="button" onclick="closeBlockedIPsModal()" class="px-8 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg shadow-amber-600/20">
+                <button type="button" onclick="closeBlockedIPsModal()" class="px-8 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-[12px] font-black uppercase tracking-widest transition shadow-lg shadow-amber-600/20">
                     Zamknij
                 </button>
             </div>
@@ -1237,7 +1235,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <div class="bg-slate-900/50 rounded-2xl border border-white/5 overflow-hidden">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-slate-950/30 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
+                            <tr class="bg-slate-950/30 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
                                 <th class="px-6 py-4">ID</th>
                                 <th class="px-6 py-4">Nazwa reguły</th>
                                 <th class="px-6 py-4">Kategoria</th>
@@ -1260,13 +1258,13 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 <td class="px-6 py-4 font-mono text-xs text-slate-500">#<?= substr(md5($r['id']), 0, 4) ?></td>
                                 <td class="px-6 py-4">
                                     <div class="font-bold text-sm text-white"><?= htmlspecialchars($r['name']) ?></div>
-                                    <div class="text-[10px] text-slate-500 mt-0.5"><?= htmlspecialchars($r['id']) ?></div>
+                                    <div class="text-[12px] text-slate-500 mt-0.5"><?= htmlspecialchars($r['id']) ?></div>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[10px] font-mono text-purple-400 border border-purple-500/20"><?= htmlspecialchars($r['category']) ?></span>
+                                    <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-[12px] font-mono text-purple-400 border border-purple-500/20"><?= htmlspecialchars($r['category']) ?></span>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border <?= $severity_color ?>"><?= $r['priority'] ?? 'MEDIUM' ?></span>
+                                    <span class="px-2 py-0.5 rounded-md text-[12px] font-bold border <?= $severity_color ?>"><?= $r['priority'] ?? 'MEDIUM' ?></span>
                                 </td>
                                 <td class="px-6 py-4 text-xs font-mono text-slate-400"><?= $r['action'] ?></td>
                                 <td class="px-6 py-4 text-right">
@@ -1298,10 +1296,10 @@ $top_countries = array_slice($top_countries, 0, 5);
             </div>
             
             <div class="modal-footer p-6 border-t border-white/5 bg-slate-900/30 flex justify-between items-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                <p class="text-[12px] text-slate-500 font-bold uppercase tracking-widest">
                     Aktywnych reguł: <span class="text-blue-400"><?= number_format($active_rules) ?></span> | Krytycznych: <span class="text-red-400"><?= $ips_enabled ? number_format(round($active_rules * 0.12)) : '0' ?></span>
                 </p>
-                <button type="button" onclick="closeSecurityRulesModal()" class="px-8 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg shadow-blue-600/20">
+                <button type="button" onclick="closeSecurityRulesModal()" class="px-8 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[12px] font-black uppercase tracking-widest transition shadow-lg shadow-blue-600/20">
                     Zamknij
                 </button>
             </div>
@@ -1628,10 +1626,10 @@ $top_countries = array_slice($top_countries, 0, 5);
             </div>
             
             <div class="modal-footer p-6 border-t border-white/5 bg-slate-900/30 flex justify-between items-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                <p class="text-[12px] text-slate-500 font-bold uppercase tracking-widest">
                     Ocena końcowa: <span class="text-emerald-400 text-lg"><?= $stats['security_score'] ?>/100</span>
                 </p>
-                <button type="button" onclick="closeSecurityScoreModal()" class="px-8 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg shadow-emerald-600/20">
+                <button type="button" onclick="closeSecurityScoreModal()" class="px-8 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[12px] font-black uppercase tracking-widest transition shadow-lg shadow-emerald-600/20">
                     Zamknij
                 </button>
             </div>

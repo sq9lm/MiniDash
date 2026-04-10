@@ -717,30 +717,69 @@ function get_unifi_security_settings() {
         ];
     }
 
-    // Check for Region Blocking (geo-blocking) in traffic rules and IPS config
+    // Check for Region Blocking with direction (in/out/both)
     $geo_countries = [];
+    $geo_rules = []; // [{countries: [...], direction: 'in'|'out'|'both', action: 'block'|'allow'}]
+
+    // 1. Traffic rules with region blocking
     foreach ($traffic_rules_resp['data'] ?? [] as $tr) {
         $target = $tr['matching_target'] ?? $tr['target_devices'] ?? '';
-        if (strtoupper($target) === 'REGION' || !empty($tr['regions']) || !empty($tr['geoip_countries'])) {
-            $geo_countries = array_merge($geo_countries, $tr['regions'] ?? $tr['geoip_countries'] ?? []);
+        $countries = $tr['regions'] ?? $tr['geoip_countries'] ?? $tr['countries'] ?? [];
+        if (strtoupper($target) === 'REGION' || !empty($countries)) {
+            $dir = $tr['direction'] ?? $tr['traffic_direction'] ?? 'both';
+            $action = $tr['action'] ?? 'BLOCK';
+            $geo_rules[] = [
+                'countries' => $countries,
+                'direction' => strtolower($dir),
+                'action' => strtoupper($action),
+                'name' => $tr['description'] ?? $tr['name'] ?? 'Region Block',
+            ];
+            $geo_countries = array_merge($geo_countries, $countries);
         }
     }
-    // Also check IPS config for country restrictions
-    if (!empty($ips_config_raw['restriction_countries'])) {
-        $geo_countries = array_merge($geo_countries, $ips_config_raw['restriction_countries']);
+
+    // 2. IPS config country restrictions
+    $ips_raw = $ips_resp['data'][0] ?? [];
+    if (!empty($ips_raw['restriction_countries'])) {
+        $dir = $ips_raw['restriction_direction'] ?? 'incoming';
+        $geo_rules[] = [
+            'countries' => $ips_raw['restriction_countries'],
+            'direction' => ($dir === 'incoming' || $dir === 'in') ? 'in' : (($dir === 'outgoing' || $dir === 'out') ? 'out' : 'both'),
+            'action' => 'BLOCK',
+            'name' => 'IPS Region Restriction',
+        ];
+        $geo_countries = array_merge($geo_countries, $ips_raw['restriction_countries']);
     }
-    // Try dedicated country-block setting
+
+    // 3. Dedicated country-block setting
     $geo_resp = fetch_api("/proxy/network/api/s/$site_to_use_trad/rest/setting/country_block");
-    if (!empty($geo_resp['data'][0]['blocked_countries'])) {
-        $geo_countries = array_merge($geo_countries, $geo_resp['data'][0]['blocked_countries']);
+    $cb = $geo_resp['data'][0] ?? [];
+    if (!empty($cb['blocked_countries'])) {
+        $dir = $cb['direction'] ?? $cb['block_direction'] ?? 'both';
+        $geo_rules[] = [
+            'countries' => $cb['blocked_countries'],
+            'direction' => strtolower($dir),
+            'action' => 'BLOCK',
+            'name' => 'Country Block Setting',
+        ];
+        $geo_countries = array_merge($geo_countries, $cb['blocked_countries']);
     }
-    // Also try v2 API for region blocking
+
+    // 4. V2 API region blocking
     if (empty($geo_countries)) {
         $geo_v2 = fetch_api("/proxy/network/api/v2/region-block");
         if (!empty($geo_v2['data'])) {
             foreach ($geo_v2['data'] as $rb) {
-                if (!empty($rb['countries'])) $geo_countries = array_merge($geo_countries, $rb['countries']);
-                if (!empty($rb['regions'])) $geo_countries = array_merge($geo_countries, $rb['regions']);
+                $countries = array_merge($rb['countries'] ?? [], $rb['regions'] ?? []);
+                if (!empty($countries)) {
+                    $geo_rules[] = [
+                        'countries' => $countries,
+                        'direction' => strtolower($rb['direction'] ?? 'both'),
+                        'action' => strtoupper($rb['action'] ?? 'BLOCK'),
+                        'name' => $rb['name'] ?? 'V2 Region Block',
+                    ];
+                    $geo_countries = array_merge($geo_countries, $countries);
+                }
             }
         }
     }
@@ -757,6 +796,7 @@ function get_unifi_security_settings() {
         'threats_count' => $threats_count,
         'geoblocking_enabled' => !empty($ips_config['geoblock_enabled']) || !empty($ips_config['country_block_enabled']) || !empty($ips_config['geoip_filtering_enabled']) || !empty($geo_countries),
         'blocked_countries' => $geo_countries,
+        'geo_rules' => $geo_rules,
         'monitoring_active' => true,
         'vpn_secure' => $vpn_active
     ];
