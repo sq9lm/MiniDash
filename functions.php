@@ -666,11 +666,12 @@ function get_unifi_security_settings() {
 
     // 2. Optimized Firewall Rules count with Path Memory
     $fw_path = minidash_cache_get('api_path_firewall', 3600);
+    $firewall_rules_resp = ['data' => []];
     if (!$fw_path) {
         $paths = ["/proxy/network/api/s/$site_to_use_trad/rest/firewallrule", "/proxy/network/api/v2/firewall/rules", "/proxy/network/api/s/$site_to_use_trad/stat/firewall/rules"];
         foreach ($paths as $p) {
             $test = fetch_api($p);
-            if (($test['meta']['rc'] ?? '') === 'ok') {
+            if (!empty($test['data'])) {
                 $fw_path = $p;
                 minidash_cache_set('api_path_firewall', $p);
                 $firewall_rules_resp = $test;
