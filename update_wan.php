@@ -52,9 +52,11 @@ try {
         // Find gateway in traditional stats
         foreach ($trad_devices as $td) {
             if (normalize_mac($td['mac'] ?? '') === $g_mac) {
-                // Traditionally, UniFi stores current rates in wan1 sub-object
-                $rx = $td['wan1']['rxRateBps'] ?? $td['wan1']['rx_bytes-r'] ?? 0;
-                $tx = $td['wan1']['txRateBps'] ?? $td['wan1']['tx_bytes-r'] ?? 0;
+                // Traditional API: rx_rate/tx_rate are in bps, rx_bytes-r is bytes/s (needs *8)
+                $rx = $td['wan1']['rx_rate'] ?? $td['wan1']['rxRateBps'] ?? 0;
+                if ($rx == 0) $rx = ($td['wan1']['rx_bytes-r'] ?? 0) * 8;
+                $tx = $td['wan1']['tx_rate'] ?? $td['wan1']['txRateBps'] ?? 0;
+                if ($tx == 0) $tx = ($td['wan1']['tx_bytes-r'] ?? 0) * 8;
                 break;
             }
         }
