@@ -426,8 +426,13 @@ $top_countries = array_slice($top_countries, 0, 5);
                             }).join('');
                             if (typeof lucide !== 'undefined') lucide.createIcons();
                         }
-                        document.addEventListener('DOMContentLoaded', () => {
-                            MiniPagination.create('security-events-container', securityEventsData, renderSecurityEvents);
+                        window.addEventListener('load', () => {
+                            if (typeof MiniPagination !== 'undefined') {
+                                MiniPagination.create('security-events-container', securityEventsData, renderSecurityEvents);
+                            } else {
+                                // Fallback: render all without pagination
+                                renderSecurityEvents(securityEventsData);
+                            }
                         });
                         </script>
                     </div>
