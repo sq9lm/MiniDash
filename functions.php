@@ -36,42 +36,120 @@ function normalize_mac($mac)
 }
 
 function get_system_info() {
+    global $config;
+
     $site_resp = fetch_api("/proxy/network/api/s/default/stat/sysinfo");
     $sysinfo = $site_resp['data'][0] ?? [];
-    
+
     $dev_resp = fetch_api("/proxy/network/api/s/default/stat/device");
     $devices = $dev_resp['data'] ?? [];
-    
+
     $udr = null;
     foreach ($devices as $d) {
-        if (in_array($d['model'] ?? '', ['UDR', 'UDM', 'UXG', 'USG'])) {
+        if (in_array($d['model'] ?? '', ['UDR', 'UDM', 'UXG', 'USG', 'UDMPRO', 'UDMSE', 'UCG'])) {
             $udr = $d;
             break;
         }
     }
 
-    $os_version = $sysinfo['console_display_version'] ?? 'Nieznana';
-    if ($os_version === 'Nieznana' && isset($sysinfo['version'])) {
-        $os_version = $sysinfo['version'];
+    $os_version = $sysinfo['console_display_version'] ?? $sysinfo['version'] ?? 'Nieznana';
+
+    // CPU, RAM, disk from gateway device stats
+    $cpu = $udr['system-stats']['cpu'] ?? 0;
+    $ram = $udr['system-stats']['mem'] ?? 0;
+    $disk_used = 0;
+    $disk_total = 0;
+    if (isset($udr['storage'])) {
+        foreach ($udr['storage'] as $s) {
+            $disk_total += $s['size'] ?? 0;
+            $disk_used += $s['used'] ?? 0;
+        }
     }
-    
+
+    // Update channel from sysinfo
+    $update_channel = $sysinfo['update_channel'] ?? $sysinfo['release_channel'] ?? 'release';
+
+    // Firmware update info
+    $fw_update_available = isset($udr['upgradable']) && $udr['upgradable'];
+    $fw_update_version = $udr['upgrade_to_firmware'] ?? '';
+
+    // Installed applications — try /proxy/network/api/s/default/stat/sysinfo for apps list
+    // and also check other Protect/Talk/Identity endpoints
+    $apps = [];
+
+    // 1. UniFi Network (always present)
+    $apps[] = [
+        'name' => 'UniFi Network',
+        'version' => $sysinfo['version'] ?? 'N/A',
+        'status' => 'Active',
+        'icon' => 'network',
+        'color' => 'blue',
+        'update' => $fw_update_available,
+        'update_version' => $fw_update_version,
+        'channel' => $update_channel,
+    ];
+
+    // 2. UniFi Protect — check bootstrap endpoint
+    $protect_resp = fetch_api("/proxy/protect/api/bootstrap");
+    $protect_data = $protect_resp['data'] ?? $protect_resp['original'] ?? null;
+    if ($protect_data && (isset($protect_data['nvr']) || isset($protect_data['cameras']))) {
+        $nvr = $protect_data['nvr'] ?? [];
+        $protect_version = $nvr['version'] ?? $nvr['firmwareVersion'] ?? '';
+        $protect_uptodate = !($nvr['isUpdating'] ?? false) && empty($nvr['availableFirmwareVersion'] ?? '');
+        $apps[] = [
+            'name' => 'UniFi Protect',
+            'version' => $protect_version ?: 'Installed',
+            'status' => 'Active',
+            'icon' => 'video',
+            'color' => 'purple',
+            'update' => !$protect_uptodate,
+            'update_version' => $nvr['availableFirmwareVersion'] ?? '',
+            'channel' => '',
+        ];
+    }
+
+    // 3. UniFi Talk — check talk endpoint
+    $talk_resp = fetch_api("/proxy/talk/api/bootstrap");
+    if (!empty($talk_resp['data']) || (isset($talk_resp['original']) && !isset($talk_resp['original']['error']))) {
+        $apps[] = [
+            'name' => 'UniFi Talk',
+            'version' => $talk_resp['data']['version'] ?? $talk_resp['original']['version'] ?? 'Installed',
+            'status' => 'Active',
+            'icon' => 'phone',
+            'color' => 'cyan',
+            'update' => false,
+            'update_version' => '',
+            'channel' => '',
+        ];
+    }
+
+    // 4. UniFi Access — check access endpoint
+    $access_resp = fetch_api("/proxy/access/api/v2/bootstrap");
+    if (!empty($access_resp['data']) || (isset($access_resp['original']) && !isset($access_resp['original']['error']))) {
+        $apps[] = [
+            'name' => 'UniFi Access',
+            'version' => $access_resp['data']['version'] ?? $access_resp['original']['version'] ?? 'Installed',
+            'status' => 'Active',
+            'icon' => 'key',
+            'color' => 'amber',
+            'update' => false,
+            'update_version' => '',
+            'channel' => '',
+        ];
+    }
+
     return [
         'version' => $os_version,
         'model' => $udr['model'] ?? 'UniFi Gateway',
-        'up_to_date' => !(isset($udr['upgradable']) && $udr['upgradable']),
-        'update_ver' => $udr['upgrade_to_firmware'] ?? '',
+        'up_to_date' => !$fw_update_available,
+        'update_ver' => $fw_update_version,
+        'update_channel' => $update_channel,
         'uptime_pretty' => isset($sysinfo['uptime']) ? formatDuration($sysinfo['uptime']) : 'N/A',
-        'cpu_usage' => (isset($udr['system-stats']['cpu'])) ? $udr['system-stats']['cpu'] : '0',
-        'apps' => [
-            [
-                'name' => 'UniFi Network',
-                'version' => $sysinfo['version'] ?? 'N/A',
-                'status' => 'Active',
-                'icon' => 'network',
-                'color' => 'blue',
-                'update' => (isset($udr['upgradable']) && $udr['upgradable'])
-            ]
-        ]
+        'cpu_usage' => $cpu,
+        'ram_usage' => $ram,
+        'disk_used' => $disk_used,
+        'disk_total' => $disk_total,
+        'apps' => $apps,
     ];
 }
 
@@ -1904,6 +1982,7 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
             <div class="modal-body p-8 space-y-10">
                 <!-- System Info Cards -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- OS Version + Model -->
                     <div class="p-5 bg-slate-900/40 rounded-3xl border border-white/5 flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
@@ -1917,43 +1996,70 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                         <div class="text-right">
                              <div class="text-[10px] text-slate-500 uppercase font-black">Model</div>
                              <div class="text-xs font-mono text-slate-400"><?= htmlspecialchars($sys['model']) ?></div>
+                             <div class="text-[9px] text-slate-600 mt-1">Kanal: <?= htmlspecialchars($sys['update_channel'] ?? 'release') ?></div>
                         </div>
                     </div>
 
-                    <div class="p-5 bg-slate-900/40 rounded-3xl border border-white/5 grid grid-cols-2 gap-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                                <i data-lucide="clock" class="w-5 h-5"></i>
+                    <!-- Uptime + CPU + RAM + Disk -->
+                    <div class="p-5 bg-slate-900/40 rounded-3xl border border-white/5 grid grid-cols-2 gap-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                                <i data-lucide="clock" class="w-4 h-4"></i>
                             </div>
                             <div>
                                 <span class="text-[8px] text-slate-500 uppercase font-black">Uptime</span>
                                 <div class="text-xs font-bold text-emerald-400"><?= $sys['uptime_pretty'] ?? 'N/A' ?></div>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                                <i data-lucide="activity" class="w-5 h-5"></i>
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                                <i data-lucide="cpu" class="w-4 h-4"></i>
                             </div>
                             <div>
-                                <span class="text-[8px] text-slate-500 uppercase font-black">Obciążenie</span>
-                                <div class="text-xs font-bold text-slate-300"><?= $sys['cpu_usage'] ?? '0' ?>%</div>
+                                <span class="text-[8px] text-slate-500 uppercase font-black">CPU</span>
+                                <div class="text-xs font-bold text-<?= ($sys['cpu_usage'] ?? 0) > 80 ? 'red' : 'slate' ?>-300"><?= $sys['cpu_usage'] ?? '0' ?>%</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                                <i data-lucide="memory-stick" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <span class="text-[8px] text-slate-500 uppercase font-black">RAM</span>
+                                <div class="text-xs font-bold text-<?= ($sys['ram_usage'] ?? 0) > 85 ? 'red' : 'slate' ?>-300"><?= $sys['ram_usage'] ?? '0' ?>%</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                                <i data-lucide="hard-drive" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <span class="text-[8px] text-slate-500 uppercase font-black">Dysk</span>
+                                <?php
+                                    $disk_pct = ($sys['disk_total'] > 0) ? round(($sys['disk_used'] / $sys['disk_total']) * 100) : 0;
+                                ?>
+                                <div class="text-xs font-bold text-<?= $disk_pct > 85 ? 'red' : 'slate' ?>-300"><?= $disk_pct ?>%</div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- System Status -->
                     <div class="p-5 bg-slate-900/40 rounded-3xl border border-white/5 flex items-center justify-between sm:col-span-2">
                          <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-2xl bg-<?= $sys['up_to_date'] ? 'emerald' : 'amber' ?>-500/10 text-<?= $sys['up_to_date'] ? 'emerald' : 'amber' ?>-400 flex items-center justify-center">
-                                <i data-lucide="<?= $sys['up_to_date'] ? 'refresh-cw' : 'alert-triangle' ?>" class="w-6 h-6"></i>
+                                <i data-lucide="<?= $sys['up_to_date'] ? 'check-circle' : 'alert-triangle' ?>" class="w-6 h-6"></i>
                             </div>
                             <div>
                                 <span class="text-[10px] text-slate-500 uppercase tracking-widest font-black">Status Systemu</span>
                                 <div class="text-lg font-bold text-<?= $sys['up_to_date'] ? 'emerald' : 'amber' ?>-400">
-                                    <?= $sys['up_to_date'] ? 'Aktualny' : 'Dostępna aktualizacja' ?>
+                                    <?= $sys['up_to_date'] ? 'Aktualny' : 'Dostepna aktualizacja' ?>
                                 </div>
+                                <?php if (!$sys['up_to_date'] && !empty($sys['update_ver'])): ?>
+                                    <div class="text-[9px] text-amber-500/70 font-mono mt-0.5">Nowa wersja: <?= htmlspecialchars($sys['update_ver']) ?></div>
+                                <?php endif; ?>
                             </div>
                         </div>
-                        <i data-lucide="<?= $sys['up_to_date'] ? 'check-circle' : 'arrow-up-circle' ?>" class="w-6 h-6 text-<?= $sys['up_to_date'] ? 'emerald' : 'emerald-400/40' ?>-500/40"></i>
+                        <i data-lucide="<?= $sys['up_to_date'] ? 'check-circle' : 'arrow-up-circle' ?>" class="w-6 h-6 text-<?= $sys['up_to_date'] ? 'emerald' : 'amber' ?>-500/40"></i>
                     </div>
                 </div>
 
@@ -1969,34 +2075,33 @@ function render_nav($title = "UniFi MiniDash", $stats = []) {
                                 </div>
                                 <div>
                                     <h4 class="text-lg font-black text-white group-hover:text-<?= $app['color'] ?>-400 transition-colors"><?= htmlspecialchars($app['name']) ?></h4>
-                                    <p class="text-[10px] text-slate-500 font-mono uppercase">Version <?= htmlspecialchars($app['version']) ?> • <?= $app['status'] ?></p>
+                                    <p class="text-[10px] text-slate-500 font-mono uppercase">
+                                        v<?= htmlspecialchars($app['version']) ?> • <?= $app['status'] ?>
+                                        <?php if (!empty($app['channel'])): ?> • <?= htmlspecialchars($app['channel']) ?><?php endif; ?>
+                                    </p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-3">
                                 <?php if ($app['update']): ?>
-                                    <div class="flex items-center gap-2 px-3 py-1 bg-<?= $app['color'] ?>-500 animate-pulse text-white text-[10px] font-black rounded-lg uppercase shadow-lg shadow-<?= $app['color'] ?>-500/20">
-                                        <i data-lucide="arrow-up-circle" class="w-3 h-3"></i> Update Available
+                                    <div class="flex flex-col items-end gap-1">
+                                        <div class="flex items-center gap-2 px-3 py-1 bg-amber-500 text-white text-[10px] font-black rounded-lg uppercase shadow-lg shadow-amber-500/20">
+                                            <i data-lucide="arrow-up-circle" class="w-3 h-3"></i> Aktualizacja
+                                        </div>
+                                        <?php if (!empty($app['update_version'])): ?>
+                                            <span class="text-[9px] font-mono text-amber-400/60">→ <?= htmlspecialchars($app['update_version']) ?></span>
+                                        <?php endif; ?>
                                     </div>
                                 <?php else: ?>
-                                    <span class="px-3 py-1 bg-<?= $app['color'] ?>-500/10 text-<?= $app['color'] ?>-400 text-[10px] font-black rounded-lg uppercase border border-<?= $app['color'] ?>-500/20 tracking-tighter">Up to date</span>
+                                    <span class="px-3 py-1 bg-<?= $app['color'] ?>-500/10 text-<?= $app['color'] ?>-400 text-[10px] font-black rounded-lg uppercase border border-<?= $app['color'] ?>-500/20 tracking-tighter">Aktualny</span>
                                 <?php endif; ?>
                             </div>
                         </div>
                         <?php endforeach; ?>
                         
-                        <!-- Identity App (Placeholder if missing from API) -->
-                        <div class="p-6 bg-slate-900/40 rounded-3xl border border-white/5 hover:border-slate-500/20 transition-all flex items-center justify-between group opacity-50">
-                            <div class="flex items-center gap-5">
-                                <div class="w-14 h-14 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center">
-                                    <i data-lucide="fingerprint" class="w-8 h-8"></i>
-                                </div>
-                                <div>
-                                    <h4 class="text-lg font-black text-white">UniFi Identity</h4>
-                                    <p class="text-[10px] text-slate-500 font-mono uppercase">Not Configured</p>
-                                </div>
-                            </div>
-                            <span class="px-3 py-1 bg-slate-800 text-slate-500 text-[10px] font-black rounded-lg uppercase items-center flex">Inactive</span>
-                        </div>
+                        <?php if (count($sys['apps']) <= 1): ?>
+                        <!-- No additional apps detected -->
+                        <div class="p-4 text-center text-xs text-slate-600">Nie wykryto dodatkowych aplikacji UniFi</div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
