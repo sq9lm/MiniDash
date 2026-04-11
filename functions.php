@@ -2117,17 +2117,24 @@ function render_nav($title = "MiniDash", $stats = []) {
 
     <script>
         async function clearAllNotifications() {
-            if (!confirm('Czy na pewno chcesz wyczyścić historię wszystkich powiadomień?')) return;
             try {
                 const response = await fetch('api_clear_history.php', { method: 'POST' });
                 const result = await response.json();
                 if (result.success) {
-                    location.reload();
-                } else {
-                    alert('Błąd: ' + result.message);
+                    // Clear notifications from DOM without page reload
+                    const panel = document.querySelector('#notif-overlay + div .flex-grow') || document.querySelector('.overflow-y-auto.custom-scrollbar');
+                    if (panel) {
+                        panel.innerHTML = '<div class="py-20 flex flex-col items-center justify-center text-center opacity-40"><div class="w-16 h-16 rounded-3xl bg-slate-800 flex items-center justify-center mb-4 border border-white/5"><i data-lucide="bell-off" class="w-8 h-8 text-slate-600"></i></div><p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Brak zdarzen</p></div>';
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    }
+                    // Remove notification badge
+                    const badge = document.getElementById('notif-badge');
+                    if (badge) badge.remove();
+                    // Show toast
+                    if (typeof showToast !== 'undefined') showToast('Powiadomienia wyczyszczone', 'success');
                 }
             } catch (e) {
-                alert('Błąd sieci');
+                if (typeof showToast !== 'undefined') showToast('Blad czyszczenia', 'error');
             }
         }
 
