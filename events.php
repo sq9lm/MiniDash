@@ -17,7 +17,7 @@ $all_events = get_recent_events(100, false); // Pokaż wszystko, nawet "wyczyszc
     <link rel="stylesheet" href="dashboard.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
-    <script src="assets/js/lucide.min.js" defer></script>
+    <script src="assets/js/lucide.min.js"></script>
 </head>
 <body class="pt-24 pb-12 antialiased">
     <?php render_nav("Historia Zdarzeń"); ?>

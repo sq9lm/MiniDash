@@ -22,7 +22,7 @@ $navbar_stats = get_navbar_stats();
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
-    <script src="assets/js/lucide.min.js" defer></script>
+    <script src="assets/js/lucide.min.js"></script>
 </head>
 <body class="custom-scrollbar">
 

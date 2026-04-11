@@ -82,7 +82,7 @@ foreach ($notif_keys as $key => $defaults) {
     <link rel="stylesheet" href="dashboard.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
-    <script src="assets/js/lucide.min.js" defer></script>
+    <script src="assets/js/lucide.min.js"></script>
     <style>
         .setting-card {
             background: rgba(15, 23, 42, 0.4);

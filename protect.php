@@ -93,7 +93,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
-    <script src="assets/js/lucide.min.js" defer></script>
+    <script src="assets/js/lucide.min.js"></script>
     <style>
         .cam-grid-slot {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

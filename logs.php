@@ -149,7 +149,7 @@ $log_lines = array_slice($processed_logs, 0, $limit);
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
-    <script src="assets/js/lucide.min.js" defer></script>
+    <script src="assets/js/lucide.min.js"></script>
 </head>
 <body class="custom-scrollbar">
     <?php render_nav("Logs", $navbar_stats); ?>
