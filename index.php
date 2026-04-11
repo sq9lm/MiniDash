@@ -196,8 +196,13 @@ try {
         $vlan_id = detect_vlan_id($ip, $vlan_id);
         $client['vlan'] = $vlan_id;
 
-        // Also detect VPN status
-        $client['is_vpn'] = ($vlan_id === 0 || $vlan_id === 69 || $vlan_id === 70);
+        // Detect VPN status — check VLAN, network name, or connection type
+        $net_name = strtolower($client['essid'] ?? $client['network'] ?? $client['last_connection_network_name'] ?? '');
+        $conn_type = strtolower($client['type'] ?? '');
+        $client['is_vpn'] = ($vlan_id === 0 || $vlan_id === 69 || $vlan_id === 70
+            || strpos($net_name, 'vpn') !== false || strpos($net_name, 'ovpn') !== false || strpos($net_name, 'wireguard') !== false || strpos($net_name, 'wgadmin') !== false
+            || $conn_type === 'vpn'
+            || !empty($client['is_vpn']));
 
         $vlan_name = get_vlan_name($vlan_id);
         $c_rx = $client['rx_rate'] ?? $client['rx_bytes-r'] ?? 0;
