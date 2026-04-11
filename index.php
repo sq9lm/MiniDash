@@ -348,7 +348,7 @@ try {
             </div>
 
             <!-- 4. WAN Ingress (Download) -->
-            <div onclick="openWanModal()" class="glass-card p-6 stat-glow-amber cursor-pointer group hover:scale-[1.02] transition-all">
+            <div onclick="openWanFlowsModal()" class="glass-card p-6 stat-glow-amber cursor-pointer group hover:scale-[1.02] transition-all">
                 <div class="flex justify-between items-center mb-5">
                     <div class="p-3 bg-amber-500/10 rounded-xl text-amber-400 group-hover:bg-amber-400/20 transition-colors">
                         <i data-lucide="arrow-down-to-line" class="w-6 h-6"></i>
@@ -360,7 +360,7 @@ try {
             </div>
 
             <!-- 5. WAN Egress (Upload) -->
-            <div onclick="openWanModal()" class="glass-card p-6 stat-glow-emerald cursor-pointer group hover:scale-[1.02] transition-all">
+            <div onclick="openWanFlowsModal()" class="glass-card p-6 stat-glow-emerald cursor-pointer group hover:scale-[1.02] transition-all">
                 <div class="flex justify-between items-center mb-5">
                     <div class="p-3 bg-emerald-500/10 rounded-xl text-emerald-400 group-hover:bg-emerald-400/20 transition-colors">
                         <i data-lucide="arrow-up-from-line" class="w-6 h-6"></i>
@@ -2052,6 +2052,80 @@ try {
             </div>
         </div>
     </div>
+    <!-- WAN Flows Modal (Top clients by traffic) -->
+    <div id="wanFlowsModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center" onclick="if(event.target===this)closeWanFlowsModal()">
+        <div class="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl w-full max-w-3xl max-h-[80vh] overflow-hidden shadow-2xl">
+            <div class="p-6 flex items-center justify-between border-b border-white/5">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                        <i data-lucide="activity" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-white">Aktywny ruch klientow</h2>
+                        <p class="text-xs text-slate-500">Top 20 klientow wg transferu</p>
+                    </div>
+                </div>
+                <button onclick="closeWanFlowsModal()" class="text-slate-500 hover:text-white transition">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="overflow-y-auto max-h-[65vh] p-4">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-[9px] text-slate-500 uppercase tracking-wider font-bold border-b border-white/5">
+                            <th class="text-left py-2 px-3">Klient</th>
+                            <th class="text-left py-2 px-3">IP / Siec</th>
+                            <th class="text-right py-2 px-3">Download</th>
+                            <th class="text-right py-2 px-3">Upload</th>
+                        </tr>
+                    </thead>
+                    <tbody id="wan-flows-modal-body">
+                        <tr><td colspan="4" class="text-center py-8 text-slate-500 text-xs">Ladowanie...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openWanFlowsModal() {
+        const modal = document.getElementById('wanFlowsModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        loadWanFlowsModal();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    function closeWanFlowsModal() {
+        document.getElementById('wanFlowsModal').classList.add('hidden');
+        document.getElementById('wanFlowsModal').classList.remove('flex');
+    }
+    function loadWanFlowsModal() {
+        fetch('api_wan_flows.php')
+            .then(r => r.json())
+            .then(data => {
+                const flows = data.data || [];
+                const tbody = document.getElementById('wan-flows-modal-body');
+                if (flows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-500 text-xs">Brak aktywnego ruchu</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = flows.map(f => {
+                    const icon = f.is_wired ? 'monitor' : 'wifi';
+                    return `<tr class="hover:bg-white/[0.02] transition-colors border-t border-white/5">
+                        <td class="py-3 px-3"><div class="flex items-center gap-2"><i data-lucide="${icon}" class="w-4 h-4 text-slate-500 shrink-0"></i><span class="text-sm font-bold text-white truncate">${f.name}</span></div></td>
+                        <td class="py-3 px-3"><div class="text-xs font-mono text-slate-400">${f.ip||'-'}</div><div class="text-[9px] text-purple-400">${f.network||'-'}</div></td>
+                        <td class="py-3 px-3 text-right text-xs font-bold text-emerald-400">${formatBps(f.rx_bps)}</td>
+                        <td class="py-3 px-3 text-right text-xs font-bold text-amber-400">${formatBps(f.tx_bps)}</td>
+                    </tr>`;
+                }).join('');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            })
+            .catch(() => {
+                document.getElementById('wan-flows-modal-body').innerHTML = '<tr><td colspan="4" class="text-center py-8 text-red-400 text-xs">Blad ladowania</td></tr>';
+            });
+    }
+    </script>
+
     <?php include __DIR__ . '/includes/confirm_modal.php'; ?>
     <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
