@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# Create data directories if not exist
+mkdir -p /var/www/html/data/avatars /var/www/html/logs
+chown -R www-data:www-data /var/www/html/data /var/www/html/logs
+
+# Create .env from environment variables if not exists
+if [ ! -f /var/www/html/.env ]; then
+    cat > /var/www/html/.env << EOF
+UNIFI_CONTROLLER_URL=${UNIFI_CONTROLLER_URL:-https://192.168.1.1}
+UNIFI_API_KEY=${UNIFI_API_KEY:-your-api-key}
+UNIFI_SITE=${UNIFI_SITE:-default}
+ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+ADMIN_FULL_NAME=${ADMIN_FULL_NAME:-Admin}
+ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+DEBUG=${DEBUG:-false}
+EOF
+    chown www-data:www-data /var/www/html/.env
+fi
+
+# Run migrations
+php /var/www/html/db.php 2>/dev/null || true
+
+# Start PHP-FPM and Nginx
+php-fpm -D
+nginx -g "daemon off;"
