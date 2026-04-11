@@ -497,7 +497,15 @@
         "clear_confirm": "Czy na pewno chcesz wyczyścić historię wszystkich powiadomień?",
         "clear_error": "Błąd: ",
         "network_error": "Błąd sieci",
-        "alert_label": "Alert"
+        "alert_label": "Alert",
+        "notifications_cleared": "Powiadomienia wyczyszczone",
+        "clear_failed": "Błąd czyszczenia"
+    },
+    "personal": {
+        "profile_saved": "Profil zaktualizowany",
+        "save_error": "Błąd",
+        "unexpected_error": "Wystąpił nieoczekiwany błąd zapisu",
+        "saving": "Zapisywanie..."
     },
     "alerts": {
         "speed_spike_title": "Nagły wzrost transferu: ",

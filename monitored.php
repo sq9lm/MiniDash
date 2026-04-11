@@ -68,10 +68,10 @@ try {
         // Enrich with traffic if online
         if (isset($trad_clients[$c_mac])) {
             $tc = $trad_clients[$c_mac];
-            $client['rx_rate'] = $tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? 0) * 8);
-            $client['tx_rate'] = $tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? 0) * 8);
-            $client['rx_bytes'] = $tc['rx_bytes'] ?? 0;
-            $client['tx_bytes'] = $tc['tx_bytes'] ?? 0;
+            $client['rx_rate'] = $tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? $tc['wired-rx_bytes-r'] ?? 0) * 8);
+            $client['tx_rate'] = $tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? $tc['wired-tx_bytes-r'] ?? 0) * 8);
+            $client['rx_bytes'] = $tc['rx_bytes'] ?? $tc['wired-rx_bytes'] ?? 0;
+            $client['tx_bytes'] = $tc['tx_bytes'] ?? $tc['wired-tx_bytes'] ?? 0;
             $client['uptime'] = $tc['uptime'] ?? 0;
         }
         

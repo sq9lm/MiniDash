@@ -36,6 +36,19 @@ if (!empty($trad_resp['data'])) {
     foreach ($trad_resp['data'] as $d) {
         if (normalize_mac($d['mac']) === normalize_mac($mac)) {
             $device_stats = $d;
+            // Normalize wired fields
+            if (empty($device_stats['rx_rate'])) {
+                $device_stats['rx_rate'] = (($d['rx_bytes-r'] ?? $d['wired-rx_bytes-r'] ?? 0) * 8);
+            }
+            if (empty($device_stats['tx_rate'])) {
+                $device_stats['tx_rate'] = (($d['tx_bytes-r'] ?? $d['wired-tx_bytes-r'] ?? 0) * 8);
+            }
+            if (empty($device_stats['rx_bytes'])) {
+                $device_stats['rx_bytes'] = $d['wired-rx_bytes'] ?? 0;
+            }
+            if (empty($device_stats['tx_bytes'])) {
+                $device_stats['tx_bytes'] = $d['wired-tx_bytes'] ?? 0;
+            }
             break;
         }
     }
@@ -138,7 +151,7 @@ for ($i = 0; $i < $bar_count; $i++) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historia - <?= htmlspecialchars($device_name) ?></title>
+    <title><?= __('history.title') ?> - <?= htmlspecialchars($device_name) ?></title>
     <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
@@ -146,7 +159,7 @@ for ($i = 0; $i < $bar_count; $i++) {
     <script src="assets/js/lucide.min.js"></script>
 </head>
 <body class="custom-scrollbar">
-    <?php render_nav("Historia: " . $device_name); ?>
+    <?php render_nav(__('history.title') . ": " . $device_name, $navbar_stats); ?>
 
     <div class="max-w-4xl mx-auto p-4 md:p-8">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -179,7 +192,7 @@ for ($i = 0; $i < $bar_count; $i++) {
         <!-- Stats Overview -->
         <?php 
         $current_status = !empty($history) ? $history[0]['status'] : 'unknown';
-        $last_change = !empty($history) ? $history[0]['timestamp'] : 'Brak danych';
+        $last_change = !empty($history) ? $history[0]['timestamp'] : __('history.no_data');
         ?>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="glass-card p-6 stat-glow-<?= $current_status === 'on' ? 'emerald' : 'red' ?>">
@@ -190,7 +203,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                     <div>
                         <div class="text-[12px] text-slate-500 uppercase font-black tracking-widest mb-1"><?= __('history.current_status') ?></div>
                         <div class="text-2xl font-black <?= $current_status === 'on' ? 'text-emerald-400' : 'text-red-400' ?>">
-                            <?= $current_status === 'on' ? 'Online' : 'Offline' ?>
+                            <?= $current_status === 'on' ? __('common.online') : __('common.offline') ?>
                         </div>
                     </div>
                 </div>
@@ -214,7 +227,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                         <i data-lucide="list" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <div class="text-[12px] text-slate-500 uppercase font-black tracking-widest mb-1">Liczba zdarzeń</div>
+                        <div class="text-[12px] text-slate-500 uppercase font-black tracking-widest mb-1"><?= __('history.event_count') ?></div>
                         <div class="text-2xl font-black text-slate-200"><?= count($history) ?></div>
                     </div>
                 </div>
@@ -225,7 +238,7 @@ for ($i = 0; $i < $bar_count; $i++) {
         <div class="glass-card p-6 mb-8">
             <h2 class="text-lg font-bold flex items-center gap-2 mb-6 text-slate-200">
                 <i data-lucide="bar-chart-3" class="text-blue-400 w-5 h-5"></i>
-                Statystyki Transferu
+                <?= __('history.transfer_stats') ?>
             </h2>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -236,14 +249,14 @@ for ($i = 0; $i < $bar_count; $i++) {
                         <div class="flex items-center gap-4 p-5 bg-slate-800/30 rounded-2xl border border-white/5">
                             <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><i data-lucide="arrow-down" class="w-6 h-6"></i></div>
                             <div class="flex flex-col">
-                                <span class="text-[12px] text-slate-500 uppercase font-black tracking-widest">Pobieranie</span>
+                                <span class="text-[12px] text-slate-500 uppercase font-black tracking-widest"><?= __('common.download_speed') ?></span>
                                 <span class="text-2xl font-black text-white font-mono mt-1"><?= format_bps($device_stats['rx_rate'] ?? 0) ?></span>
                             </div>
                         </div>
                         <div class="flex items-center gap-4 p-5 bg-slate-800/30 rounded-2xl border border-white/5">
                             <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl"><i data-lucide="arrow-up" class="w-6 h-6"></i></div>
                             <div class="flex flex-col">
-                                <span class="text-[12px] text-slate-500 uppercase font-black tracking-widest">Wysyłanie</span>
+                                <span class="text-[12px] text-slate-500 uppercase font-black tracking-widest"><?= __('common.upload_speed') ?></span>
                                 <span class="text-2xl font-black text-white font-mono mt-1"><?= format_bps($device_stats['tx_rate'] ?? 0) ?></span>
                             </div>
                         </div>
@@ -264,7 +277,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                        $stats_7d_total = (int)($s7d->fetchColumn() ?: 0);
                    }
                    ?>
-                   <span class="text-[12px] font-black text-slate-500 uppercase tracking-widest block mb-4">Zużycie Danych</span>
+                   <span class="text-[12px] font-black text-slate-500 uppercase tracking-widest block mb-4"><?= __('history.data_usage') ?></span>
                    <div class="grid grid-cols-3 gap-3 mb-4">
                          <div class="bg-slate-800/30 p-4 rounded-2xl border border-white/5 text-center flex flex-col justify-center">
                              <span class="block text-[12px] text-slate-500 font-black uppercase tracking-widest mb-1">24h</span>
@@ -307,7 +320,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                     <i data-lucide="activity" class="text-blue-400 w-5 h-5"></i>
                     <?= __('history.history_timeline') ?>
                 </h2>
-                <span class="text-[12px] text-slate-500 bg-slate-800 px-2 py-1 rounded">Ostatnie 50 wpisów</span>
+                <span class="text-[12px] text-slate-500 bg-slate-800 px-2 py-1 rounded"><?= __('history.last_50_entries') ?></span>
             </div>
             
             <!-- Uptime Visualizer -->

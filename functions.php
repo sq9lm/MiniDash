@@ -1022,8 +1022,8 @@ function detect_known_devices(array $clients, array $devices): array
             $client_data[$mac] = [
                 'ip' => $ip,
                 'vlan' => $c['vlan'] ?? null,
-                'rx_rate' => $c['rxRateBps'] ?? $c['rx_bytes-r'] ?? $c['rx_rate'] ?? 0,
-                'tx_rate' => $c['txRateBps'] ?? $c['tx_bytes-r'] ?? $c['tx_rate'] ?? 0,
+                'rx_rate' => $c['rxRateBps'] ?? $c['rx_bytes-r'] ?? $c['wired-rx_bytes-r'] ?? $c['rx_rate'] ?? 0,
+                'tx_rate' => $c['txRateBps'] ?? $c['tx_bytes-r'] ?? $c['wired-tx_bytes-r'] ?? $c['tx_rate'] ?? 0,
                 'rx_bytes' => $c['rx_bytes'] ?? 0,
                 'tx_bytes' => $c['tx_bytes'] ?? 0,
                 'uptime' => $c['uptime'] ?? 0
@@ -1546,10 +1546,11 @@ function render_personal_modal() {
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                             <label class="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Język Interfejsu</label>
-                            <select name="language" class="w-full px-5 py-3 bg-slate-900/50 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
-                                <option value="auto">Automatyczny (<?= strtoupper($console['language'] ?? 'EN') ?>)</option>
-                                <option value="pl" <?= ($config['language'] ?? '') === 'pl' ? 'selected' : '' ?>>Polski (PL)</option>
-                                <option value="en" <?= ($config['language'] ?? '') === 'en' ? 'selected' : '' ?>>English (EN)</option>
+                            <?php $cur_lang = $_COOKIE['minidash_lang'] ?? $config['language'] ?? 'pl'; ?>
+                            <select name="language" class="w-full px-5 py-3 bg-slate-900/50 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none" onchange="document.cookie='minidash_lang='+this.value+';path=/;max-age=31536000';">
+                                <option value="auto" <?= $cur_lang === 'auto' ? 'selected' : '' ?>>Auto (<?= strtoupper($console['language'] ?? 'en') ?>)</option>
+                                <option value="pl" <?= $cur_lang === 'pl' ? 'selected' : '' ?>>Polski (PL)</option>
+                                <option value="en" <?= $cur_lang === 'en' ? 'selected' : '' ?>>English (EN)</option>
                             </select>
                         </div>
                         <div>
