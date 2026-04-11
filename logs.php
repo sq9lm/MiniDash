@@ -146,10 +146,11 @@ $log_lines = array_slice($processed_logs, 0, $limit);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System Logs</title>
     <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+    <!-- TODO: Replace Tailwind CDN with local build when build step is set up -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="assets/js/lucide.min.js"></script>
 </head>
 <body class="custom-scrollbar">
     <?php render_nav("Logs", $navbar_stats); ?>

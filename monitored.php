@@ -148,9 +148,10 @@ function formatUptime($seconds) {
     <title>Zasoby | MiniDash UniFi</title>
     <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
     <link rel="stylesheet" href="dashboard.css">
+    <!-- TODO: Replace Tailwind CDN with local build when build step is set up -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="assets/css/fonts.css">
+    <script src="assets/js/lucide.min.js"></script>
 </head>
 <body class="custom-scrollbar">
     <?php render_nav("Zasoby Sieciowe", $navbar_stats); ?>

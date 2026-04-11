@@ -146,10 +146,11 @@ $top_countries = array_slice($top_countries, 0, 5);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UniFi Security - Monitoring Bezpieczeństwa</title>
     <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+    <!-- TODO: Replace Tailwind CDN with local build when build step is set up -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="assets/js/lucide.min.js"></script>
 </head>
 <body class="custom-scrollbar">
     <?php render_nav("UniFi Security", $navbar_stats); ?>
@@ -406,7 +407,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                             <div class="flex items-center justify-between gap-4">
                                                 <div class="flex-grow min-w-0">
                                                     <div class="flex items-center gap-2 mb-1">
-                                                        <img src="https://flagcdn.com/24x18/${cc}.png" class="w-4 h-3 rounded-sm opacity-80" title="${cc.toUpperCase()}">
+                                                        <img src="img/flags/${cc}.png" class="w-4 h-3 rounded-sm opacity-80" title="${cc.toUpperCase()}">
                                                         <h3 class="font-bold text-white text-sm truncate">${e.signature||'Zagrozenie'}</h3>
                                                     </div>
                                                     <div class="flex items-center flex-wrap gap-x-4 gap-y-1 text-[12px] font-medium italic">
@@ -456,7 +457,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                         <?php foreach ($top_countries as $cc => $data): ?>
                         <div class="flex items-center justify-between group cursor-pointer">
                             <div class="flex items-center gap-3">
-                                <img src="https://flagcdn.com/24x18/<?= $cc ?>.png" class="w-6 h-auto rounded shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
+                                <img src="img/flags/<?= $cc ?>.png" class="w-6 h-auto rounded shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
                                 <span class="text-sm font-bold text-slate-300"><?= strtoupper($cc) ?></span>
                             </div>
                             <div class="flex items-center gap-3">
@@ -747,7 +748,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/<?= $ip['country_code'] ?>.png" alt="<?= strtoupper($ip['country_code']) ?>" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/<?= $ip['country_code'] ?>.png" alt="<?= strtoupper($ip['country_code']) ?>" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono"><?= strtoupper($ip['country_code']) ?></span>
                                     </div>
                                 </td>
@@ -778,7 +779,7 @@ $top_countries = array_slice($top_countries, 0, 5);
     <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/us.png" alt="US" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/us.png" alt="US" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">US</span>
                                     </div>
                                 </td>
@@ -793,7 +794,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/pl.png" alt="PL" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/pl.png" alt="PL" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">PL</span>
                                     </div>
                                 </td>
@@ -808,7 +809,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/de.png" alt="DE" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/de.png" alt="DE" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">DE</span>
                                     </div>
                                 </td>
@@ -823,7 +824,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/fr.png" alt="FR" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/fr.png" alt="FR" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">FR</span>
                                     </div>
                                 </td>
@@ -838,7 +839,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/nl.png" alt="NL" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/nl.png" alt="NL" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">NL</span>
                                     </div>
                                 </td>
@@ -853,7 +854,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/gb.png" alt="GB" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/gb.png" alt="GB" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">GB</span>
                                     </div>
                                 </td>
@@ -868,7 +869,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/jp.png" alt="JP" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/jp.png" alt="JP" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">JP</span>
                                     </div>
                                 </td>
@@ -883,7 +884,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/kr.png" alt="KR" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/kr.png" alt="KR" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">KR</span>
                                     </div>
                                 </td>
@@ -898,7 +899,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/au.png" alt="AU" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/au.png" alt="AU" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">AU</span>
                                     </div>
                                 </td>
@@ -913,7 +914,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/sg.png" alt="SG" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/sg.png" alt="SG" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">SG</span>
                                     </div>
                                 </td>
@@ -928,7 +929,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/ca.png" alt="CA" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/ca.png" alt="CA" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">CA</span>
                                     </div>
                                 </td>
@@ -943,7 +944,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/mx.png" alt="MX" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/mx.png" alt="MX" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">MX</span>
                                     </div>
                                 </td>
@@ -958,7 +959,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/ar.png" alt="AR" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/ar.png" alt="AR" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">AR</span>
                                     </div>
                                 </td>
@@ -973,7 +974,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/za.png" alt="ZA" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/za.png" alt="ZA" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">ZA</span>
                                     </div>
                                 </td>
@@ -988,7 +989,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/se.png" alt="SE" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/se.png" alt="SE" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">SE</span>
                                     </div>
                                 </td>
@@ -1003,7 +1004,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/no.png" alt="NO" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/no.png" alt="NO" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">NO</span>
                                     </div>
                                 </td>
@@ -1018,7 +1019,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/dk.png" alt="DK" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/dk.png" alt="DK" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">DK</span>
                                     </div>
                                 </td>
@@ -1033,7 +1034,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/fi.png" alt="FI" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/fi.png" alt="FI" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">FI</span>
                                     </div>
                                 </td>
@@ -1048,7 +1049,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/es.png" alt="ES" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/es.png" alt="ES" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">ES</span>
                                     </div>
                                 </td>
@@ -1063,7 +1064,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/it.png" alt="IT" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/it.png" alt="IT" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">IT</span>
                                     </div>
                                 </td>
@@ -1078,7 +1079,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/pt.png" alt="PT" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/pt.png" alt="PT" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">PT</span>
                                     </div>
                                 </td>
@@ -1093,7 +1094,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/gr.png" alt="GR" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/gr.png" alt="GR" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">GR</span>
                                     </div>
                                 </td>
@@ -1108,7 +1109,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/cz.png" alt="CZ" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/cz.png" alt="CZ" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">CZ</span>
                                     </div>
                                 </td>
@@ -1123,7 +1124,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/hu.png" alt="HU" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/hu.png" alt="HU" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">HU</span>
                                     </div>
                                 </td>
@@ -1138,7 +1139,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <tr class="hover:bg-white/[0.02] transition-colors">
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-2">
-                                        <img src="https://flagcdn.com/24x18/at.png" alt="AT" class="w-6 h-auto rounded shadow-sm">
+                                        <img src="img/flags/at.png" alt="AT" class="w-6 h-auto rounded shadow-sm">
                                         <span class="text-xs text-slate-400 font-mono">AT</span>
                                     </div>
                                 </td>
@@ -1813,7 +1814,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             $cnt = $counts[$code] ?? 0;
                         ?>
                         <div class="flex items-center gap-1.5 bg-slate-700/50 rounded-lg px-2 py-1 hover:bg-slate-600/50 transition">
-                            <img src="https://flagcdn.com/24x18/<?= $code ?>.png" class="w-5 h-3.5 rounded-sm" title="<?= strtoupper($code) ?>">
+                            <img src="img/flags/<?= $code ?>.png" class="w-5 h-3.5 rounded-sm" title="<?= strtoupper($code) ?>">
                             <span class="text-xs text-slate-300 font-mono"><?= strtoupper($code) ?></span>
                             <?php if ($cnt > 0): ?>
                             <span class="text-[9px] text-rose-400 font-bold"><?= number_format($cnt) ?></span>
@@ -1837,7 +1838,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                         if (!$code || is_numeric($code) || $code === 'un') continue;
                     ?>
                     <div class="flex items-center gap-1.5 bg-slate-700/50 rounded-lg px-2 py-1">
-                        <img src="https://flagcdn.com/24x18/<?= $code ?>.png" class="w-5 h-3.5 rounded-sm" title="<?= strtoupper($code) ?>">
+                        <img src="img/flags/<?= $code ?>.png" class="w-5 h-3.5 rounded-sm" title="<?= strtoupper($code) ?>">
                         <span class="text-xs text-slate-300 font-mono"><?= strtoupper($code) ?></span>
                     </div>
                     <?php endforeach; ?>

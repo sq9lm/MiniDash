@@ -3106,7 +3106,7 @@ $tradSite = get_trad_site_id($site_id_context);
                                     </td>
                                     <td class="px-6 py-3">
                                         <div class="flex items-center gap-2">
-                                            <img src="https://flagcdn.com/w20/${countryCode}.png" class="w-4 h-auto rounded-sm opacity-80" onerror="this.src='https://flagcdn.com/w20/un.png'">
+                                            <img src="img/flags/${countryCode}.png" class="w-4 h-auto rounded-sm opacity-80" onerror="this.src='img/flags/un.png'">
                                             <span class="text-xs font-mono font-bold text-blue-300">${f.external_ip || '<span class="text-slate-700">automatyczny</span>'}</span>
                                         </div>
                                     </td>
@@ -3357,7 +3357,7 @@ $tradSite = get_trad_site_id($site_id_context);
                 if (countryRow) {
                     countryRow.innerHTML = data.countries.map(c => `
                         <div class="flex items-center gap-1.5 px-2 py-1 bg-white/5 rounded-lg border border-white/5" title="${c.country}">
-                            <img src="https://flagcdn.com/24x18/${c.code}.png" class="w-3.5 h-auto rounded-sm opacity-80">
+                            <img src="img/flags/${c.code}.png" class="w-3.5 h-auto rounded-sm opacity-80">
                             <span class="text-[12px] font-bold text-slate-400">${c.count}</span>
                         </div>
                     `).join('');
@@ -3399,7 +3399,7 @@ $tradSite = get_trad_site_id($site_id_context);
                         <tr class="hover:bg-white/[0.02] transition-colors border-t border-white/5">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
-                                    <img src="https://flagcdn.com/w20/${countryCode}.png" class="w-5 h-auto rounded shadow-sm" onerror="this.src='https://flagcdn.com/w20/un.png'">
+                                    <img src="img/flags/${countryCode}.png" class="w-5 h-auto rounded shadow-sm" onerror="this.src='img/flags/un.png'">
                                     <div class="min-w-0">
                                         <div class="text-[12px] font-black text-slate-400 uppercase tracking-widest truncate">${s.country || 'Unknown'}</div>
                                         <div class="text-[11px] text-slate-500 truncate">${s.city || 'Internet'}</div>
