@@ -343,6 +343,10 @@ $session_timeout = $config['session_timeout'] ?? 60; // minutes
 ini_set('session.cookie_httponly', 1);
 ini_set('session.cookie_samesite', 'Strict');
 ini_set('session.use_strict_mode', 1);
+ini_set('session.sid_length', 48);
+ini_set('session.sid_bits_per_character', 6);
+ini_set('session.cookie_lifetime', 0); // Session cookie (expires when browser closes)
+ini_set('session.gc_maxlifetime', $session_timeout * 60);
 if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
     ini_set('session.cookie_secure', 1);
 }
@@ -355,6 +359,26 @@ if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 
     session_start();
 }
 $_SESSION['last_activity'] = time();
+
+// Security headers
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+header('X-XSS-Protection: 1; mode=block');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+}
+
+// Session fingerprint — bind session to browser + IP to prevent hijacking
+$fingerprint = hash('sha256', ($_SERVER['HTTP_USER_AGENT'] ?? '') . ($_SERVER['REMOTE_ADDR'] ?? ''));
+if (isset($_SESSION['fingerprint']) && $_SESSION['fingerprint'] !== $fingerprint) {
+    // Session hijacking detected — destroy session
+    session_unset();
+    session_destroy();
+    session_start();
+} else {
+    $_SESSION['fingerprint'] = $fingerprint;
+}
 
 
 
