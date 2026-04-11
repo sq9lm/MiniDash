@@ -77,8 +77,8 @@ foreach ($notif_keys as $key => $defaults) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Konfiguracja Powiadomień | MiniDash</title>
-    <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+    <title><?= __('notifications.title') ?></title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
     <link rel="stylesheet" href="dashboard.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
@@ -121,13 +121,13 @@ foreach ($notif_keys as $key => $defaults) {
     </style>
 </head>
 <body class="pt-24 pb-20 antialiased min-h-screen">
-    <?php render_nav("Ustawienia Powiadomień"); ?>
+    <?php render_nav(__('notifications.nav_title')); ?>
 
     <div class="max-w-5xl mx-auto px-6">
         <div class="flex items-center justify-between mb-10">
             <div>
-                <h2 class="text-3xl font-black text-white tracking-tight">System Powiadomień</h2>
-                <p class="text-slate-500 mt-2 font-medium">Zarządzaj kanałami alertów o statusie urządzeń</p>
+                <h2 class="text-3xl font-black text-white tracking-tight"><?= __('notifications.heading') ?></h2>
+                <p class="text-slate-500 mt-2 font-medium"><?= __('notifications.desc') ?></p>
             </div>
             <div class="flex gap-4">
                 <button onclick="location.href='index.php'" class="p-3 bg-white/5 border border-white/10 rounded-2xl text-slate-400 hover:text-white transition group">
@@ -145,8 +145,8 @@ foreach ($notif_keys as $key => $defaults) {
                             <i data-lucide="mail" class="w-6 h-6"></i>
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-white">Email (SMTP / Gmail)</h3>
-                            <p class="text-sm text-slate-500">Powiadomienia na skrzynkę pocztową</p>
+                            <h3 class="text-xl font-bold text-white"><?= __('notifications.email_title') ?></h3>
+                            <p class="text-sm text-slate-500"><?= __('notifications.email_desc') ?></p>
                         </div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
@@ -166,19 +166,19 @@ foreach ($notif_keys as $key => $defaults) {
                             <input type="number" name="email_port" value="<?= htmlspecialchars($config['email_notifications']['smtp_port']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="587">
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Użytkownik / Login</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2"><?= __('notifications.email_user_label') ?></label>
                             <input type="text" name="email_user" value="<?= htmlspecialchars($config['email_notifications']['smtp_username']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="user@gmail.com">
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Hasło (lub hasło aplikacji)</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2"><?= __('notifications.email_password_label') ?></label>
                             <input type="password" name="email_pass" value="<?= htmlspecialchars($config['email_notifications']['smtp_password']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="••••••••••••">
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Email nadawcy</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2"><?= __('notifications.email_sender_label') ?></label>
                             <input type="text" name="email_from" value="<?= htmlspecialchars($config['email_notifications']['from_email']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="alert@domena.pl">
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Gdzie wysłać alerty?</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2"><?= __('notifications.email_recipient_label') ?></label>
                             <input type="text" name="email_to" value="<?= htmlspecialchars($config['email_notifications']['to_email']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="twoj@email.com">
                         </div>
                     </div>
@@ -193,8 +193,8 @@ foreach ($notif_keys as $key => $defaults) {
                             <i data-lucide="send" class="w-6 h-6"></i>
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-white">Telegram Bot</h3>
-                            <p class="text-sm text-slate-500">Natychmiastowe alerty na komunikator</p>
+                            <h3 class="text-xl font-bold text-white"><?= __('notifications.telegram_title') ?></h3>
+                            <p class="text-sm text-slate-500"><?= __('notifications.telegram_desc') ?></p>
                         </div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
@@ -226,7 +226,7 @@ foreach ($notif_keys as $key => $defaults) {
                                 <i data-lucide="message-square" class="w-6 h-6"></i>
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-white">WhatsApp API</h3>
+                                <h3 class="text-lg font-bold text-white"><?= __('notifications.whatsapp_title') ?></h3>
                             </div>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
@@ -245,7 +245,7 @@ foreach ($notif_keys as $key => $defaults) {
                                 <input type="password" name="wa_key" value="<?= htmlspecialchars($config['whatsapp_notifications']['api_key']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="WA_SECRET_TOKEN">
                             </div>
                             <div>
-                                <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer Telefonu Docelowy</label>
+                                <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2"><?= __('notifications.phone_number_target') ?></label>
                                 <input type="text" name="wa_phone" value="<?= htmlspecialchars($config['whatsapp_notifications']['phone_number']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="+48123456789">
                             </div>
                         </div>
@@ -260,7 +260,7 @@ foreach ($notif_keys as $key => $defaults) {
                                 <i data-lucide="hash" class="w-6 h-6"></i>
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-white">Slack Webhook</h3>
+                                <h3 class="text-lg font-bold text-white"><?= __('notifications.slack_title') ?></h3>
                             </div>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
@@ -287,8 +287,8 @@ foreach ($notif_keys as $key => $defaults) {
                             <i data-lucide="smartphone" class="w-6 h-6"></i>
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-white">SMS GSM / API</h3>
-                            <p class="text-sm text-slate-500">Powiadomienia SMS przez bramkę API</p>
+                            <h3 class="text-xl font-bold text-white"><?= __('notifications.sms_title') ?></h3>
+                            <p class="text-sm text-slate-500"><?= __('notifications.sms_desc') ?></p>
                         </div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
@@ -308,7 +308,7 @@ foreach ($notif_keys as $key => $defaults) {
                             <input type="password" name="sms_key" value="<?= htmlspecialchars($config['sms_notifications']['api_key']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="SMS_API_SECRET">
                         </div>
                         <div>
-                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Numer Telefonu Docelowy</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2"><?= __('notifications.phone_number_target') ?></label>
                             <input type="text" name="sms_phone" value="<?= htmlspecialchars($config['sms_notifications']['to_number']) ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="+48999888777">
                         </div>
                     </div>
@@ -323,8 +323,8 @@ foreach ($notif_keys as $key => $defaults) {
                             <i data-lucide="message-circle" class="w-6 h-6"></i>
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-white">Discord</h3>
-                            <p class="text-sm text-slate-500">Powiadomienia przez Discord Webhook</p>
+                            <h3 class="text-xl font-bold text-white"><?= __('notifications.discord_title') ?></h3>
+                            <p class="text-sm text-slate-500"><?= __('notifications.discord_desc') ?></p>
                         </div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
@@ -340,7 +340,7 @@ foreach ($notif_keys as $key => $defaults) {
                             <input type="text" name="discord_webhook_url" value="<?= htmlspecialchars($config['discord_notifications']['webhook_url'] ?? '') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="https://discord.com/api/webhooks/...">
                         </div>
                         <div>
-                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Nazwa bota</label>
+                            <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2"><?= __('notifications.discord_bot_name') ?></label>
                             <input type="text" name="discord_username" value="<?= htmlspecialchars($config['discord_notifications']['username'] ?? 'MiniDash') ?>" class="w-full p-4 rounded-xl input-dark text-sm" placeholder="MiniDash">
                         </div>
                     </div>
@@ -355,8 +355,8 @@ foreach ($notif_keys as $key => $defaults) {
                             <i data-lucide="webhook" class="w-6 h-6"></i>
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-white">n8n</h3>
-                            <p class="text-sm text-slate-500">Generic webhook do automatyzacji n8n</p>
+                            <h3 class="text-xl font-bold text-white"><?= __('notifications.n8n_title') ?></h3>
+                            <p class="text-sm text-slate-500"><?= __('notifications.n8n_desc') ?></p>
                         </div>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
@@ -378,10 +378,10 @@ foreach ($notif_keys as $key => $defaults) {
             <div class="sticky bottom-0 mt-8 p-6 bg-slate-900/95 backdrop-blur-xl border-t border-white/5 z-50 -mx-8 px-8 rounded-b-3xl">
                 <div class="flex justify-end gap-4">
                     <button type="button" onclick="location.href='index.php'" class="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold transition">
-                        Anuluj
+                        <?= __('common.cancel') ?>
                     </button>
                     <button type="submit" class="px-12 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest transition shadow-2xl shadow-blue-600/40">
-                        Zapisz Konfigurację
+                        <?= __('notifications.save_config') ?>
                     </button>
                 </div>
             </div>
@@ -427,9 +427,9 @@ foreach ($notif_keys as $key => $defaults) {
 
     // Show toast on page load if status set
     <?php if ($status === 'success'): ?>
-        showToast('Konfiguracja zapisana', 'success');
+        showToast('<?= __('notifications.config_saved') ?>', 'success');
     <?php elseif ($status === 'error'): ?>
-        showToast('Błąd zapisu konfiguracji', 'error');
+        showToast('<?= __('notifications.config_save_error') ?>', 'error');
     <?php endif; ?>
     </script>
     <?php include __DIR__ . '/includes/footer.php'; ?>

@@ -24,8 +24,8 @@ if (file_exists($release_file)) {
 <footer class="mt-12 border-t border-white/5">
     <div class="max-w-7xl mx-auto px-6 py-6 flex items-end justify-between">
         <div>
-            <div class="text-xs text-slate-500"><a href="https://www.lm-ads.com" target="_blank" class="hover:text-slate-300 transition">LM-Networks</a> &copy; 2025-2026 &middot; Wszelkie prawa zastrzezone</div>
-            <div class="text-[10px] text-slate-600 mt-1">Czesc ekosystemu LuMiGRAF Solutions obejmujacego rowniez <a href="https://dev.lm-ads.com" target="_blank" class="hover:text-slate-400 transition">narzedzia deweloperskie</a></div>
+            <div class="text-xs text-slate-500"><a href="https://www.lm-ads.com" target="_blank" class="hover:text-slate-300 transition">LM-Networks</a> &copy; 2025-2026 &middot; <?= __('footer.rights') ?></div>
+            <div class="text-[10px] text-slate-600 mt-1"><?= __('footer.ecosystem') ?> <a href="https://dev.lm-ads.com" target="_blank" class="hover:text-slate-400 transition"><?= __('footer.dev_tools') ?></a></div>
         </div>
         <div class="text-right">
             <a href="#" onclick="openChangelogModal(); return false;" class="text-xs text-slate-600 font-mono hover:text-slate-400 transition cursor-pointer">
@@ -48,7 +48,7 @@ if (file_exists($release_file)) {
             </button>
         </div>
         <div class="mb-4">
-            <div class="text-sm text-slate-400">Wersja <span class="text-white font-bold">v<?= MINIDASH_VERSION ?></span><?php if ($git_hash): ?> &middot; <span class="font-mono text-purple-400">#<?= $git_hash ?></span><?php endif; ?></div>
+            <div class="text-sm text-slate-400"><?= __('footer.version_label') ?> <span class="text-white font-bold">v<?= MINIDASH_VERSION ?></span><?php if ($git_hash): ?> &middot; <span class="font-mono text-purple-400">#<?= $git_hash ?></span><?php endif; ?></div>
         </div>
         <div class="space-y-1 text-sm max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
             <?php if (!empty($changelog_lines)): ?>
@@ -73,7 +73,7 @@ if (file_exists($release_file)) {
                     }
                 endforeach; ?>
             <?php else: ?>
-                <div class="text-slate-500 py-4 text-center">Brak pliku RELEASE_NOTES.md</div>
+                <div class="text-slate-500 py-4 text-center"><?= __('footer.no_release_notes') ?></div>
             <?php endif; ?>
         </div>
     </div>
@@ -196,7 +196,7 @@ window.MiniPagination = {
         pag.className = 'mini-pagination flex items-center justify-between px-4 py-3 border-t border-white/5 mt-2';
         pag.innerHTML = `
             <div class="flex items-center gap-2">
-                <span class="text-[10px] text-slate-500 uppercase font-bold">Wczytano ${start + 1}-${Math.min(start + inst.pageSize, total)} z ${total}</span>
+                <span class="text-[10px] text-slate-500 uppercase font-bold"><?= __('common.displaying') ?> ${start + 1}-${Math.min(start + inst.pageSize, total)} <?= __('common.of') ?> ${total}</span>
             </div>
             <div class="flex items-center gap-2">
                 <div class="flex gap-1 bg-slate-900/50 rounded-lg p-0.5 border border-white/5">

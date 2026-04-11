@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logowanie - MiniDash</title>
-    <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+    <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
@@ -69,12 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <!-- Logo/Header -->
         <div class="text-center mb-8">
             <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-800/50 mb-4 shadow-xl shadow-blue-500/10 border border-white/10">
-                <img src="img/lm-network.svg" alt="MiniDash" class="w-10 h-10 opacity-90">
+                <img src="img/logo_lm-u.png" alt="MiniDash" class="w-10 h-10 opacity-90">
             </div>
             <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
                 MiniDash
             </h1>
-            <p class="text-slate-500 text-sm mt-2 font-medium tracking-wide uppercase">Dostęp Autoryzowany</p>
+            <p class="text-slate-500 text-sm mt-2 font-medium tracking-wide uppercase"><?= __('login.authorized_access') ?></p>
         </div>
 
         <div class="glass-card p-8 shadow-2xl relative overflow-hidden">
@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <form method="POST" class="space-y-6 relative z-10">
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Użytkownik</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1"><?= __('login.username') ?></label>
                     <div class="relative">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
                             <i data-lucide="user" class="w-4 h-4"></i>
@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Hasło</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1"><?= __('login.password') ?></label>
                     <div class="relative">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
                             <i data-lucide="lock" class="w-4 h-4"></i>
@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 <button type="submit"
                         class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition shadow-xl shadow-blue-600/20 group flex items-center justify-center gap-2">
-                    <span>Zaloguj do Dashboardu</span>
+                    <span><?= __('login.login_button') ?></span>
                     <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition"></i>
                 </button>
             </form>

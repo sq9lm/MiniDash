@@ -1,8 +1,10 @@
 <?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
-define('MINIDASH_VERSION', '2.1.0');
+define('MINIDASH_VERSION', '2.1.1');
 error_reporting(E_ALL & ~E_NOTICE);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/logs/php_errors.log');
 
 // Load .env file
 $envFile = __DIR__ . '/.env';
@@ -91,8 +93,34 @@ $config = [
         'vlan_id' => 40,
         'camera_grid' => []
     ],
+    'language' => 'pl',
     'debug' => filter_var($_ENV['DEBUG'] ?? 'false', FILTER_VALIDATE_BOOLEAN)
 ];
+
+// ── i18n ──────────────────────────────────────────────
+$_lang = [];
+
+function load_language(string $lang = 'pl'): void {
+    global $_lang;
+    $file = __DIR__ . "/lang/{$lang}.json";
+    if (!file_exists($file)) $file = __DIR__ . '/lang/pl.json';
+    $_lang = json_decode(file_get_contents($file), true) ?? [];
+}
+
+function __(string $key, array $params = []): string {
+    global $_lang;
+    $parts = explode('.', $key);
+    $val = $_lang;
+    foreach ($parts as $p) {
+        if (!is_array($val) || !isset($val[$p])) return $key;
+        $val = $val[$p];
+    }
+    if (!is_string($val)) return $key;
+    foreach ($params as $k => $v) {
+        $val = str_replace('{' . $k . '}', $v, $val);
+    }
+    return $val;
+}
 
 /**
  * Zczytuje dane z config.json i nakłada na domyślne $config
@@ -112,6 +140,9 @@ function load_app_config($defaults) {
 
 $config = load_app_config($config);
 
+// Load language
+load_language($config['language'] ?? 'pl');
+
 // Dynamiczna inicjalizacja tematów ntfy jeśli brakuje
 if (empty($config['ntfy_notifications']['topic']) && !empty($config['api_key'])) {
     $config['ntfy_notifications']['topic'] = 'minidash_alerts_' . substr(md5($config['api_key'] ?? 'default'), 0, 8);
@@ -126,20 +157,22 @@ function sendAlert($subject, $message, $severity = 'info') {
         sendEmailNotification($subject, $message);
     }
     
+    $full_message = $subject . "\n" . $message;
+
     if ($config['telegram_notifications']['enabled']) {
-        sendTelegramNotification($message, $severity);
+        sendTelegramNotification($full_message, $severity);
     }
 
     if ($config['whatsapp_notifications'] && $config['whatsapp_notifications']['enabled']) {
-        sendWhatsAppNotification($message);
+        sendWhatsAppNotification($full_message);
     }
 
     if ($config['slack_notifications'] && $config['slack_notifications']['enabled']) {
-        sendSlackNotification($message);
+        sendSlackNotification($full_message);
     }
 
     if ($config['sms_notifications'] && $config['sms_notifications']['enabled']) {
-        sendSmsNotification($message);
+        sendSmsNotification($full_message);
     }
 
     if ($config['ntfy_notifications'] && $config['ntfy_notifications']['enabled']) {
@@ -147,21 +180,22 @@ function sendAlert($subject, $message, $severity = 'info') {
     }
 
     if ($config['discord_notifications'] && $config['discord_notifications']['enabled']) {
-        sendDiscordNotification($message);
+        sendDiscordNotification($full_message);
     }
 
     if ($config['n8n_notifications'] && $config['n8n_notifications']['enabled']) {
-        sendN8nNotification($message);
+        sendN8nNotification($full_message);
     }
 
     // Log alert to SQLite events table for in-app notification panel
     global $db;
     if (isset($db)) {
         try {
+            $severity_upper = strtoupper($severity);
             $stmt = $db->prepare("INSERT INTO events (type, severity, message, details_json) VALUES (?, ?, ?, ?)");
-            $stmt->execute(['alert', 'WARNING', $subject, json_encode(['message' => $message])]);
+            $stmt->execute(['alert', $severity_upper, $subject, json_encode(['message' => $message, 'full' => $full_message])]);
         } catch (Exception $e) {
-            // Silently fail — don't break alert sending
+            error_log("MiniDash: Failed to log event: " . $e->getMessage());
         }
     }
 }

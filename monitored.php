@@ -145,15 +145,15 @@ function formatUptime($seconds) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zasoby | MiniDash UniFi</title>
-    <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+    <title><?= __('monitored.title') ?> | MiniDash UniFi</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
     <link rel="stylesheet" href="dashboard.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
     <script src="assets/js/lucide.min.js"></script>
 </head>
 <body class="custom-scrollbar">
-    <?php render_nav("Zasoby Sieciowe", $navbar_stats); ?>
+    <?php render_nav(__('monitored.title'), $navbar_stats); ?>
     
     <div class="max-w-7xl mx-auto p-4 md:p-8">
         
@@ -161,9 +161,9 @@ function formatUptime($seconds) {
             <div>
                 <h2 class="text-3xl font-black tracking-tight flex items-center gap-3">
                     <span class="w-2.5 h-10 bg-emerald-500 rounded-full"></span>
-                    Monitorowane Zasoby
+                    <?= __('monitored.heading') ?>
                 </h2>
-                <p class="text-slate-500 mt-2 text-sm">Przegląd kluczowych urządzeń przypisanych do Twojej sieci.</p>
+                <p class="text-slate-500 mt-2 text-sm"><?= __('monitored.subtitle') ?></p>
             </div>
             
             <div class="flex items-center gap-4">
@@ -189,11 +189,11 @@ function formatUptime($seconds) {
                     <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-500">
                         <i data-lucide="search-x" class="w-8 h-8"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-300">Brak monitorowanych urządzeń</h3>
-                    <p class="text-slate-500 mt-2">Dodaj urządzenia w ustawieniach, aby widzieć je tutaj.</p>
+                    <h3 class="text-xl font-bold text-slate-300"><?= __('monitored.no_devices_title') ?></h3>
+                    <p class="text-slate-500 mt-2"><?= __('monitored.no_devices_desc') ?></p>
                     <a href="devices.php" class="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all transform hover:scale-105">
                         <i data-lucide="plus-circle" class="w-5 h-5"></i>
-                        Zarządzaj urządzeniami
+                        <?= __('monitored.manage_devices') ?>
                     </a>
                 </div>
             <?php else: ?>
@@ -242,10 +242,10 @@ function formatUptime($seconds) {
                                     
                                     <div class="mt-3 pt-2 border-t border-white/5 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
                                         <div class="flex items-center gap-1">
-                                            <span class="text-[12px] text-slate-500 uppercase font-black tracking-wider">Szczegóły</span>
+                                            <span class="text-[12px] text-slate-500 uppercase font-black tracking-wider"><?= __('monitored.device_details') ?></span>
                                             <i data-lucide="plus" class="w-3 h-3 text-slate-500"></i>
                                         </div>
-                                        <button onclick="event.stopPropagation(); deleteDeviceHistory('<?= $device['mac'] ?>')" class="p-1.5 hover:bg-red-500/20 text-slate-600 hover:text-red-500 rounded transition-colors" title="Usuń z historii">
+                                        <button onclick="event.stopPropagation(); deleteDeviceHistory('<?= $device['mac'] ?>')" class="p-1.5 hover:bg-red-500/20 text-slate-600 hover:text-red-500 rounded transition-colors" title="<?= __('monitored.delete_from_history_title') ?>">
                                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                         </button>
                                     </div>
@@ -295,7 +295,7 @@ function formatUptime($seconds) {
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="text-xs font-mono text-slate-500 uppercase tracking-wider">${device.mac.match(/.{1,2}/g).join(':')}</span>
                                     <span class="w-1.5 h-1.5 rounded-full ${isOn ? 'bg-emerald-500' : 'bg-red-500'}"></span>
-                                    <span class="text-xs font-black uppercase text-slate-500 tracking-widest">${isOn ? 'Online' : 'Offline'}</span>
+                                    <span class="text-xs font-black uppercase text-slate-500 tracking-widest">${isOn ? '<?= __('common.online') ?>' : '<?= __('common.offline') ?>'}</span>
                                 </div>
                             </div>
                         </div>
@@ -306,8 +306,8 @@ function formatUptime($seconds) {
 
                     <div class="grid grid-cols-2 gap-4">
                         <div class="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
-                            <span class="text-xs font-black text-slate-600 uppercase tracking-widest">Adres IP</span>
-                            <div class="text-base font-mono text-slate-200 mt-1">${device.ip || 'Nieprzypisany'}</div>
+                            <span class="text-xs font-black text-slate-600 uppercase tracking-widest"><?= __('common.ip_address') ?></span>
+                            <div class="text-base font-mono text-slate-200 mt-1">${device.ip || '<?= __('monitored.unassigned_ip') ?>'}</div>
                         </div>
                         <div class="bg-slate-900/40 p-4 rounded-2xl border border-white/5">
                             <span class="text-xs font-black text-slate-600 uppercase tracking-widest">Uptime</span>
@@ -321,19 +321,19 @@ function formatUptime($seconds) {
                         <div class="space-y-6">
                             <!-- Live Transfer -->
                             <div>
-                                <span class="text-[11px] font-black text-slate-600 uppercase tracking-widest block mb-3">Transfer Live</span>
+                                <span class="text-[11px] font-black text-slate-600 uppercase tracking-widest block mb-3"><?= __('history.live_transfer') ?></span>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div class="flex items-center gap-3 p-3 bg-slate-800/30 rounded-xl border border-white/5">
                                         <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg"><i data-lucide="arrow-down" class="w-4 h-4"></i></div>
                                         <div class="flex flex-col">
-                                            <span class="text-[11px] text-slate-500 uppercase font-bold">Pobieranie</span>
+                                            <span class="text-[11px] text-slate-500 uppercase font-bold"><?= __('common.download_speed') ?></span>
                                             <span class="text-lg font-mono text-slate-200 leading-none mt-0.5">${formatBps(device.rx_rate || 0)}</span>
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-3 p-3 bg-slate-800/30 rounded-xl border border-white/5">
                                         <div class="p-2 bg-amber-500/10 text-amber-400 rounded-lg"><i data-lucide="arrow-up" class="w-4 h-4"></i></div>
                                         <div class="flex flex-col">
-                                            <span class="text-[11px] text-slate-500 uppercase font-bold">Wysyłanie</span>
+                                            <span class="text-[11px] text-slate-500 uppercase font-bold"><?= __('common.upload_speed') ?></span>
                                             <span class="text-lg font-mono text-slate-200 leading-none mt-0.5">${formatBps(device.tx_rate || 0)}</span>
                                         </div>
                                     </div>
@@ -342,18 +342,18 @@ function formatUptime($seconds) {
                             
                             <!-- Data Usage Stats -->
                             <div>
-                                <span class="text-[11px] font-black text-slate-600 uppercase tracking-widest block mb-3">Statystyki Zużycia Danych</span>
+                                <span class="text-[11px] font-black text-slate-600 uppercase tracking-widest block mb-3"><?= __('common.data_usage') ?></span>
                                 <div class="grid grid-cols-3 gap-3 mb-3">
                                      <!-- 24H -->
                                      <div class="bg-slate-800/30 p-3 rounded-xl border border-white/5 text-center flex flex-col justify-center">
-                                         <span class="block text-[12px] text-slate-500 font-bold uppercase tracking-wider mb-1">24 Godziny</span>
+                                         <span class="block text-[12px] text-slate-500 font-bold uppercase tracking-wider mb-1"><?= __('common.24h') ?></span>
                                          <span id="stat-24h" class="block text-sm font-mono text-slate-400">
                                             <div class="flex justify-center"><div class="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div></div>
                                          </span>
                                      </div>
                                      <!-- 7D -->
                                      <div class="bg-slate-800/30 p-3 rounded-xl border border-white/5 text-center flex flex-col justify-center">
-                                         <span class="block text-[12px] text-slate-500 font-bold uppercase tracking-wider mb-1">7 Dni</span>
+                                         <span class="block text-[12px] text-slate-500 font-bold uppercase tracking-wider mb-1"><?= __('common.7d') ?></span>
                                          <span id="stat-7d" class="block text-sm font-mono text-slate-400">
                                             <div class="flex justify-center"><div class="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div></div>
                                          </span>
@@ -361,7 +361,7 @@ function formatUptime($seconds) {
                                      <!-- Total -->
                                      <div class="bg-slate-800/30 p-3 rounded-xl border border-blue-500/10 text-center flex flex-col justify-center relative overflow-hidden">
                                          <div class="absolute inset-0 bg-blue-500/5"></div>
-                                         <span class="block text-[12px] text-blue-400 font-bold uppercase tracking-wider mb-1 relative">Całkowite</span>
+                                         <span class="block text-[12px] text-blue-400 font-bold uppercase tracking-wider mb-1 relative"><?= __('common.total') ?></span>
                                          <span class="block text-sm font-mono text-blue-100 relative font-bold">${formatBytes((parseFloat(device.rx_bytes) || 0) + (parseFloat(device.tx_bytes) || 0))}</span>
                                      </div>
                                 </div>
@@ -369,13 +369,13 @@ function formatUptime($seconds) {
                                 <div class="bg-slate-800/20 p-3 rounded-xl border border-white/5 flex justify-between items-center text-xs">
                                      <div class="flex items-center gap-2">
                                          <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
-                                         <span class="text-slate-500 uppercase font-bold text-[11px]">Pobrane (Total):</span>
+                                         <span class="text-slate-500 uppercase font-bold text-[11px]"><?= __('common.downloaded') ?> (Total):</span>
                                          <span class="font-mono text-slate-300">${formatBytes(device.rx_bytes || 0)}</span>
                                      </div>
                                      <div class="h-4 w-[1px] bg-white/10"></div>
                                      <div class="flex items-center gap-2">
                                          <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
-                                         <span class="text-slate-500 uppercase font-bold text-[11px]">Wysłane (Total):</span>
+                                         <span class="text-slate-500 uppercase font-bold text-[11px]"><?= __('common.uploaded') ?> (Total):</span>
                                          <span class="font-mono text-slate-300">${formatBytes(device.tx_bytes || 0)}</span>
                                      </div>
                                 </div>
@@ -386,18 +386,18 @@ function formatUptime($seconds) {
                             <div class="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mb-4">
                                 <i data-lucide="zap-off" class="w-8 h-8"></i>
                             </div>
-                            <h4 class="text-lg font-bold text-slate-300">Urządzenie jest OFFLINE</h4>
-                            <p class="text-sm text-slate-500 mt-1 max-w-[250px]">Nie można pobrać danych o ruchu, gdy urządzenie nie ma połączenia z siecią.</p>
+                            <h4 class="text-lg font-bold text-slate-300"><?= __('monitored.device_offline_title') ?></h4>
+                            <p class="text-sm text-slate-500 mt-1 max-w-[250px]"><?= __('monitored.device_offline_desc') ?></p>
                         </div>
                     `}
                     
                     <div class="mt-8 flex gap-3">
                         <a href="history.php?mac=${encodeURIComponent(device.mac)}" class="flex-1 flex items-center justify-center gap-2 py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition shadow-xl shadow-blue-600/20 text-sm">
                             <i data-lucide="scroll-text" class="w-4 h-4"></i>
-                            Zobacz pełną historię
+                            <?= __('common.view_full_history') ?>
                         </a>
                         <button onclick="closeResourceModal()" class="px-6 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition text-sm">
-                            Zamknij
+                            <?= __('common.close') ?>
                         </button>
                     </div>
                 </div>
@@ -453,7 +453,7 @@ function formatUptime($seconds) {
         });
 
         function deleteDeviceHistory(mac) {
-            showConfirm('Czy na pewno chcesz usunąć to urządzenie z historii i monitoringu? Ta operacja jest nieodwracalna.', async () => {
+            showConfirm('<?= __('modals.confirm_delete_device') ?>', async () => {
                 try {
                     const response = await fetch('api_toggle_monitor.php', {
                         method: 'POST',
@@ -465,11 +465,11 @@ function formatUptime($seconds) {
                     if (result.success) {
                         window.location.reload();
                     } else {
-                        showToast(result.message || 'Nieznany błąd', 'error');
+                        showToast(result.message || '<?= __('common.unknown') ?>', 'error');
                     }
                 } catch (e) {
                     console.error('Error:', e);
-                    showToast('Wystąpił błąd podczas usuwania.', 'error');
+                    showToast('<?= __('alerts.delete_error') ?>', 'error');
                 }
             });
         }

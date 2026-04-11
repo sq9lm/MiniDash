@@ -1,7 +1,14 @@
 <?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 require_once 'config.php';
+require_once 'functions.php';
 header('Content-Type: application/json');
+
+if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Unauthorized']);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Invalid method']);

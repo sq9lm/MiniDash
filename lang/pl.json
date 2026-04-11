@@ -237,6 +237,7 @@
         "critical_rules": "Krytyczne",
         "high_rules": "Wysokie",
         "medium_rules": "Średnie",
+        "low_rules": "Niskie",
         "no_rules_defined": "Brak zdefiniowanych reguł",
         "ips_protection_disabled": "Ochrona IPS wyłączona",
         "no_rules_in_category": "Nie znaleziono żadnych reguł bezpieczeństwa w wybranej kategorii.",
@@ -246,7 +247,35 @@
         "score_factors": "Czynniki wpływające na ocenę:",
         "ips_ids_system": "System IPS/IDS",
         "points": "pkt",
-        "detected_action": "Wykryto"
+        "detected_action": "Wykryto",
+        "blocked_ips_modal_title": "Zablokowane adresy IP",
+        "blocked_ips_modal_desc": "Lista adresów IP zablokowanych przez system bezpieczeństwa",
+        "blocked_at_col": "Zablokowano",
+        "blocked_countries_label": "Zablokowane kraje",
+        "vpn_security": "Bezpieczeństwo VPN",
+        "filter_events_title": "Filtruj zdarzenia",
+        "label_placeholder": "Etykieta (opcjonalnie)",
+        "ip_placeholder": "Adres IP",
+        "added_col": "Dodano",
+        "label_col": "Etykieta",
+        "fallback_rule_name": "Reguła",
+        "no_ignore_ips": "Brak ignorowanych adresów IP",
+        "start_hour": "Godzina rozpoczęcia",
+        "end_hour": "Godzina zakończenia",
+        "no_blocked_addresses": "Brak zablokowanych adresów",
+        "final_score": "Ocena końcowa",
+        "no_blocked_ips_desc": "System IPS nie zarejestrował obecnie żadnych aktywnych blokad adresów IP.",
+        "rule_name_col": "Nazwa reguły",
+        "ips_ids_label": "System IPS/IDS",
+        "firewall_coverage": "Pokrycie reguł firewall i Flows",
+        "rules_count_label": "reguł",
+        "threat_detection_label": "Wykrywanie zagrożeń",
+        "blocked_ratio": "Stosunek zablokowanych zagrożeń",
+        "blocks_count_label": "blokad",
+        "monitoring_active_label": "Monitoring aktywny",
+        "critical_events_label": "Krytyczne zdarzenia (ostatnia godzina)",
+        "events_count_label": "zdarzeń",
+        "export_csv_ready": "Eksport CSV gotowy"
     },
     "stalker": {
         "title": "Wi-Fi Stalker",
@@ -341,7 +370,9 @@
         "db_labels_roaming": "Roaming",
         "db_labels_logins": "Logowania",
         "db_labels_monitors": "Monitory",
-        "db_labels_device_history": "Historia urz."
+        "db_labels_device_history": "Historia urz.",
+        "language": "Język Interfejsu",
+        "language_desc": "Wybierz język wyświetlania dashboardu"
     },
     "notifications": {
         "title": "Konfiguracja Powiadomień | MiniDash",
@@ -465,7 +496,8 @@
         "just_now": "teraz",
         "clear_confirm": "Czy na pewno chcesz wyczyścić historię wszystkich powiadomień?",
         "clear_error": "Błąd: ",
-        "network_error": "Błąd sieci"
+        "network_error": "Błąd sieci",
+        "alert_label": "Alert"
     },
     "alerts": {
         "speed_spike_title": "Nagły wzrost transferu: ",
@@ -495,6 +527,22 @@
         "monitor_enable": "Monitoruj i powiadamiaj",
         "monitor_disable": "Wyłącz powiadomienia",
         "event_history": "Historia Zdarzeń"
+    },
+    "triggers": {
+        "title": "Wyzwalacze Alertów",
+        "desc": "Automatyczne reguły monitoringu i powiadomień",
+        "speed_alert": "Alert Wzrostu Transferu",
+        "speed_alert_desc": "Alert gdy urządzenie przekroczy próg ruchu",
+        "speed_threshold": "Próg (Mbps)",
+        "new_device_alert": "Wykrywanie Nowych Urządzeń",
+        "new_device_alert_desc": "Alert gdy nieznane urządzenie dołączy do sieci",
+        "ips_alert": "Alert IPS/IDS",
+        "ips_alert_desc": "Alert o zablokowanej próbie włamania",
+        "latency_alert": "Alert Wysokiej Latencji",
+        "latency_alert_desc": "Alert gdy opóźnienie WAN przekroczy próg",
+        "latency_threshold": "Próg (ms)",
+        "vpn_alert": "Alert Połączenia VPN",
+        "vpn_alert_desc": "Alert o połączeniu/rozłączeniu VPN"
     },
     "clients_modal": {
         "search_placeholder": "Szukaj...",

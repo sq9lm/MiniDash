@@ -89,7 +89,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UniFi Protect - Monitoring Kamer</title>
-    <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+    <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
@@ -118,7 +118,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                         <i data-lucide="video" class="w-8 h-8 text-purple-400"></i>
                         UniFi Protect
                     </h1>
-                    <p class="text-slate-500 text-sm">System monitoringu wideo i nagrywania zdarzeń</p>
+                    <p class="text-slate-500 text-sm"><?= __('protect.subtitle') ?></p>
                 </div>
                 <button onclick="openSettings()" class="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl font-bold uppercase tracking-widest transition flex items-center gap-3 shadow-xl shadow-purple-600/20">
                     <i data-lucide="settings" class="w-5 h-5"></i>
@@ -135,11 +135,11 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                     <div class="p-2.5 bg-purple-500/10 rounded-xl text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
                         <i data-lucide="camera" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-xs font-black text-slate-500 uppercase tracking-[0.15em] group-hover:text-purple-300">Kamery</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-[0.15em] group-hover:text-purple-300"><?= __('protect.cameras_title') ?></span>
                 </div>
                 <div class="text-3xl font-black tracking-tighter text-white"><?= $total_cameras ?></div>
                 <div class="flex justify-between items-end mt-1">
-                    <div class="text-slate-400 text-xs font-medium italic">Zainstalowane</div>
+                    <div class="text-slate-400 text-xs font-medium italic"><?= __('protect.cameras_installed') ?></div>
                     <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:translate-x-1 transition-transform"></i>
                 </div>
             </div>
@@ -150,7 +150,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                     <div class="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                         <i data-lucide="network" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-xs font-black text-slate-500 uppercase tracking-[0.15em] group-hover:text-emerald-300">Połączenia</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-[0.15em] group-hover:text-emerald-300"><?= __('protect.connections') ?></span>
                 </div>
                 <div class="text-3xl font-black tracking-tighter text-white"><?= $camera_connections ?></div>
                 <div class="flex justify-between items-end mt-1">
@@ -165,7 +165,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
                     <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
                         <i data-lucide="hard-drive" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-xs font-black text-slate-500 uppercase tracking-[0.15em] group-hover:text-blue-300">Magazyn</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-[0.15em] group-hover:text-blue-300"><?= __('protect.storage') ?></span>
                 </div>
                 <div class="text-3xl font-black tracking-tighter text-white"><?= $nvr['version'] ?: '1' ?></div>
                 <div class="flex justify-between items-end mt-1">
@@ -203,7 +203,7 @@ $nvr_utilization = $nvr['storage']['utilization'] ?? 0; // Percentage likely? Or
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <h2 class="text-xl font-bold text-white flex items-center gap-2">
                     <i data-lucide="grid" class="w-6 h-6 text-purple-400"></i>
-                    Podgląd na żywo
+                    <?= __('protect.live_view') ?>
                 </h2>
                 
                 <!-- Layout Selector -->

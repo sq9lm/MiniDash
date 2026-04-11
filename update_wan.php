@@ -3,7 +3,8 @@
 /**
  * MiniDash - Update WAN Stats
  */
-error_reporting(0);
+error_reporting(E_ALL & ~E_NOTICE);
+ini_set('display_errors', 0);
 ob_start();
 
 require_once __DIR__ . '/config.php';

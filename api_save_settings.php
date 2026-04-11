@@ -1,10 +1,32 @@
 <?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
 require_once 'config.php';
+require_once 'functions.php';
 header('Content-Type: application/json');
+
+if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Unauthorized']);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Invalid method']);
+    exit;
+}
+
+// Language switch (lightweight action)
+if (($_POST['action'] ?? '') === 'save_language') {
+    $lang = in_array($_POST['language'] ?? '', ['pl', 'en']) ? $_POST['language'] : 'pl';
+    $configFile = __DIR__ . '/data/config.json';
+    $existing = file_exists($configFile) ? json_decode(file_get_contents($configFile), true) : [];
+    if (!is_array($existing)) $existing = [];
+    $existing['language'] = $lang;
+    if (file_put_contents($configFile, json_encode($existing, JSON_PRETTY_PRINT))) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to save language']);
+    }
     exit;
 }
 

@@ -1,135 +1,171 @@
 # MiniDash — Release Notes
 
+## v2.1.1 (2026-04-11)
+
+Internationalization, security audit, notification fixes.
+
+### i18n (PL/EN)
+- Full English translation of the entire interface
+- __() function with parameter support and dot-notation
+- Language files: lang/pl.json (~520 keys), lang/en.json
+- Language switcher in Personal settings modal (saved to config.json)
+- All pages translated: dashboard, security, stalker, monitored, devices, events, history, logs, protect, login, footer, navbar, notification settings
+
+### Notifications
+- Device names now visible in Telegram and all other channels (subject + message)
+- Severity correctly saved in SQLite events (instead of hardcoded WARNING)
+- Bell panel — colors based on severity (critical=red, warning=amber, info=green)
+- Alert clicks navigate to events.php (instead of history.php with empty MAC)
+
+### Security Audit
+- Auth check added to api_ping.php, api_clear_history.php, api_save_settings.php
+- display_errors=0 in production (config.php, api_user_settings.php)
+- error_reporting(0) in update_wan.php replaced with proper logging
+- Avatar upload: MIME type validation + 5MB size limit + random filename + old file cleanup
+
+### Code Cleanup
+- Removed ~370 lines of dead code (old _disabled_render_* functions)
+- Removed 20+ debug files from data/ and logs/
+- WAN Link card no longer stretches to VLAN height (self-start)
+
+### Docker
+- Docker files ready: Dockerfile, docker-compose.yml, nginx.conf, start.sh
+
+---
+
 ## v2.1.0 (2026-04-10)
 
-Rozbudowa dashboardu, security, ustawien systemowych i optymalizacje.
+Dashboard expansion, security improvements, system settings and optimizations.
 
 ### Dashboard
-- Dynamiczne sesje WAN z API (zamiast hardcoded)
-- VLAN detection z UniFi API networkconf (zamiast hardcoded mapy IP)
-- VLAN detail modal — klik na VLAN pokazuje klientow z transferem
-- AP drilldown — klienci wired i wireless z sw_mac/ap_mac
-- Navbar upload kolor amber (spojny z Egress)
-- formatBps obsluguje Tbps/Gbps
-- WAN units fix (rx_bytes-r * 8 dla bps)
-- Stalker widget pokazuje aktywne sesje WiFi
+- Dynamic WAN sessions from API (replaced hardcoded data)
+- VLAN detection from UniFi API networkconf (replaced hardcoded IP map)
+- VLAN detail modal — click VLAN to see clients with transfer stats
+- AP drilldown — wired and wireless clients via sw_mac/ap_mac
+- Navbar upload color changed to amber (consistent with Egress)
+- formatBps supports Tbps/Gbps
+- WAN units fix (rx_bytes-r * 8 for bps)
+- Stalker widget shows active WiFi sessions count
 
 ### Security
-- IPS config dropdown — klikalne modale (rules, threat intel, geo-blocking)
-- Geo-blocking modal z flagami krajow + liczba blokad (z IPS events)
-- Security score fix — blocked threats to plus, nie minus
-- VPN detection z networkconf (+10 pkt score)
-- Firewall rules detection fix (meta.rc → !empty data)
-- MongoDB ObjectId w get_trad_site_id
-- Blocked IPs country code z srcipCountry
-- Security events paginacja (MiniPagination)
-- Cache TTL zwiekszony (5min settings, 2min events)
+- IPS config dropdown with clickable modals (rules, threat intel, geo-blocking)
+- Geo-blocking modal with country flags and block counts (from IPS events)
+- Security score fix — blocked threats count as positive, not penalty
+- VPN detection from networkconf (+10 pts score)
+- Firewall rules detection fix (meta.rc replaced with !empty data check)
+- MongoDB ObjectId support in get_trad_site_id
+- Blocked IPs country code from srcipCountry
+- Security events pagination (MiniPagination)
+- Cache TTL increased (5min settings, 2min events)
 
-### Inteligentne Wyzwalacze
-- Nowe urzadzenie — alert przy nieznanym MAC (z learning phase)
-- IPS Alert — powiadomienie o zablokowanym ataku
-- Wysoki ping — latency > konfigurowalny prog
+### Smart Triggers
+- New device — alert on unknown MAC (with learning phase + cooldown)
+- IPS Alert — notification on blocked attack
+- High latency — configurable threshold alert
+- VPN connection — connect/disconnect alerts
+- Speed spike — traffic threshold per device
 
-### Ustawienia Systemu
-- Retencja danych — suwaki per tabela (7-730 dni)
-- Sesja i bezpieczenstwo — timeout, max prob logowania, lock duration
-- Odswiezanie dashboardu — konfigurowalny interwal pollingu
-- Baza danych — rozmiar, rekordy, VACUUM, eksport config/DB
+### System Settings
+- Data retention — per-table sliders (7-730 days)
+- Session security — timeout, max login attempts, lock duration
+- Dashboard refresh — configurable polling interval
+- Database management — size, records, VACUUM, config/DB export
 
-### O Systemie
-- CPU, RAM, Disk, Uptime w modalu
-- Kanal aktualizacji
-- Dynamiczne wykrywanie zainstalowanych aplikacji (Network, Protect, Talk, Access)
-- VPN lista z networkconf (OpenVPN + WireGuard)
+### About System
+- CPU, RAM, Disk, Uptime in modal
+- Update channel info
+- Dynamic detection of installed apps (Network, Protect, Talk, Access)
+- VPN list from networkconf (OpenVPN + WireGuard)
 
-### Powiadomienia
-- Alerty widoczne w panelu dzwonka (sendAlert → SQLite events)
-- Zarządca Procesow — prawdziwe dane z API
-- WAN health — latency, packet_loss z gateway device stats
+### Notifications
+- Alerts visible in bell panel (sendAlert -> SQLite events -> notification panel)
+- Process Manager — real data from API
+- WAN health — latency, packet_loss from gateway device stats
 
-### Inne
-- Globalna paginacja (MiniPagination) — reusable komponent
-- Usunięto fake progress bars z Ingress/Egress
-- Usunięto hardcoded Zarządca Procesow
-- Monitored.php — modal szczegółow naprawiony
-- Protect.php — poprawki
+### Other
+- Global pagination component (MiniPagination) — reusable
+- Removed fake progress bars from Ingress/Egress
+- Removed hardcoded Process Manager data
+- monitored.php — detail modal fixed, add device button
+- protect.php — improvements
 
 ---
 
 ## v2.0.0 (2026-04-10)
 
-Duza aktualizacja: migracja na SQLite, Wi-Fi Stalker, ulepszenia Threat Watch, nowe kanaly powiadomien, szyfrowanie danych.
+Major update: SQLite migration, Wi-Fi Stalker, enhanced Threat Watch, new notification channels, credential encryption.
 
-### Baza danych SQLite
-- Migracja z plikow JSON na SQLite jako centralny storage
-- Automatyczny system migracji (`migrations/`) — nowe wersje schematu aplikowane przy starcie
-- Auto-purge starych danych (konfigurowalne progi dni per tabela)
-- Skrypt `migrate_json.php` do jednorazowej migracji istniejacych danych
+### SQLite Database
+- Migration from JSON files to SQLite as central storage
+- Automatic migration system (migrations/) — new schema versions applied on startup
+- Auto-purge of old data (configurable day thresholds per table)
+- migrate_json.php script for one-time migration of existing data
 
-### Wi-Fi Stalker (nowe)
-- Sledzenie aktywnych sesji WiFi w czasie rzeczywistym
-- Wykrywanie roamingu miedzy Access Pointami
-- Historia roamingu z RSSI, kanałem i czasem
-- Watchlist urzadzen z powiadomieniami przy roamingu
-- Eksport CSV
-- Filtry: czas (1h/24h/7d/30d), pasmo (2.4/5/6 GHz), wyszukiwarka
-- Widget na dashboardzie z liczba aktywnych sesji
-- Polling co 30s z automatycznym wykrywaniem zmian
+### Wi-Fi Stalker (new)
+- Real-time WiFi session tracking
+- Roaming detection between Access Points
+- Roaming history with RSSI, channel and timing
+- Device watchlist with roaming alerts
+- CSV export
+- Filters: time range (1h/24h/7d/30d), band (2.4/5/6 GHz), search
+- Dashboard widget with active session count
+- 30s polling with automatic change detection
 
-### Threat Watch ulepszenia
-- IP Ignore List — whitelist adresow IP pomijanych w analizie zagrozen
-- Filtry zakresu czasu (1h/24h/7d/30d) na zdarzeniach bezpieczenstwa
-- Auto-purge starych zdarzen (30 dni)
+### Threat Watch Enhancements
+- IP Ignore List — whitelist of IPs excluded from threat analysis
+- Time range filters (1h/24h/7d/30d) on security events
+- Auto-purge of old events (30 days)
 
-### Drilldown AP -> klienci
-- Klikniecie na urzadzenie w panelu infrastruktury rozwija liste klientow
-- Obsluga klientow WiFi (po ap_mac) i wired (po sw_mac z numerem portu)
-- Dane z UniFi Traditional API (RSSI, siec, predkosc, IP)
+### AP Drilldown
+- Click on infrastructure device to expand client list
+- WiFi clients (by ap_mac) and wired clients (by sw_mac with port number)
+- Data from UniFi Traditional API (RSSI, network, speed, IP)
 
-### Nowe kanaly powiadomien
-- Discord — webhook z rich embeds
-- n8n — generic webhook do automatyzacji
-- Panele konfiguracji w ustawieniach powiadomien
-- Endpoint testowy `api_test_alert.php`
+### New Notification Channels
+- Discord — webhook with rich embeds
+- n8n — generic webhook for automation
+- Configuration panels in notification settings
+- Test endpoint api_test_alert.php
 
-### Szyfrowanie credentials
-- Wrazliwe pola w config.json szyfrowane sodium_crypto_secretbox
-- Automatyczne szyfrowanie przy zapisie, deszyfrowanie przy odczycie
-- Klucz generowany automatycznie (`data/.encryption_key`)
-- Prefix `ENC:` na zaszyfrowanych wartosciach
+### Credential Encryption
+- Sensitive config.json fields encrypted with sodium_crypto_secretbox
+- Automatic encryption on save, decryption on read
+- Key auto-generated (data/.encryption_key)
+- ENC: prefix on encrypted values
 
-### Bezpieczenstwo i struktura
-- Sekrety przeniesione z hardcoded do `.env`
-- Git zainicjalizowany z `.gitignore` blokujacym dane wrazliwe
-- Usunieto UTF-8 BOM z wszystkich plikow PHP
-- Pliki debug/test przeniesione do `_old/`
+### Security & Structure
+- Secrets moved from hardcoded values to .env
+- Git initialized with .gitignore blocking sensitive data
+- Removed UTF-8 BOM from all PHP files
+- Debug/test files moved to _old/
 
 ### Footer
-- Wersja aplikacji + git hash (klikalny changelog)
-- Branding LM-Networks z linkami (lm-ads.com, dev.lm-ads.com)
+- App version + git hash (clickable changelog)
+- LM-Networks branding with links (lm-ads.com, dev.lm-ads.com)
 - Copyright 2025-2026
 
 ### Favicon
-- SVG favicon na wszystkich stronach
+- SVG favicon on all pages
 
 ---
 
 ## v1.5.0 (2026-02-06)
 
-### System Logs (`logs.php`)
-- API-driven Event System zamiast parsowania plikow
-- Filtry severity (INFO/WARNING/ERROR/CRITICAL)
-- Paginacja: 25, 50, 100, 500 na strone
-- Modal z podgladem raw JSON zdarzenia
+### System Logs (logs.php)
+- API-driven Event System instead of file parsing
+- Severity filters (INFO/WARNING/ERROR/CRITICAL)
+- Pagination: 25, 50, 100, 500 per page
+- Modal with raw JSON event preview
 
-### UniFi Protect Dashboard (`protect.php`)
-- Dynamiczny grid kamer: 1, 2, 4, 9, 12 widokow
-- Interaktywne sloty do wyboru zrodla kamery
-- Status NVR, bandwidth kamer, online/offline
+### UniFi Protect Dashboard (protect.php)
+- Dynamic camera grid: 1, 2, 4, 9, 12 views
+- Interactive slots for camera source selection
+- NVR status, disk usage, recording status and estimated archive length
+- Bandwidth monitoring for cameras
 
-### Ogolne
-- Standaryzacja layoutu na max-w-7xl
-- Ikona Logs w nawigacji
+### General
+- Layout standardized to max-w-7xl
+- Logs icon added to navigation
 
 ---
 

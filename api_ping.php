@@ -1,6 +1,14 @@
 <?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/functions.php';
 header('Content-Type: application/json');
+
+if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Unauthorized']);
+    exit;
+}
 
 // Default hosts
 $default_hosts = [

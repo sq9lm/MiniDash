@@ -102,8 +102,8 @@ foreach ($clients as $c) {
             'external_ip' => $ext_data['ext'] ?? '',
             'country_code' => $cc,
             'type' => strtoupper($type),
-            'rx_bps' => round($rx * 8),
-            'tx_bps' => round($tx * 8),
+            'rx_bps' => round($tx * 8),  // tx from controller = download for client
+            'tx_bps' => round($rx * 8),  // rx from controller = upload from client
             'total_bps' => round($total * 8),
             'is_wired' => !empty($c['is_wired']),
             'network' => $c['network'] ?? $c['essid'] ?? '',

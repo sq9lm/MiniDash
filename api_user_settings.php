@@ -1,9 +1,5 @@
 <?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
-// Force error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 require_once 'config.php';
 require_once 'functions.php';
 
@@ -77,11 +73,25 @@ if ($action === 'update_profile') {
         $fileExtension = strtolower(pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION));
         $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
-        if (in_array($fileExtension, $allowedExtensions)) {
-            $fileName = 'avatar_' . time() . '.' . $fileExtension;
+        // Validate MIME type
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $_FILES['avatar']['tmp_name']);
+        finfo_close($finfo);
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+        // Validate size (max 5MB)
+        $maxSize = 5 * 1024 * 1024;
+
+        if (in_array($fileExtension, $allowedExtensions) && in_array($mime, $allowedMimes) && $_FILES['avatar']['size'] <= $maxSize) {
+            $fileName = 'avatar_' . bin2hex(random_bytes(8)) . '.' . $fileExtension;
             $targetPath = $uploadDir . $fileName;
 
             log_settings_debug("Attempting to move file to: " . $targetPath);
+
+            // Remove old avatar
+            if (!empty($config['admin_avatar']) && file_exists(__DIR__ . '/' . $config['admin_avatar'])) {
+                @unlink(__DIR__ . '/' . $config['admin_avatar']);
+            }
 
             if (move_uploaded_file($_FILES['avatar']['tmp_name'], $targetPath)) {
                 $newConfig['admin_avatar'] = 'data/avatars/' . $fileName;

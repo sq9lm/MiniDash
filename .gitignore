@@ -14,6 +14,7 @@ data/avatars/*
 *.json
 !package.json
 !composer.json
+!lang/*.json
 
 # Logs
 logs/*

@@ -145,7 +145,7 @@ $log_lines = array_slice($processed_logs, 0, $limit);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System Logs</title>
-    <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+    <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
@@ -160,16 +160,16 @@ $log_lines = array_slice($processed_logs, 0, $limit);
             <div>
                 <h1 class="text-3xl font-black text-white mb-2 flex items-center gap-3">
                     <i data-lucide="file-text" class="w-8 h-8 text-amber-400"></i>
-                    Logi Kontrolera
+                    <?= __('logs.title') ?>
                 </h1>
-                <p class="text-slate-500 text-sm">Zdarzenia pobrane bezpośrednio z API UniFiController</p>
+                <p class="text-slate-500 text-sm"><?= __('logs.subtitle') ?></p>
             </div>
             
             <!-- Severity Filter -->
              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold text-slate-500 uppercase tracking-widest hidden md:block">Filtruj:</span>
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-widest hidden md:block"><?= __('logs.filter_label') ?></span>
                 <select onchange="window.location.href='?limit=<?= $limit ?>&level='+this.value" class="bg-slate-900 border border-white/10 rounded-xl px-4 py-2 text-xs text-white font-bold uppercase tracking-wider focus:outline-none focus:border-amber-500 transition-colors cursor-pointer">
-                    <option value="" <?= empty($level) ? 'selected' : '' ?>>Wszystkie Poziomy</option>
+                    <option value="" <?= empty($level) ? 'selected' : '' ?>><?= __('logs.all_levels') ?></option>
                     <option value="INFO" <?= $level === 'INFO' ? 'selected' : '' ?>>Info</option>
                     <option value="WARNING" <?= $level === 'WARNING' ? 'selected' : '' ?>>Warning</option>
                     <option value="ERROR" <?= $level === 'ERROR' ? 'selected' : '' ?>>Error</option>
@@ -212,7 +212,7 @@ $log_lines = array_slice($processed_logs, 0, $limit);
                     <tbody class="divide-y divide-white/[0.02] text-xs font-mono">
                         <?php if (empty($log_lines)): ?>
                         <tr>
-                            <td colspan="4" class="px-6 py-8 text-center text-slate-500 italic">Brak zdarzeń do wyświetlenia</td>
+                            <td colspan="4" class="px-6 py-8 text-center text-slate-500 italic"><?= __('logs.no_events') ?></td>
                         </tr>
                         <?php else: ?>
                             <?php foreach ($log_lines as $l): 
@@ -281,7 +281,7 @@ $log_lines = array_slice($processed_logs, 0, $limit);
         <div class="modal-container w-[600px] max-w-[95vw]" onclick="event.stopPropagation()">
             <div class="modal-header border-b border-white/5 bg-slate-900/50">
                 <h2 class="text-sm font-bold text-white flex items-center gap-3" id="modal-title-date">
-                    Szczegóły zdarzenia
+                    <?= __('logs.event_detail_title') ?>
                 </h2>
                 <button onclick="closeModal('logDetailModal')" class="p-2 hover:bg-white/5 rounded-xl transition text-slate-500 hover:text-white">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -324,7 +324,7 @@ $log_lines = array_slice($processed_logs, 0, $limit);
         lucide.createIcons();
         
         function openLogDetails(log) {
-            document.getElementById('modal-title-date').innerText = log.date || 'Szczegóły zdarzenia';
+            document.getElementById('modal-title-date').innerText = log.date || '<?= __('logs.event_detail_title') ?>';
             document.getElementById('modal-severity').innerText = log.severity;
             document.getElementById('modal-category').innerText = log.category;
             document.getElementById('modal-message').innerText = log.message;

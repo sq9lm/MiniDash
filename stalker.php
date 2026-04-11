@@ -17,8 +17,8 @@ $navbar_stats = get_navbar_stats();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wi-Fi Stalker | MiniDash</title>
-    <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+    <title><?= __('stalker.title') ?> | MiniDash</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
@@ -37,8 +37,8 @@ $navbar_stats = get_navbar_stats();
                     <i data-lucide="radar" class="w-7 h-7 text-purple-400"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-black text-white">Wi-Fi Stalker</h1>
-                    <p class="text-xs text-slate-500 uppercase tracking-wider">Sledzenie roamingu i aktywnosci WiFi</p>
+                    <h1 class="text-2xl font-black text-white"><?= __('stalker.title') ?></h1>
+                    <p class="text-xs text-slate-500 uppercase tracking-wider"><?= __('stalker.subtitle') ?></p>
                 </div>
             </div>
             <div class="flex items-center gap-3">
@@ -81,7 +81,7 @@ $navbar_stats = get_navbar_stats();
 
                 <!-- Watchlist -->
                 <button onclick="openWatchlistModal()" class="px-4 py-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 rounded-xl text-xs font-bold transition border border-amber-500/20 flex items-center gap-1">
-                    <i data-lucide="eye" class="w-4 h-4"></i> Watchlist
+                    <i data-lucide="eye" class="w-4 h-4"></i> <?= __('stalker.watchlist') ?>
                 </button>
             </div>
         </div>
@@ -90,7 +90,7 @@ $navbar_stats = get_navbar_stats();
         <div class="glass-card rounded-3xl p-6 mb-6">
             <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <i data-lucide="wifi" class="w-4 h-4 text-emerald-400"></i>
-                Aktywne sesje WiFi
+                <?= __('stalker.active_sessions') ?>
                 <span id="sessions-count" class="text-purple-400 ml-1">0</span>
             </h2>
             <div class="overflow-x-auto">
@@ -107,7 +107,7 @@ $navbar_stats = get_navbar_stats();
                         </tr>
                     </thead>
                     <tbody id="sessions-body">
-                        <tr><td colspan="7" class="text-center py-8 text-slate-500">Ladowanie...</td></tr>
+                        <tr><td colspan="7" class="text-center py-8 text-slate-500"><?= __('stalker.loading') ?></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -117,11 +117,11 @@ $navbar_stats = get_navbar_stats();
         <div class="glass-card rounded-3xl p-6">
             <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <i data-lucide="repeat" class="w-4 h-4 text-amber-400"></i>
-                Historia roamingu
+                <?= __('stalker.roaming_history') ?>
                 <span id="roaming-count" class="text-amber-400 ml-1">0</span>
             </h2>
             <div id="roaming-body">
-                <div class="text-center py-8 text-slate-500">Ladowanie...</div>
+                <div class="text-center py-8 text-slate-500"><?= __('stalker.loading') ?></div>
             </div>
         </div>
 
@@ -133,7 +133,7 @@ $navbar_stats = get_navbar_stats();
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-bold text-white flex items-center gap-3">
                     <i data-lucide="eye" class="w-6 h-6 text-amber-400"></i>
-                    Watchlist
+                    <?= __('stalker.watchlist') ?>
                 </h2>
                 <button onclick="closeWatchlistModal()" class="text-slate-500 hover:text-white transition">
                     <i data-lucide="x" class="w-6 h-6"></i>
@@ -153,7 +153,7 @@ $navbar_stats = get_navbar_stats();
 
             <!-- Watchlist Table -->
             <div id="watchlist-body">
-                <div class="text-center text-slate-500 py-4">Ladowanie...</div>
+                <div class="text-center text-slate-500 py-4"><?= __('stalker.loading') ?></div>
             </div>
         </div>
     </div>
@@ -280,7 +280,7 @@ $navbar_stats = get_navbar_stats();
                     <span class="text-xs text-slate-400">${timeSince(s.connected_at)}</span>
                 </td>
                 <td class="py-4 px-4 text-right">
-                    <button onclick="addToWatchlistQuick('${safeMac}','${safeHostname}')" class="text-slate-500 hover:text-amber-400 transition p-1" title="Dodaj do watchlist">
+                    <button onclick="addToWatchlistQuick('${safeMac}','${safeHostname}')" class="text-slate-500 hover:text-amber-400 transition p-1" title="<?= __('stalker.add_to_watchlist') ?>">
                         <i data-lucide="${watchIcon}" class="w-4 h-4"></i>
                     </button>
                 </td>

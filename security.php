@@ -144,8 +144,8 @@ $top_countries = array_slice($top_countries, 0, 5);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UniFi Security - Monitoring Bezpieczeństwa</title>
-    <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+    <title><?= __('security.monitoring_title') ?></title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
@@ -161,29 +161,29 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <div>
                     <h1 class="text-3xl font-black text-white mb-2 flex items-center gap-3">
                         <i data-lucide="shield" class="w-8 h-8 text-rose-400"></i>
-                        UniFi Security
+                        <?= __('security.title') ?>
                     </h1>
                     <div class="flex items-center gap-2 mb-2">
                         <span class="px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-widest border transition-all <?= $ips_enabled ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-500 border-white/5 opacity-50' ?>" title="Intrusion Prevention System">
-                            <i data-lucide="shield-check" class="w-3 h-3 inline mr-1"></i> IPS: <?= $ips_enabled ? 'Uzbrojony' : 'Wyłączony' ?>
+                            <i data-lucide="shield-check" class="w-3 h-3 inline mr-1"></i> IPS: <?= $ips_enabled ? __('security.ips_armed') : __('security.ips_disabled') ?>
                         </span>
                         <span class="px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-widest border transition-all <?= $honeypot ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-slate-800 text-slate-500 border-white/5 opacity-50' ?>" title="Network Honeypot Detection">
-                            <i data-lucide="ghost" class="w-3 h-3 inline mr-1"></i> Honeypot: <?= $honeypot ? 'Aktywny' : 'Wyłączony' ?>
+                            <i data-lucide="ghost" class="w-3 h-3 inline mr-1"></i> Honeypot: <?= $honeypot ? __('security.honeypot_active') : __('security.ips_disabled') ?>
                         </span>
                         <span class="px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-widest border transition-all <?= $ad_blocking ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-slate-800 text-slate-500 border-white/5 opacity-50' ?>" title="Ad & Tracker Blocking">
-                            <i data-lucide="ban" class="w-3 h-3 inline mr-1"></i> Ad-block: <?= $ad_blocking ? 'Aktywny' : 'Wyłączony' ?>
+                            <i data-lucide="ban" class="w-3 h-3 inline mr-1"></i> Ad-block: <?= $ad_blocking ? __('security.ad_block_active') : __('security.ips_disabled') ?>
                         </span>
                     </div>
-                    <p class="text-slate-500 text-sm italic">Zaawansowany system wykrywania zagrożeń i ochrony sieci</p>
+                    <p class="text-slate-500 text-sm italic"><?= __('security.subtitle') ?></p>
                 </div>
                 <div class="flex items-center gap-3">
                 <button onclick="openIgnoreModal()" class="px-4 py-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 rounded-xl text-xs font-bold transition border border-amber-500/20">
-                    <i data-lucide="shield-off" class="w-4 h-4 inline mr-1"></i> Ignorowane IP
+                    <i data-lucide="shield-off" class="w-4 h-4 inline mr-1"></i> <?= __('security.ignored_ip') ?>
                 </button>
                 <div class="relative group">
                     <button class="px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl font-bold uppercase tracking-widest transition flex items-center gap-3 shadow-xl shadow-rose-600/20">
                         <i data-lucide="shield-alert" class="w-5 h-5"></i>
-                        Konfiguracja IPS
+                        <?= __('security.config_ips') ?>
                         <i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-hover:rotate-180"></i>
                     </button>
                     
@@ -197,12 +197,12 @@ $top_countries = array_slice($top_countries, 0, 5);
                                     </div>
                                     <div class="flex-grow min-w-0">
                                         <div class="flex items-center gap-2">
-                                            <p class="text-sm font-bold text-white">Reguły IPS</p>
+                                            <p class="text-sm font-bold text-white"><?= __('security.ips_rules') ?></p>
                                             <span class="px-1.5 py-0.5 rounded text-[12px] font-black uppercase tracking-tighter <?= $ips_enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400' ?>">
-                                                <?= $ips_enabled ? 'AKTYWNE' : 'WYŁĄCZONE' ?>
+                                                <?= $ips_enabled ? __('security.ips_rules_active') : __('security.ips_rules_disabled') ?>
                                             </span>
                                         </div>
-                                        <p class="text-[12px] text-slate-500 mt-0.5">Zarządzaj regułami wykrywania zagrożeń</p>
+                                        <p class="text-[12px] text-slate-500 mt-0.5"><?= __('security.manage_threat_rules') ?></p>
                                     </div>
                                 </a>
                                 
@@ -212,12 +212,12 @@ $top_countries = array_slice($top_countries, 0, 5);
                                     </div>
                                     <div class="flex-grow min-w-0">
                                         <div class="flex items-center gap-2">
-                                            <p class="text-sm font-bold text-white">Threat Intelligence</p>
+                                            <p class="text-sm font-bold text-white"><?= __('security.threat_intel') ?></p>
                                             <span class="px-1.5 py-0.5 rounded text-[12px] font-black uppercase tracking-tighter <?= $threat_detection_enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400' ?>">
-                                                <?= $threat_detection_enabled ? 'AKTYWNE' : 'WYŁĄCZONE' ?>
+                                                <?= $threat_detection_enabled ? __('security.ips_rules_active') : __('security.ips_rules_disabled') ?>
                                             </span>
                                         </div>
-                                        <p class="text-[12px] text-slate-500 mt-0.5">Źródła danych o zagrożeniach</p>
+                                        <p class="text-[12px] text-slate-500 mt-0.5"><?= __('security.threat_sources_desc') ?></p>
                                     </div>
                                 </a>
                                 
@@ -227,12 +227,12 @@ $top_countries = array_slice($top_countries, 0, 5);
                                     </div>
                                     <div class="flex-grow min-w-0">
                                         <div class="flex items-center gap-2">
-                                            <p class="text-sm font-bold text-white">Geo-blocking</p>
+                                            <p class="text-sm font-bold text-white"><?= __('security.geo_blocking') ?></p>
                                             <span class="px-1.5 py-0.5 rounded text-[12px] font-black uppercase tracking-tighter <?= $geoblocking_enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400' ?>">
-                                                <?= $geoblocking_enabled ? 'AKTYWNE' : 'WYŁĄCZONE' ?>
+                                                <?= $geoblocking_enabled ? __('security.ips_rules_active') : __('security.ips_rules_disabled') ?>
                                             </span>
                                         </div>
-                                        <p class="text-[12px] text-slate-500 mt-0.5">Blokada ruchu z wybranych krajów<?php if (!empty($security_settings['blocked_countries'])): ?> (<?= count($security_settings['blocked_countries']) ?> krajów)<?php endif; ?></p>
+                                        <p class="text-[12px] text-slate-500 mt-0.5"><?= __('security.geo_blocking_desc') ?><?php if (!empty($security_settings['blocked_countries'])): ?> (<?= count($security_settings['blocked_countries']) ?> <?= __('security.geo_blocking_countries') ?>)<?php endif; ?></p>
                                     </div>
                                 </a>
                                 
@@ -241,8 +241,8 @@ $top_countries = array_slice($top_countries, 0, 5);
                                         <i data-lucide="list" class="w-4 h-4"></i>
                                     </div>
                                     <div class="flex-grow min-w-0">
-                                        <p class="text-sm font-bold text-white">Blacklist / Whitelist</p>
-                                        <p class="text-[12px] text-slate-500 mt-0.5">Własne listy IP i domen</p>
+                                        <p class="text-sm font-bold text-white"><?= __('security.blacklist_whitelist') ?></p>
+                                        <p class="text-[12px] text-slate-500 mt-0.5"><?= __('security.custom_ip_lists') ?></p>
                                     </div>
                                 </a>
                                 
@@ -253,8 +253,8 @@ $top_countries = array_slice($top_countries, 0, 5);
                                         <i data-lucide="bell" class="w-4 h-4"></i>
                                     </div>
                                     <div class="flex-grow min-w-0">
-                                        <p class="text-xs font-bold text-white">Alerty i powiadomienia</p>
-                                        <p class="text-[11px] text-slate-500 mt-0.5">Konfiguracja alertów bezpieczeństwa</p>
+                                        <p class="text-xs font-bold text-white"><?= __('security.alerts_notifications') ?></p>
+                                        <p class="text-[11px] text-slate-500 mt-0.5"><?= __('security.alerts_config_desc') ?></p>
                                     </div>
                                 </a>
                             </div>
@@ -275,7 +275,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                     <span class="text-xs font-black text-slate-500 uppercase tracking-widest">24h</span>
                 </div>
                 <div class="text-3xl font-black tracking-tighter"><?= $stats['threats_blocked'] ?></div>
-                <div class="text-slate-400 text-xs mt-1 font-medium italic">Zablokowane zagrożenia</div>
+                <div class="text-slate-400 text-xs mt-1 font-medium italic"><?= __('security.threats_blocked') ?></div>
             </div>
 
 
@@ -284,13 +284,13 @@ $top_countries = array_slice($top_countries, 0, 5);
                     <div class="p-2.5 bg-blue-500/10 rounded-xl text-blue-400">
                         <i data-lucide="list-checks" class="w-5 h-5"></i>
                     </div>
-                    <span class="text-xs font-black text-slate-500 uppercase tracking-widest">Aktywne</span>
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-widest"><?= __('common.active') ?></span>
                 </div>
                 <div class="text-3xl font-black tracking-tighter"><?= number_format($stats['active_rules']) ?></div>
                 <div class="flex items-center justify-between mt-2">
-                    <div class="text-slate-400 text-xs font-medium italic">Reguły bezpieczeństwa</div>
+                    <div class="text-slate-400 text-xs font-medium italic"><?= __('security.security_rules') ?></div>
                     <button class="text-xs font-black text-blue-400 uppercase tracking-widest hover:text-blue-300 transition flex items-center gap-1">
-                        Szczegóły
+                        <?= __('common.details') ?>
                         <i data-lucide="chevron-right" class="w-3 h-3"></i>
                     </button>
                 </div>
@@ -305,9 +305,9 @@ $top_countries = array_slice($top_countries, 0, 5);
                 </div>
                 <div class="text-3xl font-black tracking-tighter"><?= $stats['blocked_ips'] ?></div>
                 <div class="flex items-center justify-between mt-2">
-                    <div class="text-slate-400 text-xs font-medium italic">Zablokowane IP</div>
+                    <div class="text-slate-400 text-xs font-medium italic"><?= __('security.blocked_ips') ?></div>
                     <button class="text-xs font-black text-amber-400 uppercase tracking-widest hover:text-amber-300 transition flex items-center gap-1">
-                        Szczegóły
+                        <?= __('common.details') ?>
                         <i data-lucide="chevron-right" class="w-3 h-3"></i>
                     </button>
                 </div>
@@ -327,8 +327,8 @@ $top_countries = array_slice($top_countries, 0, 5);
                 </div>
                 
                 <div class="text-center">
-                    <p class="text-[12px] font-black <?= $stats['security_score'] >= 80 ? 'text-emerald-400' : 'text-rose-400' ?> uppercase tracking-widest mb-1">Poziom Bezpieczeństwa</p>
-                    <p class="text-slate-500 text-[12px] font-medium italic">Kliknij po szczegóły</p>
+                    <p class="text-[12px] font-black <?= $stats['security_score'] >= 80 ? 'text-emerald-400' : 'text-rose-400' ?> uppercase tracking-widest mb-1"><?= __('security.security_score') ?></p>
+                    <p class="text-slate-500 text-[12px] font-medium italic"><?= __('security.click_for_details') ?></p>
                 </div>
             </div>
         </div>
@@ -342,29 +342,29 @@ $top_countries = array_slice($top_countries, 0, 5);
                         <div class="flex items-center justify-between">
                             <h2 class="text-xl font-bold text-white flex items-center gap-2">
                                 <i data-lucide="bell" class="w-6 h-6 text-rose-400"></i>
-                                Zdarzenia bezpieczeństwa
+                                <?= __('security.events_title') ?>
                             </h2>
                             <div class="flex items-center gap-2">
                                 <button onclick="openFilterModal()" class="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition border border-white/10">
                                     <i data-lucide="filter" class="w-4 h-4 inline mr-1"></i>
-                                    Filtruj
+                                    <?= __('security.filter') ?>
                                 </button>
                                 <button onclick="exportSecurityEvents()" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">
                                     <i data-lucide="download" class="w-4 h-4 inline mr-1"></i>
-                                    Eksportuj
+                                    <?= __('security.export') ?>
                                 </button>
                             </div>
                         </div>
                         
                         <!-- Time Range Selector -->
                         <div class="flex items-center gap-2 p-3 bg-slate-900/50 rounded-2xl border border-white/5">
-                            <span class="text-[12px] font-black text-slate-500 uppercase tracking-widest mr-2">Zakres:</span>
+                            <span class="text-[12px] font-black text-slate-500 uppercase tracking-widest mr-2"><?= __('security.time_range_label') ?></span>
                             <button onclick="selectTimeRange('1h')" class="time-range-btn px-4 py-2 bg-slate-800 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="1h">1h</button>
                             <button onclick="selectTimeRange('24h')" class="time-range-btn px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold transition border border-blue-500/50 shadow-lg shadow-blue-600/20" data-range="24h">1D</button>
                             <button onclick="selectTimeRange('7d')" class="time-range-btn px-4 py-2 bg-slate-800 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl text-xs font-bold transition border border-white/10" data-range="7d">1W</button>
                             <button onclick="openDateRangePicker()" class="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition border border-white/10 flex items-center gap-2 ml-auto">
                                 <i data-lucide="calendar" class="w-4 h-4"></i>
-                                Własny
+                                <?= __('common.custom') ?>
                             </button>
                         </div>
                     </div>
@@ -375,8 +375,8 @@ $top_countries = array_slice($top_countries, 0, 5);
                             <div class="p-4 bg-emerald-500/10 text-emerald-500 rounded-full w-fit mx-auto mb-4">
                                 <i data-lucide="shield-check" class="w-8 h-8"></i>
                             </div>
-                            <p class="text-white font-bold">Brak wykrytych zagrożeń</p>
-                            <p class="text-slate-500 text-xs mt-1">Skanowanie IPS działa poprawnie. Ostatnie 24h bez incydentów.</p>
+                            <p class="text-white font-bold"><?= __('security.no_threats') ?></p>
+                            <p class="text-slate-500 text-xs mt-1"><?= __('security.no_threats_desc') ?></p>
                         </div>
                         <?php endif; ?>
 
@@ -392,7 +392,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                             };
                             const container = document.getElementById('security-events-container');
                             if (!events.length) {
-                                container.innerHTML = '<div class="text-center py-8 text-slate-500 text-xs">Brak zdarzen w wybranym zakresie</div>';
+                                container.innerHTML = '<div class="text-center py-8 text-slate-500 text-xs"><?= __('security.no_events_in_range') ?></div>';
                                 return;
                             }
                             container.innerHTML = events.map(e => {
@@ -444,13 +444,13 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <!-- Top Sources -->
                 <div class="glass-card p-6 border-amber-500/10">
                     <h3 class="text-sm font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center justify-between">
-                        Najwyższe ryzyko wg kraju
+                        <?= __('security.top_risk_by_country') ?>
                         <i data-lucide="globe" class="w-4 h-4 text-amber-400"></i>
                     </h3>
                     <div class="space-y-4">
                         <?php if (empty($top_countries)): ?>
                         <div class="text-center py-8">
-                            <p class="text-[12px] text-slate-600 italic">Brak danych o pochodzeniu ataków</p>
+                            <p class="text-[12px] text-slate-600 italic"><?= __('security.no_country_data') ?></p>
                         </div>
                         <?php else: ?>
                         <?php foreach ($top_countries as $cc => $data): ?>
@@ -474,15 +474,15 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <!-- Active Protection Pillars -->
                 <div class="glass-card p-6 overflow-hidden relative">
                     <div class="absolute -right-8 -top-8 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full"></div>
-                    <h3 class="text-sm font-black text-slate-500 uppercase tracking-widest mb-6">Filary ochrony</h3>
+                    <h3 class="text-sm font-black text-slate-500 uppercase tracking-widest mb-6"><?= __('security.protection_pillars') ?></h3>
                     <div class="space-y-4">
                         <div class="flex items-start gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
                             <div class="p-2 bg-emerald-500/10 rounded-xl text-emerald-400">
                                 <i data-lucide="check-circle-2" class="w-4 h-4"></i>
                             </div>
                             <div>
-                                <p class="text-xs font-bold text-white mb-0.5">Automatyczne blokowanie</p>
-                                <p class="text-[11px] text-slate-500 italic">Aktywne odpieranie ataków w czasie rzeczywistym</p>
+                                <p class="text-xs font-bold text-white mb-0.5"><?= __('security.auto_blocking') ?></p>
+                                <p class="text-[11px] text-slate-500 italic"><?= __('security.auto_blocking_desc') ?></p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4 p-3 rounded-2xl bg-white/5 border border-white/5">
@@ -490,8 +490,8 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 <i data-lucide="zap" class="w-4 h-4"></i>
                             </div>
                             <div>
-                                <p class="text-xs font-bold text-white mb-0.5">Analiza DPI</p>
-                                <p class="text-[11px] text-slate-500 italic">Głęboka inspekcja pakietów aktywna w WAN</p>
+                                <p class="text-xs font-bold text-white mb-0.5"><?= __('security.dpi_analysis') ?></p>
+                                <p class="text-[11px] text-slate-500 italic"><?= __('security.dpi_analysis_desc') ?></p>
                             </div>
                         </div>
                         <div class="flex items-start gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 opacity-50">
@@ -499,8 +499,8 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 <i data-lucide="shield" class="w-4 h-4"></i>
                             </div>
                             <div>
-                                <p class="text-xs font-bold text-white mb-0.5">AI Threat Defense</p>
-                                <p class="text-[11px] text-slate-500 italic">Wkrótce: uczenie maszynowe wzorców</p>
+                                <p class="text-xs font-bold text-white mb-0.5"><?= __('security.ai_threat_defense') ?></p>
+                                <p class="text-[11px] text-slate-500 italic"><?= __('security.ai_threat_defense_desc') ?></p>
                             </div>
                         </div>
                     </div>
@@ -518,7 +518,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                         <i data-lucide="calendar" class="w-6 h-6 text-blue-400"></i>
                         Wybierz zakres czasowy
                     </h2>
-                    <p class="text-slate-500 text-xs mt-1">Określ początek i koniec okresu do analizy</p>
+                    <p class="text-slate-500 text-xs mt-1"><?= __('modals.date_range_desc') ?></p>
                 </div>
                 <button type="button" onclick="closeDateRangePicker()" class="p-2 hover:bg-white/5 rounded-xl transition text-slate-500 hover:text-white">
                     <i data-lucide="x" class="w-6 h-6"></i>
@@ -528,7 +528,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <!-- Start Date -->
                     <div class="space-y-4">
-                        <h3 class="text-sm font-bold text-white uppercase tracking-widest">Data początkowa</h3>
+                        <h3 class="text-sm font-bold text-white uppercase tracking-widest"><?= __('modals.date_start') ?></h3>
                         <div class="bg-slate-900/50 rounded-2xl border border-white/5 p-4">
                             <div class="flex items-center justify-between mb-4">
                                 <button class="p-2 hover:bg-white/5 rounded-lg transition">
@@ -540,13 +540,13 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </button>
                             </div>
                             <div class="grid grid-cols-7 gap-1 mb-2">
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Pn</div>
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Wt</div>
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Śr</div>
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Cz</div>
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Pt</div>
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">So</div>
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Nd</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.mon') ?></div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.tue') ?></div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.wed') ?></div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.thu') ?></div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.fri') ?></div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.sat') ?></div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.sun') ?></div>
                             </div>
                             <div class="grid grid-cols-7 gap-1">
                                 <?php for ($i = 1; $i <= 31; $i++): ?>
@@ -556,7 +556,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 <?php endfor; ?>
                             </div>
                             <div class="mt-4 pt-4 border-t border-white/5">
-                                <label class="text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Godzina rozpoczęcia</label>
+                                <label class="text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 block"><?= __('security.start_hour') ?></label>
                                 <div class="flex items-center gap-2">
                                     <select class="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none">
                                         <?php for ($h = 0; $h < 24; $h++): ?>
@@ -576,7 +576,7 @@ $top_countries = array_slice($top_countries, 0, 5);
 
                     <!-- End Date -->
                     <div class="space-y-4">
-                        <h3 class="text-sm font-bold text-white uppercase tracking-widest">Data końcowa</h3>
+                        <h3 class="text-sm font-bold text-white uppercase tracking-widest"><?= __('modals.date_end') ?></h3>
                         <div class="bg-slate-900/50 rounded-2xl border border-white/5 p-4">
                             <div class="flex items-center justify-between mb-4">
                                 <button class="p-2 hover:bg-white/5 rounded-lg transition">
@@ -588,13 +588,13 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 </button>
                             </div>
                             <div class="grid grid-cols-7 gap-1 mb-2">
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Pn</div>
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Wt</div>
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Śr</div>
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Cz</div>
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Pt</div>
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">So</div>
-                                <div class="text-center text-[11px] font-black text-slate-600 uppercase">Nd</div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.mon') ?></div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.tue') ?></div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.wed') ?></div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.thu') ?></div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.fri') ?></div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.sat') ?></div>
+                                <div class="text-center text-[11px] font-black text-slate-600 uppercase"><?= __('filters.sun') ?></div>
                             </div>
                             <div class="grid grid-cols-7 gap-1">
                                 <?php for ($i = 1; $i <= 28; $i++): ?>
@@ -604,7 +604,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 <?php endfor; ?>
                             </div>
                             <div class="mt-4 pt-4 border-t border-white/5">
-                                <label class="text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Godzina zakończenia</label>
+                                <label class="text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2 block"><?= __('security.end_hour') ?></label>
                                 <div class="flex items-center gap-2">
                                     <select class="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none">
                                         <?php for ($h = 0; $h < 24; $h++): ?>
@@ -625,10 +625,10 @@ $top_countries = array_slice($top_countries, 0, 5);
             </div>
             <div class="modal-footer p-6 border-t border-white/5 bg-slate-900/30 flex justify-end gap-3">
                 <button type="button" onclick="closeDateRangePicker()" class="px-8 py-2.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-bold uppercase tracking-widest transition border border-white/10">
-                    Anuluj
+                    <?= __('common.cancel') ?>
                 </button>
                 <button type="button" onclick="applyDateRange()" class="px-8 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition shadow-lg shadow-blue-600/20">
-                    Zastosuj
+                    <?= __('common.apply') ?>
                 </button>
             </div>
         </div>
@@ -690,9 +690,9 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <div>
                     <h2 class="text-xl font-bold flex items-center gap-2 text-white">
                         <i data-lucide="ban" class="w-6 h-6 text-amber-400"></i>
-                        Zablokowane adresy IP
+                        <?= __('security.blocked_ips_modal_title') ?>
                     </h2>
-                    <p class="text-slate-500 text-xs mt-1">Lista adresów IP zablokowanych przez system bezpieczeństwa</p>
+                    <p class="text-slate-500 text-xs mt-1"><?= __('security.blocked_ips_modal_desc') ?></p>
                 </div>
                 <button type="button" onclick="closeBlockedIPsModal()" class="p-2 hover:bg-white/5 rounded-xl transition text-slate-500 hover:text-white">
                     <i data-lucide="x" class="w-6 h-6"></i>
@@ -704,7 +704,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <div class="mb-6">
                     <div class="relative">
                         <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
-                        <input type="text" placeholder="Szukaj adresu IP, kraju lub powodu blokady..." 
+                        <input type="text" placeholder="<?= __('common.search') ?>"
                                class="w-full pl-12 pr-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition">
                     </div>
                 </div>
@@ -712,12 +712,12 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <!-- Pagination Controls -->
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-500 font-bold uppercase tracking-widest">Pokaż:</span>
+                        <span class="text-xs text-slate-500 font-bold uppercase tracking-widest"><?= __('common.show_count') ?></span>
                         <div class="flex gap-1 bg-slate-900/50 p-1 rounded-xl border border-white/5">
                             <button onclick="setBlockedIPsPageSize(20)" class="blocked-ips-page-btn px-3 py-1.5 rounded-lg text-xs font-bold transition active">20</button>
                             <button onclick="setBlockedIPsPageSize(50)" class="blocked-ips-page-btn px-3 py-1.5 rounded-lg text-xs font-bold transition">50</button>
                             <button onclick="setBlockedIPsPageSize(100)" class="blocked-ips-page-btn px-3 py-1.5 rounded-lg text-xs font-bold transition">100</button>
-                            <button onclick="setBlockedIPsPageSize(-1)" class="blocked-ips-page-btn px-3 py-1.5 rounded-lg text-xs font-bold transition">Wszystko</button>
+                            <button onclick="setBlockedIPsPageSize(-1)" class="blocked-ips-page-btn px-3 py-1.5 rounded-lg text-xs font-bold transition"><?= __('common.everything') ?></button>
                         </div>
                         
                         <div id="blockedIPsPageNumbers" class="flex gap-1 ml-4 block p-1 rounded-xl border border-white/5 bg-slate-900/50">
@@ -725,7 +725,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                         </div>
                     </div>
                     <div class="text-xs text-slate-500 font-mono">
-                        Wyświetlanie <span id="blockedIPsRangeStart" class="text-amber-400 font-bold">1</span>-<span id="blockedIPsRangeEnd" class="text-amber-400 font-bold"><?= min($blocked_ips, 20) ?></span> z <span class="text-white font-bold"><?= $blocked_ips ?></span>
+                        <?= __('common.displaying') ?> <span id="blockedIPsRangeStart" class="text-amber-400 font-bold">1</span>-<span id="blockedIPsRangeEnd" class="text-amber-400 font-bold"><?= min($blocked_ips, 20) ?></span> <?= __('common.of') ?> <span class="text-white font-bold"><?= $blocked_ips ?></span>
                     </div>
                 </div>
                 
@@ -734,11 +734,11 @@ $top_countries = array_slice($top_countries, 0, 5);
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-slate-950/30 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
-                                <th class="px-6 py-4">Kraj</th>
-                                <th class="px-6 py-4">Adres IP</th>
-                                <th class="px-6 py-4">Typ zagrożenia</th>
-                                <th class="px-6 py-4">Powód blokady</th>
-                                <th class="px-6 py-4 text-right">Zablokowano</th>
+                                <th class="px-6 py-4"><?= __('table_headers.country') ?></th>
+                                <th class="px-6 py-4"><?= __('common.ip_address') ?></th>
+                                <th class="px-6 py-4"><?= __('table_headers.threat_type') ?></th>
+                                <th class="px-6 py-4"><?= __('table_headers.block_reason') ?></th>
+                                <th class="px-6 py-4 text-right"><?= __('security.blocked_at_col') ?></th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-white/[0.02]">
@@ -766,9 +766,9 @@ $top_countries = array_slice($top_countries, 0, 5);
                                         <div class="p-4 bg-slate-900/50 rounded-full">
                                             <i data-lucide="shield-check" class="w-8 h-8 text-emerald-400"></i>
                                         </div>
-                                        <div class="text-white font-bold">Brak zablokowanych adresów</div>
+                                        <div class="text-white font-bold"><?= __('security.no_blocked_addresses') ?></div>
                                         <div class="text-slate-500 text-xs text-center max-w-[280px]">
-                                            System IPS nie zarejestrował obecnie żadnych aktywnych blokad adresów IP.
+                                            <?= __('security.no_blocked_ips_desc') ?>
                                         </div>
                                     </div>
                                 </td>
@@ -1156,10 +1156,10 @@ $top_countries = array_slice($top_countries, 0, 5);
             
             <div class="modal-footer p-6 border-t border-white/5 bg-slate-900/30 flex justify-between items-center">
                 <p class="text-[12px] text-slate-500 font-bold uppercase tracking-widest">
-                    Łącznie zablokowanych: <span class="text-amber-400">34 adresy IP</span>
+                    <?= __('common.total_blocked') ?>: <span class="text-amber-400"><?= $blocked_ips ?> <?= __('security.blocked_ips') ?></span>
                 </p>
                 <button type="button" onclick="closeBlockedIPsModal()" class="px-8 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-[12px] font-black uppercase tracking-widest transition shadow-lg shadow-amber-600/20">
-                    Zamknij
+                    <?= __('common.close') ?>
                 </button>
             </div>
         </div>
@@ -1172,9 +1172,9 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <div>
                     <h2 class="text-xl font-bold flex items-center gap-2 text-white">
                         <i data-lucide="list-checks" class="w-6 h-6 text-blue-400"></i>
-                        Aktywne reguły bezpieczeństwa
+                        <?= __('security.active_security_rules_title') ?>
                     </h2>
-                    <p class="text-slate-500 text-xs mt-1">System <?= $ips_enabled ? 'wykrywania i zapobiegania włamaniom (IPS/IDS)' : '<span class="text-red-400 font-bold">WYŁĄCZONY</span> - Włącz IPS w ustawieniach UniFi' ?></p>
+                    <p class="text-slate-500 text-xs mt-1">System <?= $ips_enabled ? __('security.ips_system_label') : '<span class="text-red-400 font-bold">' . __('security.ips_disabled_label') . '</span>' ?></p>
                 </div>
                 <button type="button" onclick="closeSecurityRulesModal()" class="p-2 hover:bg-white/5 rounded-xl transition text-slate-500 hover:text-white">
                     <i data-lucide="x" class="w-6 h-6"></i>
@@ -1185,28 +1185,28 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <!-- Filter Tabs -->
                 <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
                     <button class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        Wszystkie (<?= number_format($active_rules) ?>)
+                        <?= __('security.all_rules') ?> (<?= number_format($active_rules) ?>)
                     </button>
                     <button class="px-4 py-2 bg-slate-900/50 text-slate-400 hover:text-white rounded-xl text-xs font-bold uppercase tracking-widest transition whitespace-nowrap">
-                        Krytyczne (<?= $ips_enabled ? number_format(round($active_rules * 0.12)) : '0' ?>)
+                        <?= __('security.critical_rules') ?> (<?= $ips_enabled ? number_format(round($active_rules * 0.12)) : '0' ?>)
                     </button>
                     <button class="px-4 py-2 bg-slate-900/50 text-slate-400 hover:text-white rounded-xl text-xs font-bold uppercase tracking-widest transition whitespace-nowrap">
-                        Wysokie (<?= $ips_enabled ? number_format(round($active_rules * 0.42)) : '0' ?>)
+                        <?= __('security.high_rules') ?> (<?= $ips_enabled ? number_format(round($active_rules * 0.42)) : '0' ?>)
                     </button>
                     <button class="px-4 py-2 bg-slate-900/50 text-slate-400 hover:text-white rounded-xl text-xs font-bold uppercase tracking-widest transition whitespace-nowrap">
-                        Średnie (<?= $ips_enabled ? number_format(round($active_rules * 0.46)) : '0' ?>)
+                        <?= __('security.medium_rules') ?> (<?= $ips_enabled ? number_format(round($active_rules * 0.46)) : '0' ?>)
                     </button>
                 </div>
                 
                 <!-- Pagination Controls -->
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-500 font-bold uppercase tracking-widest">Pokaż:</span>
+                        <span class="text-xs text-slate-500 font-bold uppercase tracking-widest"><?= __('common.show_count') ?></span>
                         <div class="flex gap-1 bg-slate-900/50 p-1 rounded-xl border border-white/5">
                             <button onclick="setSecurityRulesPageSize(20)" class="security-rules-page-btn px-3 py-1.5 rounded-lg text-xs font-bold transition active">20</button>
                             <button onclick="setSecurityRulesPageSize(50)" class="security-rules-page-btn px-3 py-1.5 rounded-lg text-xs font-bold transition">50</button>
                             <button onclick="setSecurityRulesPageSize(100)" class="security-rules-page-btn px-3 py-1.5 rounded-lg text-xs font-bold transition">100</button>
-                            <button onclick="setSecurityRulesPageSize(-1)" class="security-rules-page-btn px-3 py-1.5 rounded-lg text-xs font-bold transition">Wszystko</button>
+                            <button onclick="setSecurityRulesPageSize(-1)" class="security-rules-page-btn px-3 py-1.5 rounded-lg text-xs font-bold transition"><?= __('common.everything') ?></button>
                         </div>
 
                         <div id="securityRulesPageNumbers" class="flex gap-1 ml-4 block p-1 rounded-xl border border-white/5 bg-slate-900/50">
@@ -1214,7 +1214,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                         </div>
                     </div>
                     <div class="text-xs text-slate-500 font-mono">
-                        Wyświetlanie <span id="securityRulesRangeStart" class="text-blue-400 font-bold">1</span>-<span id="securityRulesRangeEnd" class="text-blue-400 font-bold"><?= min($active_rules, 20) ?></span> z <span class="text-white font-bold"><?= number_format($active_rules) ?></span>
+                        <?= __('common.displaying') ?> <span id="securityRulesRangeStart" class="text-blue-400 font-bold">1</span>-<span id="securityRulesRangeEnd" class="text-blue-400 font-bold"><?= min($active_rules, 20) ?></span> <?= __('common.of') ?> <span class="text-white font-bold"><?= number_format($active_rules) ?></span>
                     </div>
                 </div>
                 
@@ -1224,11 +1224,11 @@ $top_countries = array_slice($top_countries, 0, 5);
                         <thead>
                             <tr class="bg-slate-950/30 text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
                                 <th class="px-6 py-4">ID</th>
-                                <th class="px-6 py-4">Nazwa reguły</th>
-                                <th class="px-6 py-4">Kategoria</th>
-                                <th class="px-6 py-4">Priorytet</th>
-                                <th class="px-6 py-4">Akcja</th>
-                                <th class="px-6 py-4 text-right">Status</th>
+                                <th class="px-6 py-4"><?= __('security.rule_name_col') ?></th>
+                                <th class="px-6 py-4"><?= __('table_headers.category') ?></th>
+                                <th class="px-6 py-4"><?= __('table_headers.priority') ?></th>
+                                <th class="px-6 py-4"><?= __('common.action') ?></th>
+                                <th class="px-6 py-4 text-right"><?= __('common.status') ?></th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-white/[0.02]">
@@ -1269,9 +1269,9 @@ $top_countries = array_slice($top_countries, 0, 5);
                                         <div class="p-4 bg-slate-900/50 rounded-full">
                                             <i data-lucide="<?= $ips_enabled ? 'info' : 'shield-off' ?>" class="w-8 h-8 text-<?= $ips_enabled ? 'blue' : 'red' ?>-400"></i>
                                         </div>
-                                        <div class="text-white font-bold"><?= $ips_enabled ? 'Brak zdefiniowanych reguł' : 'Ochrona IPS wyłączona' ?></div>
+                                        <div class="text-white font-bold"><?= $ips_enabled ? __('security.no_rules_defined') : __('security.ips_protection_disabled') ?></div>
                                         <div class="text-slate-500 text-xs text-center max-w-[280px]">
-                                            <?= $ips_enabled ? 'Nie znaleziono żadnych reguł bezpieczeństwa w wybranej kategorii.' : 'Reguły ochrony przed włamaniami są nieaktywne, ponieważ system IPS/IDS jest obecnie wyłączony w ustawieniach UniFi.' ?>
+                                            <?= $ips_enabled ? __('security.no_rules_in_category') : __('security.ips_disabled_rules_desc') ?>
                                         </div>
                                     </div>
                                 </td>
@@ -1284,10 +1284,10 @@ $top_countries = array_slice($top_countries, 0, 5);
             
             <div class="modal-footer p-6 border-t border-white/5 bg-slate-900/30 flex justify-between items-center">
                 <p class="text-[12px] text-slate-500 font-bold uppercase tracking-widest">
-                    Aktywnych reguł: <span class="text-blue-400"><?= number_format($active_rules) ?></span> | Krytycznych: <span class="text-red-400"><?= $ips_enabled ? number_format(round($active_rules * 0.12)) : '0' ?></span>
+                    <?= __('common.active_count') ?>: <span class="text-blue-400"><?= number_format($active_rules) ?></span> | <?= __('common.critical_count') ?>: <span class="text-red-400"><?= $ips_enabled ? number_format(round($active_rules * 0.12)) : '0' ?></span>
                 </p>
                 <button type="button" onclick="closeSecurityRulesModal()" class="px-8 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[12px] font-black uppercase tracking-widest transition shadow-lg shadow-blue-600/20">
-                    Zamknij
+                    <?= __('common.close') ?>
                 </button>
             </div>
         </div>
@@ -1440,9 +1440,9 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <div>
                     <h2 class="text-xl font-bold flex items-center gap-2 text-white">
                         <i data-lucide="shield-check" class="w-6 h-6 text-emerald-400"></i>
-                        Szczegółowa ocena bezpieczeństwa
+                        <?= __('security.security_score_title') ?>
                     </h2>
-                    <p class="text-slate-500 text-xs mt-1">Rozbicie punktacji systemu zabezpieczeń</p>
+                    <p class="text-slate-500 text-xs mt-1"><?= __('security.score_breakdown_desc') ?></p>
                 </div>
                 <button type="button" onclick="closeSecurityScoreModal()" class="p-2 hover:bg-white/5 rounded-xl transition text-slate-500 hover:text-white">
                     <i data-lucide="x" class="w-6 h-6"></i>
@@ -1475,17 +1475,17 @@ $top_countries = array_slice($top_countries, 0, 5);
                 
                 <!-- Score Breakdown -->
                 <div class="space-y-4">
-                    <h3 class="text-sm font-bold text-white uppercase tracking-widest mb-4">Czynniki wpływające na ocenę:</h3>
+                    <h3 class="text-sm font-bold text-white uppercase tracking-widest mb-4"><?= __('security.score_factors') ?></h3>
                     
                     <!-- Factor 1: IPS/IDS -->
                     <div class="bg-slate-900/50 rounded-xl p-4 border border-white/5">
                         <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="<?= $ips_enabled ? 'check-circle' : 'x-circle' ?>" class="w-5 h-5 <?= $ips_enabled ? 'text-emerald-400' : 'text-red-400' ?>"></i>
-                                <span class="text-sm font-bold text-white">System IPS/IDS</span>
+                                <span class="text-sm font-bold text-white"><?= __('security.ips_ids_label') ?></span>
                             </div>
                             <span class="text-xs font-mono <?= $ips_enabled ? 'text-emerald-400' : 'text-red-400' ?>">
-                                <?= $ips_enabled ? '+20' : '0' ?> pkt
+                                <?= $ips_enabled ? '+20' : '0' ?> <?= __('security.points') ?>
                             </span>
                         </div>
                         <div class="w-full bg-slate-800 rounded-full h-2">
@@ -1505,11 +1505,11 @@ $top_countries = array_slice($top_countries, 0, 5);
                         <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="<?= $active_rules >= 30 ? 'check-circle' : 'alert-circle' ?>" class="w-5 h-5 <?= $active_rules >= 30 ? 'text-emerald-400' : 'text-amber-400' ?>"></i>
-                                <span class="text-sm font-bold text-white">Pokrycie reguł firewall i Flows</span>
-                                <span class="text-xs text-slate-500 font-mono">(<?= number_format($active_rules) ?> reguł)</span>
+                                <span class="text-sm font-bold text-white"><?= __('security.firewall_coverage') ?></span>
+                                <span class="text-xs text-slate-500 font-mono">(<?= number_format($active_rules) ?> <?= __('security.rules_count_label') ?>)</span>
                             </div>
                             <span class="text-xs font-mono <?= $active_rules >= 30 ? 'text-emerald-400' : 'text-amber-400' ?>">
-                                <?= ($active_rules >= 30) ? '+15' : '+'.$rules_score ?> pkt
+                                <?= ($active_rules >= 30) ? '+15' : '+'.$rules_score ?> <?= __('security.points') ?>
                             </span>
                         </div>
                         <div class="w-full bg-slate-800 rounded-full h-2">
@@ -1522,10 +1522,10 @@ $top_countries = array_slice($top_countries, 0, 5);
                         <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="<?= $threat_detection_enabled ? 'check-circle' : 'x-circle' ?>" class="w-5 h-5 <?= $threat_detection_enabled ? 'text-emerald-400' : 'text-red-400' ?>"></i>
-                                <span class="text-sm font-bold text-white">Wykrywanie zagrożeń</span>
+                                <span class="text-sm font-bold text-white"><?= __('security.threat_detection_label') ?></span>
                             </div>
                             <span class="text-xs font-mono <?= $threat_detection_enabled ? 'text-emerald-400' : 'text-red-400' ?>">
-                                <?= $threat_detection_enabled ? '+15' : '0' ?> pkt
+                                <?= $threat_detection_enabled ? '+15' : '0' ?> <?= __('security.points') ?>
                             </span>
                         </div>
                         <div class="w-full bg-slate-800 rounded-full h-2">
@@ -1543,11 +1543,11 @@ $top_countries = array_slice($top_countries, 0, 5);
                         <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="<?= $threat_score >= 15 ? 'check-circle' : 'alert-triangle' ?>" class="w-5 h-5 <?= $threat_score >= 15 ? 'text-emerald-400' : 'text-amber-400' ?>"></i>
-                                <span class="text-sm font-bold text-white">Stosunek zablokowanych zagrożeń</span>
-                                <span class="text-xs text-slate-500 font-mono">(<?= $threats_blocked ?> blokad)</span>
+                                <span class="text-sm font-bold text-white"><?= __('security.blocked_ratio') ?></span>
+                                <span class="text-xs text-slate-500 font-mono">(<?= $threats_blocked ?> <?= __('security.blocks_count_label') ?>)</span>
                             </div>
                             <span class="text-xs font-mono <?= $threat_score >= 15 ? 'text-emerald-400' : 'text-amber-400' ?>">
-                                +<?= $threat_score ?> pkt
+                                +<?= $threat_score ?> <?= __('security.points') ?>
                             </span>
                         </div>
                         <div class="w-full bg-slate-800 rounded-full h-2">
@@ -1560,10 +1560,10 @@ $top_countries = array_slice($top_countries, 0, 5);
                         <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="<?= $monitoring_active ? 'check-circle' : 'x-circle' ?>" class="w-5 h-5 <?= $monitoring_active ? 'text-emerald-400' : 'text-red-400' ?>"></i>
-                                <span class="text-sm font-bold text-white">Monitoring aktywny</span>
+                                <span class="text-sm font-bold text-white"><?= __('security.monitoring_active_label') ?></span>
                             </div>
                             <span class="text-xs font-mono <?= $monitoring_active ? 'text-emerald-400' : 'text-red-400' ?>">
-                                <?= $monitoring_active ? '+10' : '0' ?> pkt
+                                <?= $monitoring_active ? '+10' : '0' ?> <?= __('security.points') ?>
                             </span>
                         </div>
                         <div class="w-full bg-slate-800 rounded-full h-2">
@@ -1576,10 +1576,10 @@ $top_countries = array_slice($top_countries, 0, 5);
                         <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="<?= $vpn_secure ? 'check-circle' : 'x-circle' ?>" class="w-5 h-5 <?= $vpn_secure ? 'text-emerald-400' : 'text-red-400' ?>"></i>
-                                <span class="text-sm font-bold text-white">Bezpieczeństwo VPN</span>
+                                <span class="text-sm font-bold text-white"><?= __('security.vpn_security') ?></span>
                             </div>
                             <span class="text-xs font-mono <?= $vpn_secure ? 'text-emerald-400' : 'text-red-400' ?>">
-                                <?= $vpn_secure ? '+10' : '0' ?> pkt
+                                <?= $vpn_secure ? '+10' : '0' ?> <?= __('security.points') ?>
                             </span>
                         </div>
                         <div class="w-full bg-slate-800 rounded-full h-2">
@@ -1598,11 +1598,11 @@ $top_countries = array_slice($top_countries, 0, 5);
                         <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="<?= $event_penalty == 0 ? 'check-circle' : 'alert-triangle' ?>" class="w-5 h-5 <?= $event_penalty == 0 ? 'text-emerald-400' : 'text-red-400' ?>"></i>
-                                <span class="text-sm font-bold text-white">Krytyczne zdarzenia (ostatnia godzina)</span>
-                                <span class="text-xs text-slate-500 font-mono">(<?= $critical_events_count ?> zdarzeń)</span>
+                                <span class="text-sm font-bold text-white"><?= __('security.critical_events_label') ?></span>
+                                <span class="text-xs text-slate-500 font-mono">(<?= $critical_events_count ?> <?= __('security.events_count_label') ?>)</span>
                             </div>
                             <span class="text-xs font-mono <?= $event_penalty == 0 ? 'text-emerald-400' : 'text-red-400' ?>">
-                                <?= $event_penalty > 0 ? '-' : '+' ?><?= $event_penalty ?> pkt
+                                <?= $event_penalty > 0 ? '-' : '+' ?><?= $event_penalty ?> <?= __('security.points') ?>
                             </span>
                         </div>
                         <div class="w-full bg-slate-800 rounded-full h-2">
@@ -1614,10 +1614,10 @@ $top_countries = array_slice($top_countries, 0, 5);
             
             <div class="modal-footer p-6 border-t border-white/5 bg-slate-900/30 flex justify-between items-center">
                 <p class="text-[12px] text-slate-500 font-bold uppercase tracking-widest">
-                    Ocena końcowa: <span class="text-emerald-400 text-lg"><?= $stats['security_score'] ?>/100</span>
+                    <?= __('security.final_score') ?>: <span class="text-emerald-400 text-lg"><?= $stats['security_score'] ?>/100</span>
                 </p>
                 <button type="button" onclick="closeSecurityScoreModal()" class="px-8 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[12px] font-black uppercase tracking-widest transition shadow-lg shadow-emerald-600/20">
-                    Zamknij
+                    <?= __('common.close') ?>
                 </button>
             </div>
         </div>
@@ -1637,9 +1637,9 @@ $top_countries = array_slice($top_countries, 0, 5);
         // === Export security events to CSV ===
         function exportSecurityEvents() {
             const events = securityEventsData || [];
-            if (!events.length) { if (typeof showToast !== 'undefined') showToast('Brak danych do eksportu', 'error'); return; }
+            if (!events.length) { if (typeof showToast !== 'undefined') showToast('<?= __('common.no_data') ?>', 'error'); return; }
 
-            let csv = 'Czas,Severity,Sygnatura,IP Zrodlowe,IP Docelowe,Kraj,Akcja\n';
+            let csv = '<?= __('common.time') ?>,Severity,<?= __('table_headers.threat_type') ?>,IP <?= __('security.detected_action') ?>,IP <?= __('common.ip_address') ?>,<?= __('table_headers.country') ?>,<?= __('common.action') ?>\n';
             events.forEach(e => {
                 csv += `"${e.time}","${e.severity}","${(e.signature||'').replace(/"/g,'""')}","${e.src_ip}","${e.dst_ip||''}","${e.country_code||''}","${e.action||''}"\n`;
             });
@@ -1651,7 +1651,7 @@ $top_countries = array_slice($top_countries, 0, 5);
             a.download = 'security_events_' + new Date().toISOString().slice(0,10) + '.csv';
             a.click();
             URL.revokeObjectURL(url);
-            if (typeof showToast !== 'undefined') showToast('Eksport CSV gotowy', 'success');
+            if (typeof showToast !== 'undefined') showToast('<?= __('security.export_csv_ready') ?>', 'success');
         }
 
         // === Filter modal ===
@@ -1685,25 +1685,25 @@ $top_countries = array_slice($top_countries, 0, 5);
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-lg font-bold text-white flex items-center gap-3">
                     <i data-lucide="filter" class="w-5 h-5 text-blue-400"></i>
-                    Filtruj zdarzenia
+                    <?= __('security.filter_events_title') ?>
                 </h2>
                 <button onclick="closeFilterModal()" class="text-slate-500 hover:text-white transition">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
             <div class="space-y-2">
-                <button onclick="applyFilter('all')" class="w-full px-4 py-3 bg-slate-800/50 hover:bg-white/5 text-slate-300 rounded-xl text-sm font-bold transition border border-white/5 text-left">Wszystkie</button>
+                <button onclick="applyFilter('all')" class="w-full px-4 py-3 bg-slate-800/50 hover:bg-white/5 text-slate-300 rounded-xl text-sm font-bold transition border border-white/5 text-left"><?= __('security.all_rules') ?></button>
                 <button onclick="applyFilter('critical')" class="w-full px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-sm font-bold transition border border-red-500/20 text-left flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-red-500"></span> Krytyczne
+                    <span class="w-2 h-2 rounded-full bg-red-500"></span> <?= __('security.critical_rules') ?>
                 </button>
                 <button onclick="applyFilter('high')" class="w-full px-4 py-3 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-xl text-sm font-bold transition border border-orange-500/20 text-left flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-orange-500"></span> Wysokie
+                    <span class="w-2 h-2 rounded-full bg-orange-500"></span> <?= __('security.high_rules') ?>
                 </button>
                 <button onclick="applyFilter('medium')" class="w-full px-4 py-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl text-sm font-bold transition border border-amber-500/20 text-left flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> Srednie
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> <?= __('security.medium_rules') ?>
                 </button>
                 <button onclick="applyFilter('low')" class="w-full px-4 py-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-xl text-sm font-bold transition border border-blue-500/20 text-left flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-blue-500"></span> Niskie
+                    <span class="w-2 h-2 rounded-full bg-blue-500"></span> <?= __('security.low_rules') ?>
                 </button>
             </div>
         </div>
@@ -1717,20 +1717,20 @@ $top_countries = array_slice($top_countries, 0, 5);
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-white flex items-center gap-3">
                 <i data-lucide="shield-off" class="w-6 h-6 text-amber-400"></i>
-                Ignorowane adresy IP
+                <?= __('security.ignored_ip') ?>
             </h2>
             <button onclick="closeIgnoreModal()" class="text-slate-500 hover:text-white transition">
                 <i data-lucide="x" class="w-6 h-6"></i>
             </button>
         </div>
         <div class="flex gap-3 mb-6">
-            <input type="text" id="ignore-ip" placeholder="Adres IP" class="flex-1 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50">
-            <input type="text" id="ignore-label" placeholder="Etykieta (opcjonalnie)" class="flex-1 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50">
+            <input type="text" id="ignore-ip" placeholder="<?= __('security.ip_placeholder') ?>" class="flex-1 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50">
+            <input type="text" id="ignore-label" placeholder="<?= __('security.label_placeholder') ?>" class="flex-1 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500/50">
             <button onclick="addIgnoreIP()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-bold transition">
                 <i data-lucide="plus" class="w-4 h-4"></i>
             </button>
         </div>
-        <div id="ignore-list-body"><div class="text-center text-slate-500 py-4">Ladowanie...</div></div>
+        <div id="ignore-list-body"><div class="text-center text-slate-500 py-4"><?= __('common.loading') ?></div></div>
     </div>
 </div>
 
@@ -1740,7 +1740,7 @@ $top_countries = array_slice($top_countries, 0, 5);
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-white flex items-center gap-3">
                 <i data-lucide="shield" class="w-6 h-6 text-rose-400"></i>
-                Reguły IPS
+                <?= __('security.ips_rules') ?>
             </h2>
             <button onclick="closeSecurityRulesModal()" class="text-slate-500 hover:text-white transition">
                 <i data-lucide="x" class="w-6 h-6"></i>
@@ -1748,17 +1748,17 @@ $top_countries = array_slice($top_countries, 0, 5);
         </div>
         <?php $rules = $security_settings['rule_list'] ?? []; ?>
         <?php if (empty($rules)): ?>
-            <div class="text-center text-slate-500 py-8">Brak skonfigurowanych reguł IPS</div>
+            <div class="text-center text-slate-500 py-8"><?= __('security.no_rules_defined') ?></div>
         <?php else: ?>
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="text-xs text-slate-500 uppercase border-b border-white/5">
-                        <th class="text-left py-3 px-3">Nazwa</th>
-                        <th class="text-left py-3 px-3">Kategoria</th>
-                        <th class="text-left py-3 px-3">Priorytet</th>
-                        <th class="text-left py-3 px-3">Akcja</th>
-                        <th class="text-left py-3 px-3">Status</th>
+                        <th class="text-left py-3 px-3"><?= __('common.name') ?></th>
+                        <th class="text-left py-3 px-3"><?= __('table_headers.category') ?></th>
+                        <th class="text-left py-3 px-3"><?= __('table_headers.priority') ?></th>
+                        <th class="text-left py-3 px-3"><?= __('common.action') ?></th>
+                        <th class="text-left py-3 px-3"><?= __('common.status') ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1783,7 +1783,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                         <td class="py-3 px-3">
                             <?php $enabled = $rule['enabled'] ?? false; ?>
                             <span class="px-2 py-0.5 rounded text-[11px] font-bold uppercase <?= $enabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500' ?>">
-                                <?= $enabled ? 'AKTYWNA' : 'WYŁĄCZONA' ?>
+                                <?= $enabled ? __('security.ips_rules_active') : __('security.ips_rules_disabled') ?>
                             </span>
                         </td>
                     </tr>
@@ -1801,7 +1801,7 @@ $top_countries = array_slice($top_countries, 0, 5);
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-white flex items-center gap-3">
                 <i data-lucide="database" class="w-6 h-6 text-blue-400"></i>
-                Threat Intelligence
+                <?= __('security.threat_intel') ?>
             </h2>
             <button onclick="closeThreatIntelModal()" class="text-slate-500 hover:text-white transition">
                 <i data-lucide="x" class="w-6 h-6"></i>
@@ -1822,7 +1822,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                 </div>
                 <?php $adBlock = $security_settings['ad_blocking_enabled'] ?? false; ?>
                 <span class="px-2 py-0.5 rounded text-sm font-bold uppercase <?= $adBlock ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400' ?>">
-                    <?= $adBlock ? 'Włączony' : 'Wyłączony' ?>
+                    <?= $adBlock ? __('common.enabled') : __('common.disabled') ?>
                 </span>
             </div>
             <div class="bg-slate-800/50 border border-white/5 rounded-2xl p-5">
@@ -1832,7 +1832,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                 </div>
                 <?php $honeypotEnabled = $security_settings['honeypot_enabled'] ?? false; ?>
                 <span class="px-2 py-0.5 rounded text-sm font-bold uppercase <?= $honeypotEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400' ?>">
-                    <?= $honeypotEnabled ? 'Aktywny' : 'Wyłączony' ?>
+                    <?= $honeypotEnabled ? __('security.honeypot_active') : __('common.disabled') ?>
                 </span>
             </div>
             <div class="bg-slate-800/50 border border-white/5 rounded-2xl p-5">
@@ -1842,7 +1842,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                 </div>
                 <?php $dnsFilter = $security_settings['dns_filtering_enabled'] ?? false; ?>
                 <span class="px-2 py-0.5 rounded text-sm font-bold uppercase <?= $dnsFilter ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400' ?>">
-                    <?= $dnsFilter ? 'Włączony' : 'Wyłączony' ?>
+                    <?= $dnsFilter ? __('common.enabled') : __('common.disabled') ?>
                 </span>
             </div>
         </div>
@@ -1855,7 +1855,7 @@ $top_countries = array_slice($top_countries, 0, 5);
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-white flex items-center gap-3">
                 <i data-lucide="globe" class="w-6 h-6 text-purple-400"></i>
-                Geo-blocking
+                <?= __('security.geo_blocking') ?>
             </h2>
             <button onclick="closeGeoBlockModal()" class="text-slate-500 hover:text-white transition">
                 <i data-lucide="x" class="w-6 h-6"></i>
@@ -1877,8 +1877,8 @@ $top_countries = array_slice($top_countries, 0, 5);
                 <div class="bg-slate-800/50 border border-white/5 rounded-2xl p-5">
                     <div class="flex items-center gap-3 mb-4">
                         <span class="px-2 py-0.5 rounded text-xs font-black uppercase <?= $dirColor ?>"><?= $direction ?></span>
-                        <span class="text-sm font-bold text-white"><?= htmlspecialchars($rule['name'] ?? 'Reguła') ?></span>
-                        <span class="text-xs text-slate-500"><?= count($countries) ?> krajów</span>
+                        <span class="text-sm font-bold text-white"><?= htmlspecialchars($rule['name'] ?? __('security.fallback_rule_name')) ?></span>
+                        <span class="text-xs text-slate-500"><?= count($countries) ?> <?= __('security.geo_blocking_countries') ?></span>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <?php foreach ($countries as $cc):
@@ -1902,8 +1902,8 @@ $top_countries = array_slice($top_countries, 0, 5);
             <div class="bg-slate-800/50 border border-white/5 rounded-2xl p-5">
                 <div class="flex items-center gap-3 mb-4">
                     <span class="px-2 py-0.5 rounded text-xs font-black uppercase bg-rose-500/20 text-rose-400">IN</span>
-                    <span class="text-sm font-bold text-white">Zablokowane kraje</span>
-                    <span class="text-xs text-slate-500"><?= count($blocked_countries_list) ?> krajów</span>
+                    <span class="text-sm font-bold text-white"><?= __('security.blocked_countries_label') ?></span>
+                    <span class="text-xs text-slate-500"><?= count($blocked_countries_list) ?> <?= __('security.geo_blocking_countries') ?></span>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <?php foreach ($blocked_countries_list as $cc):
@@ -1918,7 +1918,7 @@ $top_countries = array_slice($top_countries, 0, 5);
                 </div>
             </div>
         <?php else: ?>
-            <div class="text-center text-slate-500 py-8">Brak skonfigurowanych reguł geo-blockingu</div>
+            <div class="text-center text-slate-500 py-8"><?= __('security.no_country_data') ?></div>
         <?php endif; ?>
     </div>
 </div>
@@ -1967,10 +1967,10 @@ async function loadIgnoreList() {
     const list = json.data || [];
     const body = document.getElementById('ignore-list-body');
     if (list.length === 0) {
-        body.innerHTML = '<div class="text-center text-slate-500 py-4">Brak ignorowanych adresow IP</div>';
+        body.innerHTML = '<div class="text-center text-slate-500 py-4"><?= __('security.no_ignore_ips') ?></div>';
         return;
     }
-    body.innerHTML = '<table class="w-full"><thead><tr class="text-xs text-slate-500 uppercase"><th class="text-left py-2 px-3">IP</th><th class="text-left py-2 px-3">Etykieta</th><th class="text-left py-2 px-3">Dodano</th><th class="py-2 px-3"></th></tr></thead><tbody>' +
+    body.innerHTML = '<table class="w-full"><thead><tr class="text-xs text-slate-500 uppercase"><th class="text-left py-2 px-3">IP</th><th class="text-left py-2 px-3"><?= __('security.label_col') ?></th><th class="text-left py-2 px-3"><?= __('security.added_col') ?></th><th class="py-2 px-3"></th></tr></thead><tbody>' +
         list.map(item => `<tr class="border-t border-white/5 hover:bg-white/[0.02]">
             <td class="py-3 px-3 text-sm font-mono text-white">${item.ip}</td>
             <td class="py-3 px-3 text-sm text-slate-400">${item.label || '-'}</td>

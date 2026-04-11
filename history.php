@@ -139,7 +139,7 @@ for ($i = 0; $i < $bar_count; $i++) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Historia - <?= htmlspecialchars($device_name) ?></title>
-    <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+    <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
@@ -156,7 +156,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                 </a>
                 <div>
                     <h1 class="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 leading-tight"><?= htmlspecialchars($device_name) ?></h1>
-                    <p class="text-slate-500 text-base mt-1 font-bold uppercase tracking-[0.1em]">Dziennik zdarzeń i historia dostępności</p>
+                    <p class="text-slate-500 text-base mt-1 font-bold uppercase tracking-[0.1em]"><?= __('history.subtitle') ?></p>
                 </div>
             </div>
             
@@ -165,7 +165,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                     <i data-lucide="trash-2" class="w-5 h-5 group-hover/del:animate-bounce"></i>
                 </button>
                 <div class="glass-card px-5 py-3 border-white/10">
-                    <div class="text-[12px] text-slate-500 uppercase tracking-[0.2em] font-bold mb-1">Adres MAC</div>
+                    <div class="text-[12px] text-slate-500 uppercase tracking-[0.2em] font-bold mb-1"><?= __('history.mac_address') ?></div>
                     <div class="text-sm font-mono text-blue-400">
                         <?php 
                             $clean_mac = normalize_mac($mac);
@@ -188,7 +188,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                         <i data-lucide="<?= $current_status === 'on' ? 'check-circle' : 'alert-circle' ?>" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <div class="text-[12px] text-slate-500 uppercase font-black tracking-widest mb-1">Aktualny Status</div>
+                        <div class="text-[12px] text-slate-500 uppercase font-black tracking-widest mb-1"><?= __('history.current_status') ?></div>
                         <div class="text-2xl font-black <?= $current_status === 'on' ? 'text-emerald-400' : 'text-red-400' ?>">
                             <?= $current_status === 'on' ? 'Online' : 'Offline' ?>
                         </div>
@@ -202,7 +202,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                         <i data-lucide="clock" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <div class="text-[12px] text-slate-500 uppercase font-black tracking-widest mb-1">Ostatnia zmiana</div>
+                        <div class="text-[12px] text-slate-500 uppercase font-black tracking-widest mb-1"><?= __('history.last_change') ?></div>
                         <div class="text-base font-bold text-slate-200"><?= $last_change ?></div>
                     </div>
                 </div>
@@ -231,7 +231,7 @@ for ($i = 0; $i < $bar_count; $i++) {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- Live -->
                 <div>
-                    <span class="text-[12px] font-black text-slate-500 uppercase tracking-widest block mb-4">Transfer Live</span>
+                    <span class="text-[12px] font-black text-slate-500 uppercase tracking-widest block mb-4"><?= __('history.live_transfer') ?></span>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex items-center gap-4 p-5 bg-slate-800/30 rounded-2xl border border-white/5">
                             <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><i data-lucide="arrow-down" class="w-6 h-6"></i></div>
@@ -305,7 +305,7 @@ for ($i = 0; $i < $bar_count; $i++) {
             <div class="p-6 border-b border-white/5 flex justify-between items-center">
                 <h2 class="text-lg font-bold flex items-center gap-2">
                     <i data-lucide="activity" class="text-blue-400 w-5 h-5"></i>
-                    Zdarzenia systemowe
+                    <?= __('history.history_timeline') ?>
                 </h2>
                 <span class="text-[12px] text-slate-500 bg-slate-800 px-2 py-1 rounded">Ostatnie 50 wpisów</span>
             </div>
@@ -346,7 +346,7 @@ for ($i = 0; $i < $bar_count; $i++) {
                                 <td colspan="3" class="px-6 py-20 text-center">
                                     <div class="flex flex-col items-center gap-3 text-slate-500">
                                         <i data-lucide="database-zap" class="w-12 h-12 opacity-20"></i>
-                                        <div class="italic">Brak zarejestrowanych zdarzeń w bazie danych.</div>
+                                        <div class="italic"><?= __('history.no_events') ?></div>
                                     </div>
                                 </td>
                             </tr>
@@ -361,16 +361,16 @@ for ($i = 0; $i < $bar_count; $i++) {
                                                 <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
                                             </div>
                                             <div>
-                                                <div class="text-sm font-bold text-emerald-400">DEVICE_UP</div>
-                                                <div class="text-[12px] text-slate-500 uppercase font-medium">Połączono z siecią</div>
+                                                <div class="text-sm font-bold text-emerald-400"><?= __('history.device_up') ?></div>
+                                                <div class="text-[12px] text-slate-500 uppercase font-medium"><?= __('history.connected_to_network') ?></div>
                                             </div>
                                         <?php else: ?>
                                             <div class="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center shadow-lg shadow-red-500/5">
                                                 <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
                                             </div>
                                             <div>
-                                                <div class="text-sm font-bold text-red-400">DEVICE_DOWN</div>
-                                                <div class="text-[12px] text-slate-500 uppercase font-medium">Utrata połączenia</div>
+                                                <div class="text-sm font-bold text-red-400"><?= __('history.device_down') ?></div>
+                                                <div class="text-[12px] text-slate-500 uppercase font-medium"><?= __('history.lost_connection') ?></div>
                                             </div>
                                         <?php endif; ?>
                                     </div>

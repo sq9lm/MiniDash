@@ -1388,6 +1388,7 @@ function get_recent_events($limit = 10, $only_new = false) {
                     'mac' => '',
                     'deviceName' => $row['message'] ?? 'Alert',
                     'eventType' => 'minidash_alert',
+                    'severity' => $row['severity'] ?? 'INFO',
                     'raw_msg' => $details['message'] ?? $row['message'] ?? '',
                 ];
             }
@@ -1808,7 +1809,7 @@ function render_nav($title = "MiniDash", $stats = []) {
             <div class="flex items-center gap-6">
                 <!-- Logo & Refresh -->
                 <a href="index.php" title="MiniDash" class="flex items-center gap-4 group">
-                    <img src="img/lm-network.svg" alt="MiniDASH v1.2.0" class="h-10 w-auto opacity-90 group-hover:opacity-100 transition-opacity">
+                    <img src="img/logo_lm-u.png" alt="MiniDASH" class="h-10 w-auto opacity-90 group-hover:opacity-100 transition-opacity">
                     <div class="flex items-baseline gap-3">
                         <h1 class="text-lg font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400 tracking-tighter">
                             MiniDASH
@@ -1818,7 +1819,7 @@ function render_nav($title = "MiniDash", $stats = []) {
                             <div id="nav-clock" class="text-sm font-mono text-slate-400 tracking-wider font-bold hidden md:block">
                                 <?= date('d/m/Y | H:i') ?>
                             </div>
-                              <button onclick="smartRefresh();" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 rounded-lg transition" title="Odśwież stronę">
+                              <button onclick="smartRefresh();" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 rounded-lg transition" title="<?= __('nav.refresh_page') ?>">
                                 <i data-lucide="refresh-cw" class="w-4 h-4 transition-transform duration-500"></i>
                             </button>
                         </div>
@@ -1827,7 +1828,7 @@ function render_nav($title = "MiniDash", $stats = []) {
 
                 <script>
                     function smartRefresh() {
-                        const btn = document.querySelector('button[title="Odśwież stronę"]');
+                        const btn = document.querySelector('button[title="<?= __('nav.refresh_page') ?>"]');
                         const icon = btn ? btn.querySelector('[data-lucide="refresh-cw"]') : null;
                         
                         if (icon) icon.style.transform = 'rotate(360deg)';
@@ -1862,7 +1863,7 @@ function render_nav($title = "MiniDash", $stats = []) {
                         <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
                     </a>
                     <?php if ($config['modules']['monitoring_enabled'] ?? true): ?>
-                    <a href="monitored.php" class="p-2.5 rounded-xl transition-all <?= $current_page == 'monitored.php' ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' ?>" title="Zasoby">
+                    <a href="monitored.php" class="p-2.5 rounded-xl transition-all <?= $current_page == 'monitored.php' ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5' ?>" title="<?= __('nav.resources') ?>">
                         <i data-lucide="activity" class="w-5 h-5"></i>
                     </a>
                     <?php endif; ?>
@@ -1886,7 +1887,7 @@ function render_nav($title = "MiniDash", $stats = []) {
             <div class="flex items-center gap-4">
                 <!-- System Monitor (Task Manager Style) -->
                 <div class="hidden xl:flex items-center gap-6 px-1">
-                    <div onclick="openProcessModal()" class="flex flex-col gap-1.5 cursor-pointer hover:opacity-80 transition-opacity" title="Zarządca Procesów">
+                    <div onclick="openProcessModal()" class="flex flex-col gap-1.5 cursor-pointer hover:opacity-80 transition-opacity" title="<?= __('nav.process_manager') ?>">
                         <div class="flex items-center gap-2">
                             <span class="text-[11px] font-black text-slate-500 uppercase tracking-tighter w-6">CPU</span>
                             <div class="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -1903,7 +1904,7 @@ function render_nav($title = "MiniDash", $stats = []) {
                         </div>
                     </div>
                     <div class="h-6 w-[1px] bg-white/10"></div>
-                    <div onclick="openWanModal()" class="flex flex-col gap-0.5 cursor-pointer hover:opacity-80 transition-opacity" title="Łącze WAN">
+                    <div onclick="openWanModal()" class="flex flex-col gap-0.5 cursor-pointer hover:opacity-80 transition-opacity" title="<?= __('nav.wan_link') ?>">
                         <div class="flex items-center gap-1.5 text-amber-400">
                              <i data-lucide="arrow-up" class="w-3 h-3"></i>
                              <span class="text-[11px] font-mono font-bold"><?= format_bps($up) ?></span>
@@ -1993,21 +1994,21 @@ function render_nav($title = "MiniDash", $stats = []) {
                         <div class="p-2 bg-slate-900">
                             <button onclick="openPersonalModal()" class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition text-left">
                                 <i data-lucide="user-cog" class="w-4 h-4 text-emerald-400/80"></i>
-                                Osobiste
+                                <?= __('nav.personal') ?>
                             </button>
                             <button onclick="openSystemInfoModal()" class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition text-left">
                                 <i data-lucide="info" class="w-4 h-4 text-amber-400/80"></i>
-                                O systemie
+                                <?= __('nav.about_system') ?>
                             </button>
                             <a href="devices.php" class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition">
                                 <i data-lucide="settings" class="w-4 h-4 text-blue-400/80"></i>
-                                Ustawienia systemu
+                                <?= __('nav.system_settings') ?>
                             </a>
                             <div class="h-[1px] bg-white/5 my-2 mx-2"></div>
                             <form action="logout.php" method="POST">
                                 <button type="submit" class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-red-500/80 hover:text-red-400 hover:bg-red-500/5 rounded-xl transition text-left">
                                     <i data-lucide="log-out" class="w-4 h-4"></i>
-                                    Wyloguj sesję
+                                    <?= __('nav.logout') ?>
                                 </button>
                             </form>
                         </div>
@@ -2028,12 +2029,12 @@ function render_nav($title = "MiniDash", $stats = []) {
                     <i data-lucide="bell-ring" class="w-4 h-4"></i>
                 </div>
                 <div>
-                    <h3 class="text-base font-black text-white uppercase tracking-widest">Powiadomienia</h3>
-                    <p class="text-[12px] text-slate-500 font-bold uppercase tracking-tighter">Ostatnie zdarzenia systemowe</p>
+                    <h3 class="text-base font-black text-white uppercase tracking-widest"><?= __('notifications_panel.title') ?></h3>
+                    <p class="text-[12px] text-slate-500 font-bold uppercase tracking-tighter"><?= __('notifications_panel.subtitle') ?></p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="openNotifSettings()" class="p-2 text-slate-500 hover:text-white transition rounded-lg hover:bg-white/5" title="Ustawienia powiadomień">
+                <button onclick="openNotifSettings()" class="p-2 text-slate-500 hover:text-white transition rounded-lg hover:bg-white/5" title="<?= __('nav.notification_settings') ?>">
                     <i data-lucide="settings" class="w-4 h-4"></i>
                 </button>
                 <button onclick="toggleNotifications()" class="p-2 text-slate-500 hover:text-white transition rounded-lg hover:bg-white/5">
@@ -2052,7 +2053,7 @@ function render_nav($title = "MiniDash", $stats = []) {
                     <div class="w-16 h-16 rounded-3xl bg-slate-800 flex items-center justify-center mb-4 border border-white/5">
                         <i data-lucide="bell-off" class="w-8 h-8 text-slate-600"></i>
                     </div>
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Brak zdarzeń</p>
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest"><?= __('notifications_panel.no_events') ?></p>
                 </div>
             <?php else: ?>
                 <?php foreach ($recent_events as $ev): 
@@ -2071,37 +2072,58 @@ function render_nav($title = "MiniDash", $stats = []) {
                         elseif (strpos($key, 'Connected') !== false) { $icon = 'link'; $color = 'emerald'; }
                     }
                     // MiniDash alerts (speed, roaming, status changes)
-                    if (($ev['eventType'] ?? '') === 'minidash_alert') {
-                        $icon = 'bell-ring'; $color = 'amber'; $is_up = true;
+                    $is_alert = ($ev['eventType'] ?? '') === 'minidash_alert';
+                    if ($is_alert) {
+                        $sev = strtolower($ev['severity'] ?? 'info');
+                        if ($sev === 'critical') { $icon = 'alert-triangle'; $color = 'red'; }
+                        elseif ($sev === 'warning') { $icon = 'alert-circle'; $color = 'amber'; }
+                        else { $icon = 'bell-ring'; $color = 'emerald'; }
                     }
 
                     $time = strtotime($ev['timestamp']);
                     $diff = time() - $time;
                     
-                    if ($diff < 60) $time_str = "teraz";
+                    if ($diff < 60) $time_str = __('notifications_panel.just_now');
                     elseif ($diff < 3600) $time_str = floor($diff/60) . " m";
-                    elseif ($diff < 86400) $time_str = floor($diff/3600) . " g";
+                    elseif ($diff < 86400) $time_str = floor($diff/3600) . " h";
                     else $time_str = date('d.m', $time);
 
-                    $title_label = $is_up ? 'Online' : 'Offline';
+                    $title_label = $is_up ? __('common.online') : __('common.offline');
                     if ($is_system) {
                         $key = $ev['key'] ?? '';
-                        if (strpos($key, 'Roam') !== false) $title_label = 'Roaming';
-                        elseif (strpos($key, 'Disconnected') !== false) $title_label = 'Rozłączono';
-                        elseif (strpos($key, 'Discovered') !== false) $title_label = 'Nowy Klient';
-                        elseif (strpos($key, 'Connected') !== false) $title_label = 'Podłączono';
-                        else $title_label = 'System';
+                        if (strpos($key, 'Roam') !== false) $title_label = __('notifications_panel.roaming_label');
+                        elseif (strpos($key, 'Disconnected') !== false) $title_label = __('notifications_panel.disconnected_label');
+                        elseif (strpos($key, 'Discovered') !== false) $title_label = __('notifications_panel.new_client_label');
+                        elseif (strpos($key, 'Connected') !== false) $title_label = __('notifications_panel.connected_label');
+                        else $title_label = __('notifications_panel.system_label');
+                    }
+                    if ($is_alert) {
+                        $title_label = __('notifications_panel.alert_label');
                     }
 
                     $display_name = $is_system ? ($ev['raw_msg'] ? explode(':', $ev['raw_msg'])[0] : ($ev['key'] ?? 'UniFi')) : $ev['deviceName'];
                     // Fallback for raw keys
                     if ($is_system && strpos($display_name, 'EVT_') !== false) {
-                        $display_name = 'Zdarzenie Sieciowe';
+                        $display_name = __('notifications_panel.network_event');
                     }
                     $display_name = htmlspecialchars($display_name);
-                    $display_msg = $is_system ? $ev['raw_msg'] : ($is_up ? 'Urządzenie połączyło się z siecią.' : 'Utrata połączenia z urządzeniem.');
+                    if ($is_alert) {
+                        $display_msg = $ev['raw_msg'] ?? '';
+                    } elseif ($is_system) {
+                        $display_msg = $ev['raw_msg'];
+                    } else {
+                        $display_msg = $is_up ? __('notifications_panel.device_online') : __('notifications_panel.device_offline');
+                    }
                 ?>
-                    <div onclick="window.location.href='history.php?mac=<?= $ev['mac'] ?>'" class="p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.08] hover:border-blue-500/30 transition group relative overflow-hidden cursor-pointer">
+                    <?php
+                        $ev_mac = $ev['mac'] ?? '';
+                        if ($is_alert || empty($ev_mac)) {
+                            $ev_link = 'events.php';
+                        } else {
+                            $ev_link = 'history.php?mac=' . urlencode($ev_mac);
+                        }
+                    ?>
+                    <div onclick="window.location.href='<?= $ev_link ?>'" class="p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.08] hover:border-blue-500/30 transition group relative overflow-hidden cursor-pointer">
                         <div class="absolute left-0 top-0 bottom-0 w-1 bg-<?= $color ?>-500"></div>
                         <div class="flex gap-3">
                             <div class="w-8 h-8 rounded-xl bg-<?= $color ?>-500/10 text-<?= $color ?>-400 flex-shrink-0 flex items-center justify-center">
@@ -2126,10 +2148,10 @@ function render_nav($title = "MiniDash", $stats = []) {
         <!-- Footer -->
         <div class="p-6 border-t border-white/5 bg-white/[0.02] grid grid-cols-2 gap-3">
             <button onclick="clearAllNotifications()" class="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[12px] font-black uppercase tracking-widest transition border border-white/5">
-                Wyczyść wszystko
+                <?= __('common.clear_all') ?>
             </button>
             <a href="events.php" class="py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[12px] font-black uppercase tracking-widest transition shadow-lg shadow-blue-600/20 text-center">
-                Pokaż wszystko
+                <?= __('common.show_all') ?>
             </a>
         </div>
     </div>
@@ -2143,7 +2165,7 @@ function render_nav($title = "MiniDash", $stats = []) {
                     // Clear notifications from DOM without page reload
                     const panel = document.querySelector('#notif-overlay + div .flex-grow') || document.querySelector('.overflow-y-auto.custom-scrollbar');
                     if (panel) {
-                        panel.innerHTML = '<div class="py-20 flex flex-col items-center justify-center text-center opacity-40"><div class="w-16 h-16 rounded-3xl bg-slate-800 flex items-center justify-center mb-4 border border-white/5"><i data-lucide="bell-off" class="w-8 h-8 text-slate-600"></i></div><p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Brak zdarzen</p></div>';
+                        panel.innerHTML = '<div class="py-20 flex flex-col items-center justify-center text-center opacity-40"><div class="w-16 h-16 rounded-3xl bg-slate-800 flex items-center justify-center mb-4 border border-white/5"><i data-lucide="bell-off" class="w-8 h-8 text-slate-600"></i></div><p class="text-xs font-bold text-slate-500 uppercase tracking-widest"><?= __('notifications_panel.no_events') ?></p></div>';
                         if (typeof lucide !== 'undefined') lucide.createIcons();
                     }
                     // Remove notification badge
@@ -2195,8 +2217,7 @@ function render_nav($title = "MiniDash", $stats = []) {
             if(mDate) mDate.textContent = `${d}/${m}/${y}`;
             if(mTime) mTime.textContent = `${h}:${i}`;
         }
-        setInterval(updateNavClock, 30000); // Co 30 sekund
-        // Removed auto-reload to prevent closing modals
+        setInterval(updateNavClock, 30000);
 
         // Toast notification system
         (function() {
@@ -2555,9 +2576,9 @@ function render_nav($title = "MiniDash", $stats = []) {
                     <div>
                         <h2 class="text-xl font-bold flex items-center gap-2 text-white">
                             <i data-lucide="bell-ring" class="w-6 h-6 text-amber-500"></i>
-                            Konfiguracja Powiadomień
+                            <?= __('notifications.heading') ?>
                         </h2>
-                        <p class="text-slate-500 text-xs mt-1">Ustawienia kanałów alertów systemowych</p>
+                        <p class="text-slate-500 text-xs mt-1"><?= __('notifications.desc') ?></p>
                     </div>
                     <button type="button" onclick="closeNotifSettings()" class="p-2 hover:bg-white/5 rounded-xl transition text-slate-500 hover:text-white">
                         <i data-lucide="x" class="w-6 h-6"></i>
@@ -2769,8 +2790,8 @@ function render_nav($title = "MiniDash", $stats = []) {
                             <div class="flex items-center gap-3">
                                 <div class="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl"><i data-lucide="zap" class="w-5 h-5"></i></div>
                                 <div>
-                                    <h4 class="font-bold text-slate-200">Inteligentne Wyzwalacze</h4>
-                                    <span class="text-[12px] text-slate-500 uppercase tracking-widest font-black">Automatyczne Alerty</span>
+                                    <h4 class="font-bold text-slate-200"><?= __('triggers.title') ?></h4>
+                                    <span class="text-[12px] text-slate-500 uppercase tracking-widest font-black"><?= __('triggers.desc') ?></span>
                                 </div>
                             </div>
                         </div>
@@ -2781,8 +2802,8 @@ function render_nav($title = "MiniDash", $stats = []) {
                                     <div class="flex items-center gap-4">
                                         <div class="p-3 bg-blue-500/10 text-blue-400 rounded-2xl"><i data-lucide="gauge" class="w-6 h-6"></i></div>
                                         <div>
-                                            <p class="text-sm font-bold text-slate-200">Alert o nagłym wzroście transferu</p>
-                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest">Monitoruj Monitowane Urządzenia</p>
+                                            <p class="text-sm font-bold text-slate-200"><?= __('triggers.speed_alert') ?></p>
+                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest"><?= __('triggers.speed_alert_desc') ?></p>
                                         </div>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
@@ -2792,7 +2813,7 @@ function render_nav($title = "MiniDash", $stats = []) {
                                 </div>
                                 <div class="flex items-center gap-6 pl-12">
                                     <div class="w-full">
-                                        <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-3">Próg prędkości (Mbps)</label>
+                                        <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-3"><?= __('triggers.speed_threshold') ?></label>
                                         <div class="flex items-center gap-4">
                                             <input type="range" name="speed_threshold_mbps" min="2" max="1000" step="1" value="<?= htmlspecialchars($config['triggers']['speed_threshold_mbps'] ?? 100) ?>" class="flex-grow accent-blue-500" oninput="this.nextElementSibling.value = this.value + ' Mbps'">
                                             <output class="text-xs font-mono text-blue-400 bg-blue-500/10 px-3 py-2 rounded-lg border border-blue-500/20 min-w-[100px] text-center"><?= htmlspecialchars($config['triggers']['speed_threshold_mbps'] ?? 100) ?> Mbps</output>
@@ -2807,8 +2828,8 @@ function render_nav($title = "MiniDash", $stats = []) {
                                     <div class="flex items-center gap-4">
                                         <div class="p-3 bg-emerald-500/10 text-emerald-500 rounded-2xl"><i data-lucide="shield-plus" class="w-6 h-6"></i></div>
                                         <div>
-                                            <p class="text-sm font-bold text-slate-200">Wykryto nowe urzadzenie</p>
-                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest">Alert przy nieznanym MAC w sieci</p>
+                                            <p class="text-sm font-bold text-slate-200"><?= __('triggers.new_device_alert') ?></p>
+                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest"><?= __('triggers.new_device_alert_desc') ?></p>
                                         </div>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
@@ -2824,8 +2845,8 @@ function render_nav($title = "MiniDash", $stats = []) {
                                     <div class="flex items-center gap-4">
                                         <div class="p-3 bg-rose-500/10 text-rose-500 rounded-2xl"><i data-lucide="shield-alert" class="w-6 h-6"></i></div>
                                         <div>
-                                            <p class="text-sm font-bold text-slate-200">Alert Bezpieczenstwa (IPS/IDS)</p>
-                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest">Powiadomienie o zablokowanym ataku</p>
+                                            <p class="text-sm font-bold text-slate-200"><?= __('triggers.ips_alert') ?></p>
+                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest"><?= __('triggers.ips_alert_desc') ?></p>
                                         </div>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
@@ -2841,8 +2862,8 @@ function render_nav($title = "MiniDash", $stats = []) {
                                     <div class="flex items-center gap-4">
                                         <div class="p-3 bg-amber-500/10 text-amber-500 rounded-2xl"><i data-lucide="activity" class="w-6 h-6"></i></div>
                                         <div>
-                                            <p class="text-sm font-bold text-slate-200">Nagly wzrost opoznien (Ping)</p>
-                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest">Monitorowanie stabilnosci lacza WAN</p>
+                                            <p class="text-sm font-bold text-slate-200"><?= __('triggers.latency_alert') ?></p>
+                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest"><?= __('triggers.latency_alert_desc') ?></p>
                                         </div>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
@@ -2852,7 +2873,7 @@ function render_nav($title = "MiniDash", $stats = []) {
                                 </div>
                                 <div class="flex items-center gap-6 pl-12">
                                     <div class="w-full">
-                                        <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-3">Prog opoznienia (ms)</label>
+                                        <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-3"><?= __('triggers.latency_threshold') ?></label>
                                         <div class="flex items-center gap-4">
                                             <input type="range" name="latency_threshold_ms" min="10" max="500" step="5" value="<?= htmlspecialchars($config['triggers']['latency_threshold_ms'] ?? 100) ?>" class="flex-grow accent-amber-500" oninput="this.nextElementSibling.value = this.value + ' ms'">
                                             <output class="text-xs font-mono text-amber-400 bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/20 min-w-[80px] text-center"><?= htmlspecialchars($config['triggers']['latency_threshold_ms'] ?? 100) ?> ms</output>
@@ -2867,8 +2888,8 @@ function render_nav($title = "MiniDash", $stats = []) {
                                     <div class="flex items-center gap-4">
                                         <div class="p-3 bg-purple-500/10 text-purple-500 rounded-2xl"><i data-lucide="shield" class="w-6 h-6"></i></div>
                                         <div>
-                                            <p class="text-sm font-bold text-slate-300">Polaczenie VPN</p>
-                                            <p class="text-[12px] text-slate-600 uppercase tracking-widest">Niedostepne — UDR nie udostepnia event API</p>
+                                            <p class="text-sm font-bold text-slate-300"><?= __('triggers.vpn_alert') ?></p>
+                                            <p class="text-[12px] text-slate-600 uppercase tracking-widest"><?= __('triggers.vpn_alert_desc') ?></p>
                                         </div>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
@@ -2883,11 +2904,11 @@ function render_nav($title = "MiniDash", $stats = []) {
 
                 <div class="modal-footer shrink-0 p-6 bg-slate-950/50 border-t border-white/5 flex justify-end gap-3 rounded-b-3xl">
                     <button type="button" onclick="closeNotifSettings()" class="px-8 py-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-2xl font-bold transition border border-white/10">
-                        Anuluj
+                        <?= __('common.cancel') ?>
                     </button>
                     <button type="submit" class="px-10 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black uppercase tracking-widest transition flex items-center gap-3 shadow-xl shadow-blue-600/20">
                         <i data-lucide="save" class="w-5 h-5"></i>
-                        Zapisz Zmiany
+                        <?= __('common.save_changes') ?>
                     </button>
                 </div>
             </form>
@@ -3517,373 +3538,5 @@ $tradSite = get_trad_site_id($site_id_context);
 <?php } ?>
 
 <?php
-// Modal Ustawień Osobistych
-function _disabled_render_personal_modal() {
-    global $config;
-?>
-    <div id="personalModal" class="modal-overlay" onclick="closePersonalModal(event)" style="z-index: 9999;">
-        <div class="modal-container max-w-3xl p-0 overflow-hidden shadow-2xl ring-1 ring-white/10" onclick="event.stopPropagation()" style="background: #0f172a;">
-            <!-- Modal Header -->
-            <div class="p-8 pb-4 flex justify-between items-start">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                        <i data-lucide="user-cog" class="w-6 h-6"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-2xl font-bold text-white tracking-tight">Dane Osobiste</h2>
-                        <p class="text-slate-500 text-xs mt-1">Zarządzaj swoim profilem i bezpieczeństwem</p>
-                    </div>
-                </div>
-                <button onclick="closePersonalModal()" class="p-2 text-slate-500 hover:text-white transition rounded-xl">
-                    <i data-lucide="x" class="w-6 h-6"></i>
-                </button>
-            </div>
-
-            <form id="personalForm" onsubmit="savePersonalSettings(event)" class="p-6 pt-2 space-y-5 max-h-[80vh] overflow-y-auto custom-scrollbar">
-                <input type="hidden" name="action" value="update_profile">
-                
-                <div class="h-[1px] bg-white/5 w-full mb-6"></div>
-
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-10 items-start">
-                    <!-- Left: Avatar Section -->
-                    <div class="md:col-span-5 flex items-center gap-6">
-                        <div class="relative">
-                            <div id="avatar-preview" class="w-32 h-32 rounded-[2.5rem] overflow-hidden ring-4 ring-white/5 shadow-2xl bg-blue-600/20">
-                                <?php if (!empty($config['admin_avatar']) && file_exists(__DIR__ . '/' . $config['admin_avatar'])): ?>
-                                    <img src="<?= $config['admin_avatar'] ?>" class="w-full h-full object-cover">
-                                <?php else: ?>
-                                    <div class="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white">
-                                        <i data-lucide="user" class="w-12 h-12"></i>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                            <label for="avatar-input" class="absolute -bottom-1 -right-1 w-10 h-10 rounded-xl bg-[#1e293b] text-white flex items-center justify-center cursor-pointer shadow-lg border border-white/10 hover:bg-[#334155] transition-all">
-                                <i data-lucide="camera" class="w-5 h-5"></i>
-                                <input type="file" id="avatar-input" name="avatar" class="hidden" accept="image/*" onchange="previewAvatar(this)">
-                            </label>
-                        </div>
-                        <div>
-                            <p class="text-xl font-bold text-white mb-1">Twój Avatar</p>
-                            <p class="text-[12px] font-black text-slate-500 uppercase tracking-widest">Zmień zdjęcie profilowe</p>
-                        </div>
-                    </div>
-
-                    <!-- Right: Form Fields -->
-                    <div class="md:col-span-7 grid grid-cols-2 gap-x-4 gap-y-6">
-                        <div class="col-span-1">
-                            <label class="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Login / Użytkownik</label>
-                            <input type="text" name="username" value="<?= htmlspecialchars($config['admin_username']) ?>" required
-                                   class="w-full px-5 py-3.5 bg-slate-900/50 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold transition-all text-slate-200">
-                        </div>
-                        <div class="col-span-1">
-                            <label class="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Nowe Hasło</label>
-                            <input type="password" name="password" placeholder="••••••••"
-                                   class="w-full px-5 py-3.5 bg-slate-900/50 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold transition-all text-slate-200">
-                        </div>
-                        <div class="col-span-1">
-                            <label class="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Imię i Nazwisko</label>
-                            <input type="text" name="full_name" value="<?= htmlspecialchars($config['admin_full_name'] ?? '') ?>"
-                                   class="w-full px-5 py-3.5 bg-slate-900/50 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold transition-all text-slate-200">
-                        </div>
-                        <div class="col-span-1">
-                            <label class="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Adres Email</label>
-                            <input type="email" name="email" value="<?= htmlspecialchars($config['admin_email']) ?>"
-                                   class="w-full px-5 py-3.5 bg-slate-900/50 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold transition-all text-slate-200">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Regional Settings Section -->
-                <div class="mt-8 pt-6 border-t border-white/5">
-                    <div class="flex items-center gap-3 mb-6">
-                        <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                            <i data-lucide="globe" class="w-4 h-4"></i>
-                        </div>
-                        <h3 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Ustawienia Regionalne</h3>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                            <label class="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Język Interfejsu</label>
-                            <select name="language" class="w-full px-5 py-3 bg-slate-900/50 border border-white/10 rounded-2xi focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
-                                <option value="auto">Automatyczny (z konsoli)</option>
-                                <option value="pl" <?= ($config['language'] ?? '') === 'pl' ? 'selected' : '' ?>>Polski (PL)</option>
-                                <option value="en" <?= ($config['language'] ?? '') === 'en' ? 'selected' : '' ?>>English (EN)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Strefa Czasowa</label>
-                            <select name="timezone" class="w-full px-5 py-3 bg-slate-900/50 border border-white/10 rounded-2xi focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
-                                <option value="auto">Zgodnie z konsolą</option>
-                                <option value="Europe/Warsaw">Warszawa (GMT+1)</option>
-                                <option value="UTC">UTC (GMT+0)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Format Czasu / Daty</label>
-                            <div class="flex gap-2">
-                                <select name="time_format" class="flex-1 px-4 py-3 bg-slate-900/50 border border-white/10 rounded-2xi focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
-                                    <option value="24h">24h</option>
-                                    <option value="12h">12h</option>
-                                </select>
-                                <select name="date_format" class="flex-1 px-4 py-3 bg-slate-900/50 border border-white/10 rounded-2xi focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-xs font-bold text-slate-200 appearance-none">
-                                    <option value="d.m.Y">DD.MM.YY</option>
-                                    <option value="m/d/Y">MM/DD/YY</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Security Section (2FA Placeholder) -->
-                <div class="mt-8 pt-6 border-t border-white/5 opacity-40">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center">
-                                <i data-lucide="shield-check" class="w-4 h-4"></i>
-                            </div>
-                            <h3 class="text-xs font-black text-slate-550 uppercase tracking-[0.2em]">Bezpieczeństwo (2FA)</h3>
-                        </div>
-                        <span class="text-[12px] font-black text-white/20 uppercase tracking-[0.2em] bg-white/5 px-2 py-1 rounded">Wkrótce</span>
-                    </div>
-                    <div class="p-4 bg-white/[0.01] border border-white/5 rounded-2xl flex items-center justify-between">
-                        <div class="text-[12px] text-slate-500 font-bold uppercase tracking-wider">Logowanie Dwuetapowe</div>
-                        <div class="w-10 h-5 bg-slate-800 rounded-full relative opacity-50">
-                            <div class="absolute left-1 top-1 w-3 h-3 bg-slate-600 rounded-full"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Login History Section -->
-                <div class="mt-8 pt-6 border-t border-white/5">
-                    <div class="mb-4 flex items-center justify-between">
-                        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Historia Logowań</h3>
-                         <button type="button" class="text-[12px] text-blue-400 font-bold uppercase tracking-widest hover:text-white transition">
-                            Zobacz całą historię
-                        </button>
-                    </div>
-                    <div class="bg-slate-900 border border-white/10 rounded-2xl overflow-hidden">
-                        <div class="divide-y divide-white/5">
-                             <!-- Active Session -->
-                             <?php
-                                $ua = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
-                                $browser = 'Unknown Browser';
-                                $os = 'Unknown OS';
-                                if (preg_match('/windows|win32/i', $ua)) $os = 'Windows';
-                                elseif (preg_match('/macintosh|mac os x/i', $ua)) $os = 'macOS';
-                                elseif (preg_match('/linux/i', $ua)) $os = 'Linux';
-                                elseif (preg_match('/android/i', $ua)) $os = 'Android';
-                                elseif (preg_match('/iphone/i', $ua)) $os = 'iOS';
-
-                                if (preg_match('/chrome/i', $ua)) $browser = 'Chrome';
-                                elseif (preg_match('/firefox/i', $ua)) $browser = 'Firefox';
-                                elseif (preg_match('/safari/i', $ua)) $browser = 'Safari';
-                                elseif (preg_match('/edge/i', $ua)) $browser = 'Edge';
-                                
-                                $client_ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
-                                $current_loc = get_ip_location($client_ip);
-
-                                // Read from SQLite first, fallback to JSON
-                                $historyData = [];
-                                if (isset($db)) {
-                                    try {
-                                        $stmt = $db->query("SELECT ip, location, os, browser, logged_at FROM login_history ORDER BY logged_at DESC LIMIT 20");
-                                        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                                        foreach ($rows as $r) {
-                                            $historyData[] = [
-                                                'timestamp' => strtotime($r['logged_at']),
-                                                'ip' => $r['ip'],
-                                                'location' => $r['location'],
-                                                'os' => $r['os'],
-                                                'browser' => $r['browser'],
-                                            ];
-                                        }
-                                    } catch (Exception $e) {}
-                                }
-                                if (empty($historyData)) {
-                                    $historyFile = __DIR__ . '/data/login_history.json';
-                                    if (file_exists($historyFile)) {
-                                        $loaded = json_decode(file_get_contents($historyFile), true);
-                                        if (is_array($loaded)) $historyData = $loaded;
-                                    }
-                                }
-                             ?>
-                             <div class="p-4 flex items-center justify-between hover:bg-white/[0.02] transition">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/10">
-                                        <i data-lucide="laptop" class="w-5 h-5"></i>
-                                    </div>
-                                    <div>
-                                        <div class="text-xs font-bold text-white">Obecna Sesja (<?= $os ?>)</div>
-                                        <div class="text-[12px] text-slate-500 font-mono mt-0.5">IP: <?= $client_ip ?> • <?= $browser ?></div>
-                                        <div class="text-[11px] text-blue-400 font-bold mt-0.5 flex items-center gap-1.5">
-                                            <i data-lucide="map-pin" class="w-2.5 h-2.5"></i>
-                                            <?= $current_loc ?>
-                                        </div>
-                                    </div>
-                                </div>
-                                <span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-[12px] font-bold uppercase tracking-wider animate-pulse ring-1 ring-emerald-500/20">Aktywna</span>
-                            </div>
-
-                            <!-- Past History -->
-                            <?php
-                            $hist_count = 0;
-                            if (!empty($historyData)):
-                                foreach ($historyData as $idx => $entry):
-                                    if ($idx === 0 && ($entry['ip'] ?? '') === $client_ip) continue;
-                                    if ($hist_count >= 5) break;
-                                    $hist_count++;
-                            ?>
-                             <div class="p-4 flex items-center justify-between hover:bg-white/[0.02] transition border-t border-white/[0.02]">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-10 h-10 rounded-xl bg-slate-800 text-slate-500 flex items-center justify-center">
-                                        <i data-lucide="history" class="w-5 h-5"></i>
-                                    </div>
-                                    <div>
-                                        <div class="text-xs font-bold text-slate-300"><?= $entry['os'] ?? 'OS' ?> • <?= $entry['browser'] ?? 'Browser' ?></div>
-                                        <div class="text-[12px] text-slate-500 font-mono mt-0.5"><?= date('d.m.Y H:i', $entry['timestamp']) ?> • IP: <?= $entry['ip'] ?></div>
-                                        <div class="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5">
-                                            <i data-lucide="map-pin" class="w-2.5 h-2.5"></i>
-                                            <?= $entry['location'] ?? 'Unknown' ?>
-                                        </div>
-                                    </div>
-                                </div>
-                                <span class="text-[11px] text-slate-600 font-black uppercase tracking-widest">Logowanie</span>
-                            </div>
-                            <?php 
-                                endforeach;
-                            endif;
-
-                            if ($hist_count === 0): ?>
-                             <div class="p-6 flex items-center justify-center text-slate-600 text-[11px] uppercase font-black tracking-[0.2em] italic">
-                                Brak starszych aktywności
-                             </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2FA Section -->
-                <div class="mt-6 mb-4 border border-white/10 rounded-2xl p-5 bg-gradient-to-br from-slate-900 to-slate-950 relative group overflow-hidden">
-                     <div class="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                     <div class="flex items-center justify-between relative z-10">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-blue-600/10 text-blue-500 flex items-center justify-center border border-blue-600/20 group-hover:scale-110 transition-transform shadow-lg shadow-blue-900/20">
-                                 <i data-lucide="shield-check" class="w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-bold text-white">Podwójne Uwierzytelnianie (2FA)</h3>
-                                <p class="text-[12px] font-black text-blue-400/80 uppercase tracking-widest mt-1">Coming Soon...</p>
-                            </div>
-                        </div>
-                        <div class="opacity-50 pointer-events-none">
-                            <div class="w-11 h-6 bg-slate-800 rounded-full relative border border-white/10">
-                                 <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-slate-600 rounded-full"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </form>
-
-            <div class="p-6 bg-slate-950/50 border-t border-white/5 flex justify-end shrink-0">
-                <button type="submit" form="personalForm" class="px-12 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition shadow-xl shadow-blue-600/20 text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-                     Zapisz Dane
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function openPersonalModal() {
-            const modal = document.getElementById('personalModal');
-            if (modal) {
-                modal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-                lucide.createIcons();
-            } else {
-                console.error('personalModal not found!');
-            }
-        }
-
-        function closePersonalModal(e) {
-            if (e && e.target !== e.currentTarget) return;
-            const modal = document.getElementById('personalModal');
-            if (modal) {
-                modal.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-        }
-
-        function previewAvatar(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById('avatar-preview');
-                    if (preview) {
-                        preview.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
-                    }
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        async function savePersonalSettings(e) {
-            e.preventDefault();
-            const form = e.target;
-            const formData = new FormData(form);
-            const btn = form.querySelector('button[type="submit"]');
-            const originalText = btn.innerHTML;
-            
-            btn.disabled = true;
-            btn.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4 animate-spin mr-2"></i> Zapisywanie...';
-            lucide.createIcons();
-
-            try {
-                const response = await fetch('api_user_settings.php', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-                
-                if (result.success) {
-                    showToast('Profil zaktualizowany', 'success');
-                    setTimeout(() => location.reload(), 1200);
-                } else {
-                    showToast('Błąd: ' + result.message, 'error');
-                }
-            } catch (err) {
-                console.error(err);
-                showToast('Wystąpił nieoczekiwany błąd zapisu', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-                lucide.createIcons();
-            }
-        }
-    </script>
-    <?php
-}
-
-// Globalna stopka
-function _disabled_render_footer() {
-    ?>
-    <div class="mt-20 pb-12">
-        <div class="max-w-6xl mx-auto px-6">
-            <div class="h-[1px] bg-white/5 w-full mb-8"></div>
-            <footer class="text-center">
-                <div class="flex items-center justify-center gap-3 text-slate-500 text-[11px] uppercase tracking-[0.3em] font-black">
-                    MiniDASH v1.5.0 © 2026 
-                    <span class="text-slate-700">/</span>
-                    <a href="https://www.lm-ads.com" target="_blank" class="text-slate-400 hover:text-blue-400 transition hover:tracking-[0.4em]">lm-network</a> 
-                    <span class="text-slate-700">/</span>
-                    Łukasz Misiura
-                </div>
-            </footer>
-        </div>
-    </div>
-    <?php
-    render_personal_modal();
-}
-
-
+// End of functions.php
 
