@@ -92,7 +92,24 @@ try {
     if (!empty($monitored_config)) {
         $clients_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/clients?limit=1000");
         $all_active_clients = $clients_resp['data'] ?? [];
-        
+
+        // Enrich with traditional API data (rx_bytes, tx_bytes, rx_rate)
+        $trad_sta = fetch_api("/proxy/network/api/s/$tradSite/stat/sta");
+        $trad_map = [];
+        foreach (($trad_sta['data'] ?? []) as $tc) {
+            $trad_map[normalize_mac($tc['mac'] ?? '')] = $tc;
+        }
+        foreach ($all_active_clients as &$c) {
+            $cmac = normalize_mac($c['macAddress'] ?? $c['mac'] ?? '');
+            if (isset($trad_map[$cmac])) {
+                $tc = $trad_map[$cmac];
+                $c['rx_bytes'] = $tc['rx_bytes'] ?? 0;
+                $c['tx_bytes'] = $tc['tx_bytes'] ?? 0;
+                $c['rx_rate'] = $tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? 0) * 8);
+                $c['tx_rate'] = $tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? 0) * 8);
+            }
+        }
+
         $statuses = detect_known_devices($all_active_clients, $monitored_config);
         $last_speeds_file = __DIR__ . '/data/last_speeds.json';
         $last_speeds = file_exists($last_speeds_file) ? json_decode(file_get_contents($last_speeds_file), true) : [];
