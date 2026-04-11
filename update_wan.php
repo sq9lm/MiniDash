@@ -125,8 +125,9 @@ try {
                     $mbps = round($current_speed / 1000000, 1);
                     $name = $info['name'] ?? $mac;
                     sendAlert(
-                        "🚀 Nagły wzrost transferu: $name",
-                        "Urządzenie **$name** ($mac) generuje obecnie duży ruch: **$mbps Mbps**."
+                        "Wzrost transferu: $name",
+                        "Urządzenie **$name** ($mac) generuje duzy ruch: **$mbps Mbps**.",
+                        'warning'
                     );
                 }
                 $last_speeds[$mac] = $current_speed;
@@ -158,7 +159,8 @@ try {
                 if ($can_alert && $new_count < 3) {
                     sendAlert(
                         "Nowe urzadzenie: $name",
-                        "Wykryto nieznane urzadzenie **$name** (MAC: $mac, IP: $ip) w sieci."
+                        "Wykryto nieznane urzadzenie **$name** (MAC: $mac, IP: $ip) w sieci.",
+                        'warning'
                     );
                     $new_count++;
                     $known_macs['_last_alert'] = time();
@@ -185,13 +187,18 @@ try {
                 $action = $evt['inner_alert_action'] ?? '';
                 if ($action === 'blocked') {
                     $src = $evt['src_ip'] ?? '?';
-                    $sig = $evt['inner_alert_signature'] ?? $evt['inner_alert_category'] ?? 'Unknown threat';
+                    $dst = $evt['dest_ip'] ?? 'Local';
+                    $port = $evt['dest_port'] ?? '';
+                    $proto = $evt['proto'] ?? 'TCP';
+                    $sig = $evt['inner_alert_signature'] ?? 'Unknown';
+                    $cat = $evt['inner_alert_category'] ?? 'Threat';
                     $cc = strtoupper($evt['srcipCountry'] ?? '??');
                     sendAlert(
-                        "🔺 IPS Zablokowany atak",
-                        "Zablokowano atak z **$src** ($cc): $sig"
+                        "Zablokowano Atak!",
+                        "⚠️ $cat | 🌍 $cc | 🛡️ $sig\nZrodlo: **$src** → $dst" . ($port ? ":$port" : "") . " ($proto)",
+                        'critical'
                     );
-                    break; // Only alert on newest blocked event
+                    break;
                 }
             }
             if (!empty($ips_events[0]['_id'])) {
@@ -212,8 +219,9 @@ try {
                     $last_lat_alert = $_SESSION['last_latency_alert'] ?? 0;
                     if (time() - $last_lat_alert > 300) { // 5 min cooldown
                         sendAlert(
-                            "⚠️ Wysoka latencja WAN: {$latency}ms",
-                            "Opoznienie lacza WAN wynosi **{$latency}ms** (prog: {$latency_threshold}ms)."
+                            "Wysoka latencja WAN: {$latency}ms",
+                            "Opoznienie lacza WAN wynosi **{$latency}ms** (prog: {$latency_threshold}ms).",
+                            'warning'
                         );
                         $_SESSION['last_latency_alert'] = time();
                     }

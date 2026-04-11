@@ -1277,9 +1277,9 @@ function saveDeviceHistory($mac, $status)
     if ($last) {
         $devices    = loadDevices();
         $deviceName = $devices[$norm]['name'] ?? $mac;
-        $icon = ($status === 'on') ? "🟢" : "🔴";
         $statusText = ($status === 'on') ? "ONLINE" : "OFFLINE";
-        sendAlert("$icon $deviceName — $statusText", "Urządzenie **$deviceName** ($mac) jest teraz $statusText.");
+        $sev = ($status === 'on') ? 'info' : 'critical';
+        sendAlert("$deviceName — $statusText", "Urządzenie **$deviceName** ($mac) jest teraz $statusText.", $sev);
     }
 
     // Insert new status entry

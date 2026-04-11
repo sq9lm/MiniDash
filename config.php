@@ -118,7 +118,8 @@ if (empty($config['ntfy_notifications']['topic']) && !empty($config['api_key']))
 }
 
 // Global notification function
-function sendAlert($subject, $message) {
+// Severity: 'critical' (red), 'warning' (orange), 'info' (green)
+function sendAlert($subject, $message, $severity = 'info') {
     global $config;
     
     if ($config['email_notifications']['enabled']) {
@@ -126,7 +127,7 @@ function sendAlert($subject, $message) {
     }
     
     if ($config['telegram_notifications']['enabled']) {
-        sendTelegramNotification($message);
+        sendTelegramNotification($message, $severity);
     }
 
     if ($config['whatsapp_notifications'] && $config['whatsapp_notifications']['enabled']) {
@@ -204,17 +205,20 @@ function sendEmailNotification($subject, $message) {
     );
 }
 
-function sendTelegramNotification($message) {
+function sendTelegramNotification($message, $severity = 'info') {
     global $config;
     $token = $config['telegram_notifications']['bot_token'];
     $chatId = $config['telegram_notifications']['chat_id'];
-    
+
     if (empty($token) || empty($chatId)) return;
-    
+
+    $icons = ['critical' => '🔴', 'warning' => '🟠', 'info' => '🟢'];
+    $icon = $icons[$severity] ?? '🔔';
+
     $url = "https://api.telegram.org/bot$token/sendMessage";
     $data = [
         'chat_id' => $chatId,
-        'text' => "🔔 MiniDash Alert:\n" . $message,
+        'text' => "$icon MiniDash:\n" . $message,
         'parse_mode' => 'Markdown'
     ];
 
