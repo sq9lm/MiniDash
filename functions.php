@@ -1256,11 +1256,13 @@ function saveDeviceHistory($mac, $status)
         $upd->execute([':duration' => $duration, ':id' => $last['id']]);
     }
 
-    // Send alert on status change
-    $devices    = loadDevices();
-    $deviceName = $devices[$norm]['name'] ?? $mac;
-    $statusText = ($status === 'on') ? "🟢 ONLINE" : "🔴 OFFLINE";
-    sendAlert("Zmiana statusu: $deviceName", "Urządzenie **$deviceName** ($mac) jest teraz **$statusText**.");
+    // Send alert on status change (only if device had previous status — skip first-time discovery)
+    if ($last) {
+        $devices    = loadDevices();
+        $deviceName = $devices[$norm]['name'] ?? $mac;
+        $statusText = ($status === 'on') ? "ONLINE" : "OFFLINE";
+        sendAlert("Zmiana statusu: $deviceName", "Urządzenie **$deviceName** ($mac) jest teraz **$statusText**.");
+    }
 
     // Insert new status entry
     $ins = $db->prepare("
