@@ -41,7 +41,7 @@ try {
         }
     }
 
-    $ips_resp = fetch_api("/proxy/network/api/s/{$tradSite}/stat/ips/event?limit=50");
+    $ips_resp = fetch_api("/proxy/network/api/s/{$tradSite}/rest/alarm?limit=50");
     $ips_events = $ips_resp['data'] ?? [];
     $events_resp = fetch_api("/proxy/network/api/s/$tradSite/stat/event?limit=100&_sort=-time");
     $net_events = $events_resp['data'] ?? [];

@@ -51,7 +51,7 @@ foreach ($stadp_data as $d) {
 }
 
 // Fetch IPS events for external IPs (often the only source for real-time external flows)
-$ips_resp = fetch_api("/proxy/network/api/s/{$tradSite}/stat/ips/event?limit=100");
+$ips_resp = fetch_api("/proxy/network/api/s/{$tradSite}/rest/alarm?limit=100");
 $ips_events = $ips_resp['data'] ?? [];
 foreach ($ips_events as $e) {
     $src = $e['src_ip'] ?? ''; $dst = $e['dst_ip'] ?? '';

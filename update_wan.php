@@ -174,7 +174,7 @@ try {
         $last_ips_check = $_SESSION['last_ips_alert_check'] ?? 0;
         $now = time();
         if ($now - $last_ips_check > 60) { // Check every 60s max
-            $ips_resp = fetch_api('/proxy/network/api/s/default/stat/ips/event?limit=5');
+            $ips_resp = fetch_api('/proxy/network/api/s/default/rest/alarm?limit=5');
             $ips_events = $ips_resp['data'] ?? [];
             $last_ips_id_file = __DIR__ . '/data/last_ips_event_id.txt';
             $last_id = file_exists($last_ips_id_file) ? trim(file_get_contents($last_ips_id_file)) : '';

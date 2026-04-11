@@ -444,7 +444,7 @@ function get_unifi_blocked_ips() {
     $siteId = get_trad_site_id($_SESSION['site_id'] ?? $config['site'] ?? 'default');
 
     // Fetch latest blocked IPS events
-    $resp = fetch_api("/proxy/network/api/s/$siteId/stat/ips/event?limit=100");
+    $resp = fetch_api("/proxy/network/api/s/$siteId/rest/alarm?limit=100");
     $raw_events = $resp['data'] ?? [];
     
     $blocked = [];
@@ -607,7 +607,7 @@ function get_unifi_security_events() {
     $site = get_trad_site_id($_SESSION['site_id'] ?? $config['site'] ?? 'default');
 
     // Fetch latest 50 IPS events
-    $resp = fetch_api("/proxy/network/api/s/$site/stat/ips/event?limit=50");
+    $resp = fetch_api("/proxy/network/api/s/$site/rest/alarm?limit=50");
     $raw_events = $resp['data'] ?? [];
     
     // 1. Collect all source IPs for batch GeoIP
@@ -689,7 +689,7 @@ function get_unifi_security_settings() {
     }
     
     // 3. Fast Threat Stats (Last hour)
-    $threats_resp = fetch_api("/proxy/network/api/s/$site_to_use_trad/stat/ips/event?period=3600");
+    $threats_resp = fetch_api("/proxy/network/api/s/$site_to_use_trad/rest/alarm?period=3600");
     $threats_count = count($threats_resp['data'] ?? []);
     
     // 3a. VPN Check — use networkconf (rest/vpn and rest/vpnserver are empty on UDR)
@@ -741,7 +741,7 @@ function get_unifi_security_settings() {
     $blocked_by_country = [];
 
     // Build country stats from IPS events (blocked traffic)
-    $ips_events_resp = fetch_api("/proxy/network/api/s/$site_to_use_trad/stat/ips/event?limit=500");
+    $ips_events_resp = fetch_api("/proxy/network/api/s/$site_to_use_trad/rest/alarm?limit=500");
     foreach (($ips_events_resp['data'] ?? []) as $e) {
         $cc = strtolower($e['srcipCountry'] ?? $e['src_country'] ?? '');
         $action = $e['inner_alert_action'] ?? '';
