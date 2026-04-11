@@ -1277,8 +1277,9 @@ function saveDeviceHistory($mac, $status)
     if ($last) {
         $devices    = loadDevices();
         $deviceName = $devices[$norm]['name'] ?? $mac;
+        $icon = ($status === 'on') ? "🟢" : "🔴";
         $statusText = ($status === 'on') ? "ONLINE" : "OFFLINE";
-        sendAlert("Zmiana statusu: $deviceName", "Urządzenie **$deviceName** ($mac) jest teraz **$statusText**.");
+        sendAlert("$icon $deviceName — $statusText", "Urządzenie **$deviceName** ($mac) jest teraz $statusText.");
     }
 
     // Insert new status entry
@@ -2843,14 +2844,14 @@ function render_nav($title = "MiniDash", $stats = []) {
                             </div>
                         </div>
 
-                            <!-- Trigger: VPN Connection -->
-                            <div class="p-6 bg-slate-900/40 rounded-3xl border border-white/5 space-y-6">
+                            <!-- Trigger: VPN Connection (API event endpoint not available on UDR) -->
+                            <div class="p-6 bg-slate-900/20 rounded-3xl border border-white/5 space-y-6 opacity-50">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-4">
                                         <div class="p-3 bg-purple-500/10 text-purple-500 rounded-2xl"><i data-lucide="shield" class="w-6 h-6"></i></div>
                                         <div>
-                                            <p class="text-sm font-bold text-slate-200">Polaczenie VPN</p>
-                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest">Alert przy polaczeniu/rozlaczeniu VPN</p>
+                                            <p class="text-sm font-bold text-slate-300">Polaczenie VPN</p>
+                                            <p class="text-[12px] text-slate-600 uppercase tracking-widest">Niedostepne — UDR nie udostepnia event API</p>
                                         </div>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">

@@ -188,7 +188,7 @@ try {
                     $sig = $evt['inner_alert_signature'] ?? $evt['inner_alert_category'] ?? 'Unknown threat';
                     $cc = strtoupper($evt['srcipCountry'] ?? '??');
                     sendAlert(
-                        "🛡️ IPS Zablokowany atak",
+                        "🔺 IPS Zablokowany atak",
                         "Zablokowano atak z **$src** ($cc): $sig"
                     );
                     break; // Only alert on newest blocked event
