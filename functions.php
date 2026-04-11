@@ -192,6 +192,23 @@ function get_system_info() {
     return $result;
 }
 
+// CSRF Protection
+function csrf_token() {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function csrf_field() {
+    return '<input type="hidden" name="_csrf" value="' . csrf_token() . '">';
+}
+
+function verify_csrf($token = null) {
+    $token = $token ?? ($_POST['_csrf'] ?? $_GET['_csrf'] ?? '');
+    return hash_equals(csrf_token(), $token);
+}
+
 function formatDuration($seconds) {
     if ($seconds < 60) return $seconds . "s";
     $m = floor($seconds / 60);

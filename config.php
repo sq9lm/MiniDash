@@ -338,8 +338,23 @@ function sendN8nNotification($message) {
     curl_close($ch);
 }
 
-// Inicjalizacja sesji
+// Inicjalizacja sesji z bezpiecznymi ustawieniami
+$session_timeout = $config['session_timeout'] ?? 60; // minutes
+ini_set('session.cookie_httponly', 1);
+ini_set('session.cookie_samesite', 'Strict');
+ini_set('session.use_strict_mode', 1);
+if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+    ini_set('session.cookie_secure', 1);
+}
 session_start();
+
+// Session timeout check
+if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $session_timeout * 60)) {
+    session_unset();
+    session_destroy();
+    session_start();
+}
+$_SESSION['last_activity'] = time();
 
 
 

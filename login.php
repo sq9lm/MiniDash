@@ -15,18 +15,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
     
-    if (verifyLogin($username, $password)) {
+    // Rate limiting — max login attempts
+    $max_attempts = $config['max_login_attempts'] ?? 5;
+    $lock_duration = ($config['lock_duration'] ?? 15) * 60; // minutes to seconds
+    $login_attempts = $_SESSION['login_attempts'] ?? 0;
+    $lock_until = $_SESSION['lock_until'] ?? 0;
+
+    if (time() < $lock_until) {
+        $remaining = ceil(($lock_until - time()) / 60);
+        $error = "Zbyt wiele prob logowania. Sprobuj za $remaining min.";
+    } elseif (verifyLogin($username, $password)) {
         require_once 'functions.php';
+        // Regenerate session ID to prevent fixation
+        session_regenerate_id(true);
         $_SESSION['logged_in'] = true;
         $_SESSION['username'] = $username;
-        $_SESSION['last_login_time'] = time(); // Podtrzymujemy dla UI
-        
+        $_SESSION['last_login_time'] = time();
+        $_SESSION['login_attempts'] = 0;
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+
         log_login_event($username);
-        
+
         header('Location: index.php');
         exit;
     } else {
-        $error = "Nieprawidłowy użytkownik lub hasło";
+        $login_attempts++;
+        $_SESSION['login_attempts'] = $login_attempts;
+        if ($login_attempts >= $max_attempts) {
+            $_SESSION['lock_until'] = time() + $lock_duration;
+            $error = "Zbyt wiele prob. Konto zablokowane na " . ($lock_duration / 60) . " min.";
+        } else {
+            $remaining = $max_attempts - $login_attempts;
+            $error = "Nieprawidlowy uzytkownik lub haslo ($remaining prob pozostalo)";
+        }
     }
 }
 ?>
