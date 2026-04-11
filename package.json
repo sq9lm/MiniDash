@@ -1,0 +1,27 @@
+{
+  "name": "unifi",
+  "version": "1.0.0",
+  "description": "**MiniDash** to lekki, nowoczesny i responsywny panel zarządzania dla systemów Ubiquiti UniFi. Został zaprojektowany, aby zapewnić szybki dostęp do kluczowych statystyk sieci, monitoringu kamer UniFi Protect oraz zaawansowanych logów systemowych w jednej, estetycznej konsoli.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sq9lm/MiniDash.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/sq9lm/MiniDash/issues"
+  },
+  "homepage": "https://github.com/sq9lm/MiniDash#readme",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

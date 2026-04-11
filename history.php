@@ -138,8 +138,7 @@ for ($i = 0; $i < $bar_count; $i++) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Historia - <?= htmlspecialchars($device_name) ?></title>
     <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
-    <!-- TODO: Replace Tailwind CDN with local build when build step is set up -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="assets/css/tailwind.min.css">
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
     <script src="assets/js/lucide.min.js"></script>
