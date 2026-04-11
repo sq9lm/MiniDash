@@ -155,11 +155,19 @@ try {
             if (!isset($known_macs[$mac])) {
                 $name = $client['name'] ?? $client['hostname'] ?? $mac;
                 $ip = $client['ip'] ?? $client['last_ip'] ?? '';
+                $vlan_id = detect_vlan_id($ip, $client['vlan'] ?? null);
+                $vlan_name = get_vlan_name($vlan_id);
+                $network = $client['essid'] ?? $client['network'] ?? '';
+                $is_wired = !empty($client['is_wired']);
                 $known_macs[$mac] = ['name' => $name, 'first_seen' => date('Y-m-d H:i:s')];
                 if ($can_alert && $new_count < 3) {
+                    $type = $is_wired ? '🔌 Wired' : '📶 WiFi';
+                    $details = "📡 IP: $ip | $type";
+                    if ($network) $details .= ": $network";
+                    $details .= " | 🏷️ VLAN: $vlan_name";
                     sendAlert(
                         "Nowe urzadzenie: $name",
-                        "Wykryto nieznane urzadzenie **$name** (MAC: $mac, IP: $ip) w sieci.",
+                        "$details\nMAC: $mac",
                         'warning'
                     );
                     $new_count++;
