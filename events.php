@@ -15,7 +15,7 @@ $all_events = get_recent_events(100, false); // Pokaż wszystko, nawet "wyczyszc
     <title>Historia Zdarzeń | MiniDash</title>
     <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
     <link rel="stylesheet" href="dashboard.css">
-    <link rel="stylesheet" href="assets/css/tailwind.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
     <script src="assets/js/lucide.min.js" defer></script>
 </head>

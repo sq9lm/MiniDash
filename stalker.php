@@ -19,7 +19,7 @@ $navbar_stats = get_navbar_stats();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wi-Fi Stalker | MiniDash</title>
     <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
-    <link rel="stylesheet" href="assets/css/tailwind.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
     <script src="assets/js/lucide.min.js" defer></script>
