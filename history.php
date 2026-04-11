@@ -252,15 +252,27 @@ for ($i = 0; $i < $bar_count; $i++) {
 
                 <!-- Usage History -->
                 <div>
+                   <?php
+                   // Fetch 24h/7d stats from SQLite
+                   $stats_24h_total = 0; $stats_7d_total = 0;
+                   if (isset($db)) {
+                       $s24 = $db->prepare("SELECT SUM(rx_bytes) + SUM(tx_bytes) as total FROM client_history WHERE mac = ? AND seen_at >= datetime('now', '-1 day')");
+                       $s24->execute([$mac]);
+                       $stats_24h_total = (int)($s24->fetchColumn() ?: 0);
+                       $s7d = $db->prepare("SELECT SUM(rx_bytes) + SUM(tx_bytes) as total FROM client_history WHERE mac = ? AND seen_at >= datetime('now', '-7 days')");
+                       $s7d->execute([$mac]);
+                       $stats_7d_total = (int)($s7d->fetchColumn() ?: 0);
+                   }
+                   ?>
                    <span class="text-[12px] font-black text-slate-500 uppercase tracking-widest block mb-4">Zużycie Danych</span>
                    <div class="grid grid-cols-3 gap-3 mb-4">
                          <div class="bg-slate-800/30 p-4 rounded-2xl border border-white/5 text-center flex flex-col justify-center">
                              <span class="block text-[12px] text-slate-500 font-black uppercase tracking-widest mb-1">24h</span>
-                             <span class="block text-lg font-mono text-slate-400 font-bold">-</span>
+                             <span class="block text-lg font-mono text-slate-400 font-bold"><?= $stats_24h_total > 0 ? format_bytes($stats_24h_total) : '-' ?></span>
                          </div>
                          <div class="bg-slate-800/30 p-4 rounded-2xl border border-white/5 text-center flex flex-col justify-center">
                              <span class="block text-[12px] text-slate-500 font-black uppercase tracking-widest mb-1">7d</span>
-                             <span class="block text-lg font-mono text-slate-400 font-bold">-</span>
+                             <span class="block text-lg font-mono text-slate-400 font-bold"><?= $stats_7d_total > 0 ? format_bytes($stats_7d_total) : '-' ?></span>
                          </div>
                          <div class="bg-slate-800/30 p-4 rounded-2xl border border-blue-500/10 text-center relative overflow-hidden flex flex-col justify-center">
                              <div class="absolute inset-0 bg-blue-500/5"></div>
