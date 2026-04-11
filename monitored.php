@@ -166,8 +166,8 @@ function formatUptime($seconds) {
                 <p class="text-slate-500 mt-2 text-sm">Przegląd kluczowych urządzeń przypisanych do Twojej sieci.</p>
             </div>
             
-            <div class="flex items-center gap-4 bg-slate-900/50 p-4 rounded-2xl border border-white/5">
-                <div class="flex items-center gap-6 text-[12px] font-black uppercase tracking-widest">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-6 text-[12px] font-black uppercase tracking-widest bg-slate-900/50 p-4 rounded-2xl border border-white/5">
                     <div class="flex items-center gap-2">
                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
                         <span class="text-emerald-400">Online</span>
@@ -177,6 +177,9 @@ function formatUptime($seconds) {
                         <span class="text-red-400">Offline</span>
                     </div>
                 </div>
+                <button onclick="openAddDeviceModal()" class="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold uppercase tracking-widest transition flex items-center gap-2 shadow-lg shadow-blue-600/20">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Dodaj urzadzenie
+                </button>
             </div>
         </div>
 
@@ -478,6 +481,56 @@ function formatUptime($seconds) {
             <div id="resource-modal-content"></div>
         </div>
     </div>
+
+    <!-- Add Device Modal -->
+    <div id="addDeviceModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center" onclick="if(event.target===this)closeAddDeviceModal()">
+        <div class="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                    <i data-lucide="plus-circle" class="w-6 h-6 text-blue-400"></i>
+                    Dodaj urzadzenie
+                </h2>
+                <button onclick="closeAddDeviceModal()" class="text-slate-500 hover:text-white transition">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <form method="POST" action="devices.php" class="space-y-4">
+                <input type="hidden" name="action" value="add">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nazwa urzadzenia</label>
+                    <input type="text" name="name" required class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="np. Daniel S22+">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Adres MAC</label>
+                    <input type="text" name="mac" required class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="AA:BB:CC:DD:EE:FF">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">VLAN (opcjonalnie)</label>
+                    <select name="vlan" class="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+                        <option value="">Automatyczny</option>
+                        <?php foreach (get_vlans() as $vid => $vname): ?>
+                            <option value="<?= $vid ?>"><?= htmlspecialchars($vname) ?> (VLAN <?= $vid ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold uppercase tracking-widest transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20">
+                    <i data-lucide="save" class="w-4 h-4"></i> Zapisz
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function openAddDeviceModal() {
+        document.getElementById('addDeviceModal').classList.remove('hidden');
+        document.getElementById('addDeviceModal').classList.add('flex');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    function closeAddDeviceModal() {
+        document.getElementById('addDeviceModal').classList.add('hidden');
+        document.getElementById('addDeviceModal').classList.remove('flex');
+    }
+    </script>
 
     <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
