@@ -1277,9 +1277,27 @@ function saveDeviceHistory($mac, $status)
     if ($last) {
         $devices    = loadDevices();
         $deviceName = $devices[$norm]['name'] ?? $mac;
-        $statusText = ($status === 'on') ? "ONLINE" : "OFFLINE";
-        $sev = ($status === 'on') ? 'info' : 'critical';
-        sendAlert("$deviceName — $statusText", "Urządzenie **$deviceName** ($mac) jest teraz $statusText.", $sev);
+        $duration = strtotime($timestamp) - strtotime($last['timestamp']);
+        $durationStr = formatDuration($duration);
+
+        if ($status === 'on') {
+            // Try to get IP and network info for online device
+            $ip = ''; $network = '';
+            $sta = fetch_api('/proxy/network/api/s/default/stat/sta');
+            foreach (($sta['data'] ?? []) as $c) {
+                if (normalize_mac($c['mac'] ?? '') === $norm) {
+                    $ip = $c['ip'] ?? $c['last_ip'] ?? '';
+                    $network = $c['essid'] ?? $c['network'] ?? '';
+                    break;
+                }
+            }
+            $details = "📡 IP: $ip";
+            if ($network) $details .= " | 📶 $network";
+            $details .= " | ⏱️ Offline: $durationStr";
+            sendAlert("$deviceName — ONLINE", $details, 'info');
+        } else {
+            sendAlert("$deviceName — OFFLINE", "Urzadzenie bylo online przez $durationStr.", 'critical');
+        }
     }
 
     // Insert new status entry
