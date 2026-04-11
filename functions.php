@@ -2835,6 +2835,24 @@ function render_nav($title = "MiniDash", $stats = []) {
                                 </div>
                             </div>
                         </div>
+
+                            <!-- Trigger: VPN Connection -->
+                            <div class="p-6 bg-slate-900/40 rounded-3xl border border-white/5 space-y-6">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-4">
+                                        <div class="p-3 bg-purple-500/10 text-purple-500 rounded-2xl"><i data-lucide="shield" class="w-6 h-6"></i></div>
+                                        <div>
+                                            <p class="text-sm font-bold text-slate-200">Polaczenie VPN</p>
+                                            <p class="text-[12px] text-slate-500 uppercase tracking-widest">Alert przy polaczeniu/rozlaczeniu VPN</p>
+                                        </div>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" name="vpn_alert_enabled" class="sr-only peer" <?= ($config['triggers']['vpn_alert_enabled'] ?? false) ? 'checked' : '' ?>>
+                                        <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-slate-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600 after:border-none"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -83,7 +83,8 @@ $config = [
         'new_device_alert_enabled' => false,
         'ips_alert_enabled' => false,
         'latency_alert_enabled' => false,
-        'latency_threshold_ms' => 100
+        'latency_threshold_ms' => 100,
+        'vpn_alert_enabled' => false
     ],
     'protect' => [
         'enabled' => null, // null = auto-detect

@@ -59,7 +59,8 @@ $newConfig = [
         'new_device_alert_enabled' => isset($_POST['new_device_alert_enabled']) && ($_POST['new_device_alert_enabled'] === 'true' || $_POST['new_device_alert_enabled'] === 'on'),
         'ips_alert_enabled' => isset($_POST['ips_alert_enabled']) && ($_POST['ips_alert_enabled'] === 'true' || $_POST['ips_alert_enabled'] === 'on'),
         'latency_alert_enabled' => isset($_POST['latency_alert_enabled']) && ($_POST['latency_alert_enabled'] === 'true' || $_POST['latency_alert_enabled'] === 'on'),
-        'latency_threshold_ms' => (int)($_POST['latency_threshold_ms'] ?? 100)
+        'latency_threshold_ms' => (int)($_POST['latency_threshold_ms'] ?? 100),
+        'vpn_alert_enabled' => isset($_POST['vpn_alert_enabled']) && ($_POST['vpn_alert_enabled'] === 'true' || $_POST['vpn_alert_enabled'] === 'on')
     ]
 ];
 

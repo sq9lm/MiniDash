@@ -68,8 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="w-full max-w-md">
         <!-- Logo/Header -->
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600/20 text-blue-500 mb-4 shadow-xl shadow-blue-500/10 border border-blue-500/20">
-                <i data-lucide="shield-check" class="w-8 h-8"></i>
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-800/50 mb-4 shadow-xl shadow-blue-500/10 border border-white/10">
+                <img src="img/lm-network.svg" alt="MiniDash" class="w-10 h-10 opacity-90">
             </div>
             <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
                 MiniDash

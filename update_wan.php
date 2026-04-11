@@ -223,6 +223,36 @@ try {
         }
     }
 
+    // === TRIGGER: VPN Connection Alert ===
+    if ($config['triggers']['vpn_alert_enabled'] ?? false) {
+        $last_vpn_check = $_SESSION['last_vpn_alert_check'] ?? 0;
+        if (time() - $last_vpn_check > 30) {
+            $vpn_resp = fetch_api('/proxy/network/api/s/default/rest/alarm?limit=10');
+            $last_vpn_id_file = __DIR__ . '/data/last_vpn_event_id.txt';
+            $last_vpn_id = file_exists($last_vpn_id_file) ? trim(file_get_contents($last_vpn_id_file)) : '';
+
+            foreach (($vpn_resp['data'] ?? []) as $evt) {
+                $evt_id = $evt['_id'] ?? '';
+                if ($evt_id === $last_vpn_id) break;
+                $key = $evt['key'] ?? '';
+                if (strpos($key, 'EVT_VPN') !== false || strpos($key, 'VPN_Client') !== false) {
+                    $msg = $evt['msg'] ?? 'VPN event';
+                    $is_connect = strpos($key, 'Connected') !== false || strpos($msg, 'connected') !== false;
+                    $icon = $is_connect ? 'VPN Polaczono' : 'VPN Rozlaczono';
+                    sendAlert(
+                        "$icon",
+                        $msg
+                    );
+                    break; // Only newest VPN event
+                }
+            }
+            if (!empty($vpn_resp['data'][0]['_id'])) {
+                file_put_contents($last_vpn_id_file, $vpn_resp['data'][0]['_id']);
+            }
+            $_SESSION['last_vpn_alert_check'] = time();
+        }
+    }
+
 } catch (Exception $e) {
     // Silently continue
 }
