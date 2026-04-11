@@ -39,12 +39,14 @@ try {
             $t_mac = normalize_mac($tc['mac'] ?? '');
             $trad_map[$t_mac] = $tc;
         }
-        
+
+        // Enrich existing clients with traditional data
+        $existing_macs = [];
         foreach ($clients as &$c) {
             $c_mac = normalize_mac($c['macAddress'] ?? $c['mac'] ?? '');
+            $existing_macs[] = $c_mac;
             if (isset($trad_map[$c_mac])) {
                 $tc = $trad_map[$c_mac];
-                // Map SSID and rates
                 $c['essid'] = $tc['essid'] ?? $c['essid'] ?? '';
                 $c['rx_rate'] = (float)($tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? 0) * 8));
                 $c['tx_rate'] = (float)($tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? 0) * 8));
@@ -53,6 +55,28 @@ try {
                 $c['signal'] = $tc['signal'] ?? $tc['rssi'] ?? 0;
                 $c['is_wired'] = $c['is_wired'] ?? ($tc['is_wired'] ?? ($tc['type'] == 'wired' || empty($tc['essid'])));
                 $c['vlan'] = $c['vlan'] ?? $tc['vlan'] ?? 0;
+            }
+        }
+
+        // Add clients from traditional API not in Integration API (e.g. VPN clients)
+        foreach ($trad_clients as $tc) {
+            $t_mac = normalize_mac($tc['mac'] ?? '');
+            if ($t_mac && !in_array($t_mac, $existing_macs)) {
+                $clients[] = [
+                    'mac' => $t_mac,
+                    'macAddress' => $tc['mac'] ?? '',
+                    'name' => $tc['name'] ?? $tc['hostname'] ?? $t_mac,
+                    'ipAddress' => $tc['ip'] ?? $tc['last_ip'] ?? '',
+                    'essid' => $tc['essid'] ?? '',
+                    'rx_rate' => (float)($tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? 0) * 8)),
+                    'tx_rate' => (float)($tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? 0) * 8)),
+                    'rx_bytes' => (float)($tc['rx_bytes'] ?? 0),
+                    'tx_bytes' => (float)($tc['tx_bytes'] ?? 0),
+                    'signal' => $tc['signal'] ?? 0,
+                    'is_wired' => $tc['is_wired'] ?? false,
+                    'vlan' => $tc['vlan'] ?? 0,
+                    'uptime' => $tc['uptime'] ?? 0,
+                ];
             }
         }
     }
