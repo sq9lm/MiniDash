@@ -271,7 +271,7 @@ try {
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
     <script src="assets/js/lucide.min.js"></script>
-    <script src="assets/js/chart.min.js" defer></script>
+    <script src="assets/js/chart.min.js"></script>
 </head>
 <body class="custom-scrollbar">
     <?php render_nav("MiniDash", [

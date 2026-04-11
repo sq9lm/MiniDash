@@ -140,7 +140,11 @@ try {
         $known_macs_file = __DIR__ . '/data/known_macs.json';
         $known_macs = file_exists($known_macs_file) ? json_decode(file_get_contents($known_macs_file), true) : [];
         if (!is_array($known_macs)) $known_macs = [];
-        $is_first_run = empty($known_macs);
+        $is_first_run = !isset($known_macs['_initialized']);
+
+        // Cooldown: max 1 alert batch per 5 minutes
+        $last_new_device_alert = $known_macs['_last_alert'] ?? 0;
+        $can_alert = !$is_first_run && (time() - $last_new_device_alert > 300);
 
         $sta_resp = fetch_api('/proxy/network/api/s/default/stat/sta');
         $new_count = 0;
@@ -151,16 +155,17 @@ try {
                 $name = $client['name'] ?? $client['hostname'] ?? $mac;
                 $ip = $client['ip'] ?? $client['last_ip'] ?? '';
                 $known_macs[$mac] = ['name' => $name, 'first_seen' => date('Y-m-d H:i:s')];
-                // Only alert if not first run (first run = learning phase)
-                if (!$is_first_run && $new_count < 3) { // Max 3 alerts per cycle
+                if ($can_alert && $new_count < 3) {
                     sendAlert(
                         "Nowe urzadzenie: $name",
                         "Wykryto nieznane urzadzenie **$name** (MAC: $mac, IP: $ip) w sieci."
                     );
                     $new_count++;
+                    $known_macs['_last_alert'] = time();
                 }
             }
         }
+        $known_macs['_initialized'] = true;
         file_put_contents($known_macs_file, json_encode($known_macs));
     }
 
