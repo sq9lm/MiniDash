@@ -66,6 +66,10 @@ function get_console_settings() {
 }
 
 function get_system_info() {
+    // Cache for 60s — this function makes 5 API calls
+    $cached = minidash_cache_get('system_info', 60);
+    if ($cached !== null) return $cached;
+
     global $config;
 
     $site = $_SESSION['site_id'] ?? $config['site'] ?? 'default';
@@ -171,7 +175,7 @@ function get_system_info() {
         ];
     }
 
-    return [
+    $result = [
         'version' => $os_version,
         'model' => $udr['model'] ?? 'UniFi Gateway',
         'up_to_date' => !$fw_update_available,
@@ -184,6 +188,8 @@ function get_system_info() {
         'disk_total' => $disk_total,
         'apps' => $apps,
     ];
+    minidash_cache_set('system_info', $result);
+    return $result;
 }
 
 function formatDuration($seconds) {

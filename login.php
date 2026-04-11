@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="assets/css/tailwind.min.css">
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
-    <script src="assets/js/lucide.min.js"></script>
+    <script src="assets/js/lucide.min.js" defer></script>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md">

@@ -16,21 +16,21 @@ $devices_config = loadDevices();
 try {
     // 1. Fetch Clients
     $clients_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/clients?limit=1000");
-    
-    // Auto-detect correct site ID if the configured one fails
-    if (empty($clients_resp['data']) && $siteId !== 'default') {
-         $fallback_resp = fetch_api("/proxy/network/integration/v1/sites/default/clients?limit=1000");
-         if (!empty($fallback_resp['data'])) {
-             $clients_resp = $fallback_resp;
-             $siteId = 'default';
-         }
-    }
-    
-    // 2. Fetch from Traditional API (Rich data: SSID, signals, rates)
-    $tradSite = get_trad_site_id($siteId);
-    $trad_resp = fetch_api("/proxy/network/api/s/$tradSite/stat/sta");
-    $trad_clients = $trad_resp['data'] ?? [];
-    $clients = $clients_resp['data'] ?? [];
+
+        // Auto-detect correct site ID if the configured one fails
+        if (empty($clients_resp['data']) && $siteId !== 'default') {
+             $fallback_resp = fetch_api("/proxy/network/integration/v1/sites/default/clients?limit=1000");
+             if (!empty($fallback_resp['data'])) {
+                 $clients_resp = $fallback_resp;
+                 $siteId = 'default';
+             }
+        }
+
+        // 2. Fetch from Traditional API (Rich data: SSID, signals, rates)
+        $tradSite = get_trad_site_id($siteId);
+        $trad_resp = fetch_api("/proxy/network/api/s/$tradSite/stat/sta");
+        $trad_clients = $trad_resp['data'] ?? [];
+        $clients = $clients_resp['data'] ?? [];
     
     // Merge data
     if (!empty($trad_clients)) {
@@ -58,6 +58,7 @@ try {
     }
     
     // 3. Fetch Infrastructure Devices with traditional API for better stats
+    $tradSite = $tradSite ?? get_trad_site_id($siteId);
     $trad_dev_resp = fetch_api("/proxy/network/api/s/$tradSite/stat/device");
     $trad_devices = $trad_dev_resp['data'] ?? [];
     $trad_dev_map = [];
@@ -68,6 +69,7 @@ try {
 
     $infr_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/devices");
     $infr_devices = $infr_resp['data'] ?? [];
+
     
     // Ensure we also populate subnets for detect_vlan_id
     get_vlans(); 
@@ -268,8 +270,8 @@ try {
     <link rel="stylesheet" href="assets/css/tailwind.min.css">
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
-    <script src="assets/js/lucide.min.js"></script>
-    <script src="assets/js/chart.min.js"></script>
+    <script src="assets/js/lucide.min.js" defer></script>
+    <script src="assets/js/chart.min.js" defer></script>
 </head>
 <body class="custom-scrollbar">
     <?php render_nav("MiniDash", [

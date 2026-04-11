@@ -141,7 +141,7 @@ for ($i = 0; $i < $bar_count; $i++) {
     <link rel="stylesheet" href="assets/css/tailwind.min.css">
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="dashboard.css">
-    <script src="assets/js/lucide.min.js"></script>
+    <script src="assets/js/lucide.min.js" defer></script>
 </head>
 <body class="custom-scrollbar">
     <?php render_nav("Historia: " . $device_name); ?>
