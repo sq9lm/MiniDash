@@ -345,11 +345,11 @@ $top_countries = array_slice($top_countries, 0, 5);
                                 Zdarzenia bezpieczeństwa
                             </h2>
                             <div class="flex items-center gap-2">
-                                <button class="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition border border-white/10">
+                                <button onclick="openFilterModal()" class="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition border border-white/10">
                                     <i data-lucide="filter" class="w-4 h-4 inline mr-1"></i>
                                     Filtruj
                                 </button>
-                                <button class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">
+                                <button onclick="exportSecurityEvents()" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">
                                     <i data-lucide="download" class="w-4 h-4 inline mr-1"></i>
                                     Eksportuj
                                 </button>
@@ -1634,7 +1634,81 @@ $top_countries = array_slice($top_countries, 0, 5);
             document.getElementById('securityScoreModal').classList.remove('active');
             document.body.style.overflow = '';
         }
+        // === Export security events to CSV ===
+        function exportSecurityEvents() {
+            const events = securityEventsData || [];
+            if (!events.length) { if (typeof showToast !== 'undefined') showToast('Brak danych do eksportu', 'error'); return; }
+
+            let csv = 'Czas,Severity,Sygnatura,IP Zrodlowe,IP Docelowe,Kraj,Akcja\n';
+            events.forEach(e => {
+                csv += `"${e.time}","${e.severity}","${(e.signature||'').replace(/"/g,'""')}","${e.src_ip}","${e.dst_ip||''}","${e.country_code||''}","${e.action||''}"\n`;
+            });
+
+            const blob = new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8;'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'security_events_' + new Date().toISOString().slice(0,10) + '.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+            if (typeof showToast !== 'undefined') showToast('Eksport CSV gotowy', 'success');
+        }
+
+        // === Filter modal ===
+        let activeFilters = { severity: 'all' };
+
+        function openFilterModal() {
+            document.getElementById('filterModal').classList.remove('hidden');
+            document.getElementById('filterModal').classList.add('flex');
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        function closeFilterModal() {
+            document.getElementById('filterModal').classList.add('hidden');
+            document.getElementById('filterModal').classList.remove('flex');
+        }
+        function applyFilter(severity) {
+            activeFilters.severity = severity;
+            const filtered = severity === 'all' ? securityEventsData : securityEventsData.filter(e => e.severity === severity);
+            if (typeof MiniPagination !== 'undefined') {
+                MiniPagination.create('security-events-container', filtered, renderSecurityEvents);
+            } else {
+                renderSecurityEvents(filtered);
+            }
+            closeFilterModal();
+            if (typeof showToast !== 'undefined') showToast('Filtr: ' + severity, 'success');
+        }
     </script>
+
+    <!-- Filter Modal -->
+    <div id="filterModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center" onclick="if(event.target===this)closeFilterModal()">
+        <div class="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-sm shadow-2xl">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-bold text-white flex items-center gap-3">
+                    <i data-lucide="filter" class="w-5 h-5 text-blue-400"></i>
+                    Filtruj zdarzenia
+                </h2>
+                <button onclick="closeFilterModal()" class="text-slate-500 hover:text-white transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="space-y-2">
+                <button onclick="applyFilter('all')" class="w-full px-4 py-3 bg-slate-800/50 hover:bg-white/5 text-slate-300 rounded-xl text-sm font-bold transition border border-white/5 text-left">Wszystkie</button>
+                <button onclick="applyFilter('critical')" class="w-full px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-sm font-bold transition border border-red-500/20 text-left flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-red-500"></span> Krytyczne
+                </button>
+                <button onclick="applyFilter('high')" class="w-full px-4 py-3 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-xl text-sm font-bold transition border border-orange-500/20 text-left flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-orange-500"></span> Wysokie
+                </button>
+                <button onclick="applyFilter('medium')" class="w-full px-4 py-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-xl text-sm font-bold transition border border-amber-500/20 text-left flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> Srednie
+                </button>
+                <button onclick="applyFilter('low')" class="w-full px-4 py-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-xl text-sm font-bold transition border border-blue-500/20 text-left flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-blue-500"></span> Niskie
+                </button>
+            </div>
+        </div>
+    </div>
+
     <?php include __DIR__ . '/includes/footer.php'; ?>
 
 <!-- Threat Ignore List Modal -->
