@@ -3,13 +3,15 @@
 require_once 'config.php';
 require_once 'db.php';
 require_once 'functions.php';
+require_once 'includes/navbar_stats.php';
 
 // Sprawdzenie czy użytkownik jest zalogowany
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
     header('Location: login.php');
     exit;
 }
-session_write_close();
+
+$navbar_stats = get_navbar_stats();
 
 $mac = $_GET['mac'] ?? '';
 if (empty($mac)) {
@@ -149,7 +151,7 @@ for ($i = 0; $i < $bar_count; $i++) {
     <div class="max-w-4xl mx-auto p-4 md:p-8">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div class="flex items-center gap-4">
-                <a href="index.php" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all border border-white/5 group" title="Wróć">
+                <a href="monitored.php" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl transition-all border border-white/5 group" title="Wróć">
                     <i data-lucide="chevron-left" class="w-6 h-6 group-hover:-translate-x-0.5 transition-transform"></i>
                 </a>
                 <div>
@@ -410,7 +412,7 @@ for ($i = 0; $i < $bar_count; $i++) {
 
                     const result = await response.json();
                     if (result.success) {
-                        window.location.href = 'index.php';
+                        window.location.href = 'monitored.php';
                     } else {
                         showToast(result.message || 'Nieznany błąd', 'error');
                     }
