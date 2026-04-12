@@ -140,8 +140,13 @@ function load_app_config($defaults) {
 
 $config = load_app_config($config);
 
-// Load language
-load_language($config['language'] ?? 'pl');
+// Load language: cookie > config > console > fallback pl
+$_active_lang = $_COOKIE['minidash_lang'] ?? $config['language'] ?? 'pl';
+if ($_active_lang === 'auto') {
+    // Try console language, fallback pl
+    $_active_lang = 'pl'; // will be overridden by console if available
+}
+load_language($_active_lang);
 
 // Dynamiczna inicjalizacja tematów ntfy jeśli brakuje
 if (empty($config['ntfy_notifications']['topic']) && !empty($config['api_key'])) {
@@ -417,6 +422,56 @@ if (isset($_SESSION['fingerprint']) && $_SESSION['fingerprint'] !== $fingerprint
     session_start();
 } else {
     $_SESSION['fingerprint'] = $fingerprint;
+}
+
+// Remember Me — auto-login from persistent cookie
+if (empty($_SESSION['logged_in']) && !empty($_COOKIE['remember_me'])) {
+    $parts = explode(':', $_COOKIE['remember_me'], 2);
+    if (count($parts) === 2) {
+        [$selector, $validator] = $parts;
+        $db_path_rm = __DIR__ . '/data/minidash.db';
+        if (file_exists($db_path_rm)) {
+            try {
+                $db_rm = new PDO("sqlite:$db_path_rm");
+                $db_rm->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $stmt_rm = $db_rm->prepare("SELECT * FROM remember_tokens WHERE selector = ? AND expires_at > datetime('now') LIMIT 1");
+                $stmt_rm->execute([$selector]);
+                $token_row = $stmt_rm->fetch(PDO::FETCH_ASSOC);
+
+                if ($token_row && hash_equals($token_row['validator_hash'], hash('sha256', $validator))) {
+                    session_regenerate_id(true);
+                    $_SESSION['logged_in'] = true;
+                    $_SESSION['username'] = $token_row['username'];
+                    $_SESSION['last_login_time'] = time();
+                    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+                    $_SESSION['fingerprint'] = $fingerprint;
+
+                    // Rotate token — delete old, issue new
+                    $db_rm->prepare("DELETE FROM remember_tokens WHERE selector = ?")->execute([$selector]);
+                    $new_selector = bin2hex(random_bytes(16));
+                    $new_validator = bin2hex(random_bytes(32));
+                    $new_expires = date('Y-m-d H:i:s', time() + 30 * 86400);
+                    $db_rm->prepare("INSERT INTO remember_tokens (selector, validator_hash, username, expires_at) VALUES (?, ?, ?, ?)")
+                           ->execute([$new_selector, hash('sha256', $new_validator), $token_row['username'], $new_expires]);
+
+                    $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+                    setcookie('remember_me', $new_selector . ':' . $new_validator, [
+                        'expires'  => time() + 30 * 86400,
+                        'path'     => '/',
+                        'secure'   => $secure,
+                        'httponly'  => true,
+                        'samesite' => 'Strict',
+                    ]);
+                } else {
+                    // Invalid token — clear cookie
+                    setcookie('remember_me', '', ['expires' => 1, 'path' => '/']);
+                }
+                $db_rm = null;
+            } catch (PDOException $e) {
+                // DB not ready yet — ignore
+            }
+        }
+    }
 }
 
 

@@ -8,7 +8,7 @@ services:
     ports:
       - "${MINIDASH_PORT:-8080}:80"
     environment:
-      - UNIFI_CONTROLLER_URL=${UNIFI_CONTROLLER_URL:-https://192.168.1.1}
+      - UNIFI_CONTROLLER_URL=${UNIFI_CONTROLLER_URL:-https://10.0.0.1}
       - UNIFI_API_KEY=${UNIFI_API_KEY}
       - UNIFI_SITE=${UNIFI_SITE:-default}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}

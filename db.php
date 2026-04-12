@@ -76,4 +76,7 @@ function run_purge(PDO $db): void {
     foreach ($rules as $table => $r) {
         $db->exec("DELETE FROM {$table} WHERE {$r['col']} < datetime('now', '-{$r['days']} days')");
     }
+
+    // Purge expired remember_me tokens
+    $db->exec("DELETE FROM remember_tokens WHERE expires_at < datetime('now')");
 }

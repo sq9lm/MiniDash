@@ -116,7 +116,80 @@ Data and logs are stored in Docker volumes and persist across container restarts
 
 ---
 
-## Option 2: Synology NAS (Web Station)
+## Option 2: Synology NAS (Container Manager — GUI)
+
+The easiest way to run MiniDash on a Synology NAS with DSM 7.2+.
+
+### Step 1: Upload project to NAS
+
+Copy the MiniDash folder to your Synology, e.g. via File Station or SCP:
+
+```
+/volume1/docker/minidash/
+```
+
+Make sure the folder contains `docker-compose.yml`, `Dockerfile`, and all project files.
+
+### Step 2: Configure environment
+
+Create a `.env` file in the project folder (next to `docker-compose.yml`):
+
+```bash
+# Via SSH:
+cd /volume1/docker/minidash
+cp .env.example .env
+nano .env
+```
+
+Fill in your values:
+
+```env
+UNIFI_CONTROLLER_URL=https://10.0.0.1
+UNIFI_API_KEY=your-api-key-here
+UNIFI_SITE=default
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your-secure-password
+ADMIN_FULL_NAME=Your Name
+ADMIN_EMAIL=admin@example.com
+DEBUG=false
+MINIDASH_PORT=8080
+```
+
+### Step 3: Create project in Container Manager
+
+1. Open **Container Manager** on your Synology
+2. Go to **Project** → **Create**
+3. Set a project name, e.g. `minidash`
+4. Set the path to `/volume1/docker/minidash`
+5. Container Manager will detect `docker-compose.yml` automatically
+6. Click **Next**, review the settings, then click **Done**
+
+The container will build and start automatically.
+
+### Step 4: Open in browser
+
+```
+http://YOUR-NAS-IP:8080
+```
+
+Log in with the credentials from your `.env` file.
+
+### Updating
+
+1. Upload the new version of MiniDash to the same folder
+2. In Container Manager → **Project** → select `minidash`
+3. Click **Action** → **Build** (rebuild)
+4. The container restarts with updated code; data in volumes is preserved
+
+### Notes
+
+- Data (SQLite database, avatars) and logs are stored in Docker volumes — they survive container rebuilds
+- To change the port, edit `MINIDASH_PORT` in `.env` and rebuild
+- Container Manager reads `.env` automatically — no need to enter variables manually in the GUI
+
+---
+
+## Option 3: Synology NAS (Web Station — manual)
 
 ### Step 1: Install PHP 8.2
 
@@ -179,7 +252,7 @@ First visit creates the SQLite database automatically — no manual setup needed
 
 ---
 
-## Option 3: Any Linux Server (nginx + PHP-FPM)
+## Option 4: Any Linux Server (nginx + PHP-FPM)
 
 ### Step 1: Install dependencies
 
@@ -280,7 +353,7 @@ Navigate to `http://unifi.yourdomain.com` — the database will be created on fi
 
 ---
 
-## Option 4: Apache
+## Option 5: Apache
 
 ### Step 1: Install dependencies
 

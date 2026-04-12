@@ -479,6 +479,7 @@
         "username": "Użytkownik",
         "password": "Hasło",
         "login_button": "Zaloguj do Dashboardu",
+        "remember_me": "Zapamiętaj mnie na 30 dni",
         "wrong_credentials": "Nieprawidłowy użytkownik lub hasło"
     },
     "notifications_panel": {

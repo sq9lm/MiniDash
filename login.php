@@ -34,6 +34,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['login_attempts'] = 0;
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
+        // Remember Me — persistent cookie (30 days)
+        if (!empty($_POST['remember_me'])) {
+            $selector = bin2hex(random_bytes(16));
+            $validator = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', time() + 30 * 86400);
+
+            $stmt = $db->prepare("INSERT INTO remember_tokens (selector, validator_hash, username, expires_at) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$selector, hash('sha256', $validator), $username, $expires]);
+
+            $cookie_value = $selector . ':' . $validator;
+            $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+            setcookie('remember_me', $cookie_value, [
+                'expires'  => time() + 30 * 86400,
+                'path'     => '/',
+                'secure'   => $secure,
+                'httponly'  => true,
+                'samesite' => 'Strict',
+            ]);
+        }
+
         log_login_event($username);
 
         header('Location: index.php');
@@ -58,6 +78,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logowanie - MiniDash</title>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GKH5M372M1"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-GKH5M372M1');
+    </script>
     <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="assets/css/fonts.css">
@@ -113,6 +141,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
                 
+                <label class="flex items-center gap-3 cursor-pointer group/remember select-none">
+                    <input type="checkbox" name="remember_me" value="1"
+                           class="w-4 h-4 rounded bg-slate-800/50 border-white/10 text-blue-500 focus:ring-blue-500/50 focus:ring-offset-0 cursor-pointer">
+                    <span class="text-sm text-slate-400 group-hover/remember:text-slate-300 transition"><?= __('login.remember_me') ?></span>
+                </label>
+
                 <button type="submit"
                         class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition shadow-xl shadow-blue-600/20 group flex items-center justify-center gap-2">
                     <span><?= __('login.login_button') ?></span>
