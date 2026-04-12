@@ -5,8 +5,10 @@ RUN apk add --no-cache \
     nginx \
     curl \
     sqlite \
+    sqlite-dev \
     libsodium-dev \
     && docker-php-ext-install pdo pdo_sqlite sodium \
+    && apk del sqlite-dev \
     && rm -rf /var/cache/apk/*
 
 # Nginx config

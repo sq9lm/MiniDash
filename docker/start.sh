@@ -7,7 +7,7 @@ chown -R www-data:www-data /var/www/html/data /var/www/html/logs
 # Create .env from environment variables if not exists
 if [ ! -f /var/www/html/.env ]; then
     cat > /var/www/html/.env << EOF
-UNIFI_CONTROLLER_URL=${UNIFI_CONTROLLER_URL:-https://192.168.1.1}
+UNIFI_CONTROLLER_URL=${UNIFI_CONTROLLER_URL:-https://10.0.0.1}
 UNIFI_API_KEY=${UNIFI_API_KEY:-your-api-key}
 UNIFI_SITE=${UNIFI_SITE:-default}
 ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
@@ -21,6 +21,12 @@ fi
 
 # Run migrations
 php /var/www/html/db.php 2>/dev/null || true
+
+# Start background trigger runner (every 60 seconds)
+(while true; do
+    php /var/www/html/cron_triggers.php 2>/dev/null
+    sleep 60
+done) &
 
 # Start PHP-FPM and Nginx
 php-fpm -D
