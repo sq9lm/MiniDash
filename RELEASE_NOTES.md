@@ -1,5 +1,44 @@
 # MiniDash — Release Notes
 
+## v2.2.0 (2026-04-12)
+
+Threat Watch — przebudowany moduł Security z zakładkami i live IDS/IPS monitoring.
+
+### Threat Watch (IDS/IPS)
+- Nowa zakładka "Zagrożenia" w Security — live monitoring IDS/IPS z auto-refresh co 60s
+- Kaskadowy API fallback: V2 traffic-flows → stat/ips/event → rest/alarm (kompatybilność z UDR, UDM Pro, UDM SE, UCG, UXG)
+- Pre-loaded dane z PHP — natychmiastowe przełączanie między zakładkami
+- Path memory (24h cache) — zapamiętuje który endpoint działa, pomija niedziałające
+- Paginacja listy zagrożeń (25/50/100) z nawigacją < >
+- Filtry: zakres czasu (1h/24h/7d), ryzyko (high/medium/low), akcja (blocked/alert), wyszukiwarka
+- Modal szczegółów zdarzenia z GeoIP (kraj, miasto, ISP) dla source i destination
+- Sidebar: top kraje źródłowe, rozkład ryzyka, top kategorie zagrożeń
+- Eksport CSV z filtrowanych danych
+- Ignorowanie IP z listy zagrożeń (integracja z threat_ignore)
+
+### Security Overview
+- Zakładka "Przegląd" z Security Score (SVG), statusem IPS/Honeypot/Ad-block
+- Wyświetlanie trybu IPS: IDS (detekcja), IPS (detekcja + blokowanie), IPS Inline (pełna ochrona)
+- Karty konfiguracji: IPS mode, Ad Blocking, Honeypot, Geo-blocking
+- Protection pillars, modal reguł firewalla, modal geo-blocking z flagami krajów
+- Przebudowany security score modal z rozbiciem na czynniki
+
+### Backend
+- Nowa funkcja `fetch_api_post()` — POST z API key dla V2 i legacy endpointów
+- Nowa funkcja `fetch_threat_events()` — kaskadowy fallback z normalizacją danych
+- Normalizatory: `normalize_v2_threat()`, `normalize_legacy_threat()`, `normalize_alarm_threat()`
+- Nowy endpoint `api_threats.php` — AJAX z filtrami, statystykami, top countries/categories
+- Dodany `ips_mode` do `get_unifi_security_settings()`
+
+### UI/CSS
+- Nowe glow: `stat-glow-orange`, `stat-glow-red`, `stat-glow-rose` w dashboard.css
+- Style paginacji `.page-size-btn` z aktywnym stanem (orange)
+
+### i18n (PL/EN)
+- 43 nowe klucze `threats.*` (PL + EN) — eventy, filtry, paginacja, modal, sidebar
+- 6 kluczy `threats.mode_*` — tryby IPS/IDS
+- 2 klucze `security.tab_overview`, `security.tab_threats`
+
 ## v2.1.1 (2026-04-11)
 
 Internationalization, security audit, notification fixes.

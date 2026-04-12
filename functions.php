@@ -276,8 +276,67 @@ function fetch_api($endpoint)
 }
 
 /**
+ * POST variant of fetch_api for endpoints requiring request body (e.g. V2 traffic-flows)
+ */
+function fetch_api_post($endpoint, array $payload, int $timeout = 5) {
+    global $config;
+
+    if (!function_exists('curl_init')) {
+        return ['data' => [], 'error' => 'cURL not installed'];
+    }
+
+    try {
+        $url = rtrim($config['controller_url'], '/') . '/' . ltrim($endpoint, '/');
+        $apiKey = $config['api_key'];
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "X-API-KEY: $apiKey",
+            "Content-Type: application/json"
+        ]);
+
+        $output = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_error = curl_error($ch);
+        curl_close($ch);
+
+        if ($output === false) {
+            return ['data' => [], 'error' => $curl_error, 'http_code' => $http_code];
+        }
+
+        if ($http_code >= 400) {
+            return ['data' => [], 'error' => "HTTP $http_code", 'http_code' => $http_code];
+        }
+
+        $data = json_decode($output, true);
+
+        if (isset($data['data']) && is_array($data['data'])) {
+            return $data;
+        }
+
+        if (is_array($data)) {
+            return ['data' => $data];
+        }
+
+        return ['data' => [], 'error' => 'Invalid JSON structure'];
+    } catch (Throwable $e) {
+        return ['data' => [], 'error' => $e->getMessage()];
+    }
+}
+
+/**
  * Returns the site ID to be used for Traditional API paths (/api/s/...)
- * For local gateways (UDM/UDR), the UUID site ID from Integration API 
+ * For local gateways (UDM/UDR), the UUID site ID from Integration API
  * MUST be replaced with 'default' for traditional paths.
  */
 function get_trad_site_id($siteId = null) {
@@ -661,6 +720,196 @@ function get_unifi_security_events() {
     return $events;
 }
 
+/**
+ * Fetch IPS/IDS threat events with cascading API fallback:
+ * 1. V2 traffic-flows (Network 10.x+) — filtered server-side
+ * 2. Legacy stat/ips/event — flat format
+ * 3. rest/alarm — final fallback
+ * Returns normalized array of threat events.
+ */
+function fetch_threat_events($range = '24h') {
+    global $config;
+
+    $cache_key = 'threat_events_' . $range;
+    $cached = minidash_cache_get($cache_key, 120);
+    if ($cached !== null) return $cached;
+
+    $site = $_SESSION['site_id'] ?? $config['site'] ?? 'default';
+    $tradSite = get_trad_site_id($site);
+
+    // Calculate time range
+    $now_ms = intval(microtime(true) * 1000);
+    $ranges = [
+        '1h'  => 3600000,
+        '24h' => 86400000,
+        '7d'  => 604800000,
+    ];
+    $delta = $ranges[$range] ?? $ranges['24h'];
+    $from_ms = $now_ms - $delta;
+
+    // Check path memory — skip V2 if it already failed before (24h TTL)
+    $api_path = minidash_cache_get('threat_api_path', 86400);
+    $events = [];
+    $source = 'unknown';
+
+    // --- Attempt 1: V2 traffic-flows (Network 10.x+) ---
+    if ($api_path === 'v2' || $api_path === null) {
+        $payload = [
+            'timestampFrom' => $from_ms,
+            'timestampTo'   => $now_ms,
+            'pageNumber'    => 0,
+            'pageSize'      => 200,
+            'skip_count'    => false,
+            'policy_type'   => ['INTRUSION_PREVENTION'],
+            'risk'          => [],
+            'action'        => [],
+            'direction'     => [],
+            'protocol'      => [],
+            'source_ip'     => [],
+            'destination_ip'=> [],
+            'search_text'   => '',
+        ];
+
+        $resp = fetch_api_post("/proxy/network/v2/api/site/$tradSite/traffic-flows", $payload);
+
+        if (empty($resp['error']) && !empty($resp['data'])) {
+            $source = 'v2';
+            minidash_cache_set('threat_api_path', 'v2');
+            foreach ($resp['data'] as $f) {
+                $events[] = normalize_v2_threat($f);
+            }
+        } elseif ($api_path === null) {
+            // V2 failed on first try — skip to next
+            minidash_cache_set('threat_api_path', 'legacy');
+        }
+    }
+
+    // --- Attempt 2: Legacy stat/ips/event ---
+    if (empty($events) && ($api_path === 'legacy' || $api_path === null)) {
+        $payload = [
+            'start' => intval($from_ms),
+            'end'   => intval($now_ms),
+            '_limit' => 10000,
+        ];
+        $resp = fetch_api_post("/proxy/network/api/s/$tradSite/stat/ips/event", $payload);
+
+        if (empty($resp['error']) && !empty($resp['data'])) {
+            $source = 'legacy';
+            minidash_cache_set('threat_api_path', 'legacy');
+            foreach ($resp['data'] as $e) {
+                $events[] = normalize_legacy_threat($e);
+            }
+        } elseif ($api_path === null || $api_path === 'legacy') {
+            minidash_cache_set('threat_api_path', 'alarm');
+        }
+    }
+
+    // --- Attempt 3: rest/alarm (always works as final fallback) ---
+    if (empty($events)) {
+        $resp = fetch_api("/proxy/network/api/s/$tradSite/rest/alarm?limit=200");
+        $raw = $resp['data'] ?? [];
+        $source = 'alarm';
+        minidash_cache_set('threat_api_path', 'alarm');
+
+        foreach ($raw as $e) {
+            if (empty($e['inner_alert_action'])) continue;
+            $ts = isset($e['time']) ? intval($e['time'] / 1000) : time();
+            if ($ts < ($from_ms / 1000)) continue;
+            $events[] = normalize_alarm_threat($e);
+        }
+    }
+
+    // Batch GeoIP lookup
+    $src_ips = array_filter(array_unique(array_column($events, 'src_ip')));
+    $dst_ips = array_filter(array_unique(array_column($events, 'dst_ip')));
+    $all_ips = array_unique(array_merge($src_ips, $dst_ips));
+    $geo = lookup_geoip_batch($all_ips);
+
+    foreach ($events as &$ev) {
+        if (empty($ev['country_code']) || $ev['country_code'] === 'un') {
+            $ev['country_code'] = $geo[$ev['src_ip']]['country_code'] ?? 'un';
+        }
+        $ev['src_geo'] = $geo[$ev['src_ip']] ?? [];
+        $ev['dst_geo'] = $geo[$ev['dst_ip']] ?? [];
+    }
+    unset($ev);
+
+    // Sort by timestamp descending
+    usort($events, fn($a, $b) => $b['timestamp'] <=> $a['timestamp']);
+
+    $result = ['events' => $events, 'source' => $source, 'range' => $range];
+    minidash_cache_set($cache_key, $result);
+    return $result;
+}
+
+function normalize_v2_threat(array $f): array {
+    $risk_map = ['high' => 'high', 'medium' => 'medium', 'low' => 'low'];
+    $action_raw = strtolower($f['action'] ?? 'alert');
+    $action = in_array($action_raw, ['blocked', 'dropped', 'rejected']) ? 'blocked' : 'alert';
+
+    return [
+        'timestamp'    => isset($f['timestamp']) ? intval($f['timestamp'] / 1000) : time(),
+        'src_ip'       => $f['source']['ip'] ?? $f['source_ip'] ?? '',
+        'src_port'     => $f['source']['port'] ?? '',
+        'dst_ip'       => $f['destination']['ip'] ?? $f['destination_ip'] ?? '',
+        'dst_port'     => $f['destination']['port'] ?? '',
+        'signature'    => $f['ips']['advanced_information'] ?? $f['ips']['signature'] ?? 'Unknown',
+        'signature_id' => $f['ips']['signature_id'] ?? '',
+        'category'     => $f['ips']['category_name'] ?? $f['ips']['category'] ?? '',
+        'risk'         => $risk_map[strtolower($f['risk'] ?? 'medium')] ?? 'medium',
+        'action'       => $action,
+        'direction'    => strtolower($f['direction'] ?? 'unknown'),
+        'protocol'     => strtoupper($f['protocol'] ?? ''),
+        'country_code' => strtolower($f['source']['country_code'] ?? $f['source_region'] ?? 'un'),
+    ];
+}
+
+function normalize_legacy_threat(array $e): array {
+    $severity = intval($e['inner_alert_severity'] ?? 3);
+    $risk = $severity <= 1 ? 'high' : ($severity <= 2 ? 'medium' : 'low');
+    $action_raw = strtolower($e['inner_alert_action'] ?? 'alert');
+    $action = in_array($action_raw, ['blocked', 'drop', 'reject']) ? 'blocked' : 'alert';
+
+    return [
+        'timestamp'    => isset($e['timestamp']) ? intval($e['timestamp'] / 1000) : (isset($e['time']) ? intval($e['time'] / 1000) : time()),
+        'src_ip'       => $e['src_ip'] ?? '',
+        'src_port'     => $e['src_port'] ?? '',
+        'dst_ip'       => $e['dest_ip'] ?? $e['dst_ip'] ?? '',
+        'dst_port'     => $e['dest_port'] ?? $e['dst_port'] ?? '',
+        'signature'    => $e['inner_alert_signature'] ?? $e['msg'] ?? 'Unknown',
+        'signature_id' => $e['inner_alert_signature_id'] ?? '',
+        'category'     => $e['inner_alert_category'] ?? $e['catname'] ?? '',
+        'risk'         => $risk,
+        'action'       => $action,
+        'direction'    => strtolower($e['direction'] ?? 'unknown'),
+        'protocol'     => strtoupper($e['proto'] ?? $e['app_proto'] ?? ''),
+        'country_code' => strtolower($e['src_ip_country'] ?? $e['srcipCountry'] ?? 'un'),
+    ];
+}
+
+function normalize_alarm_threat(array $e): array {
+    $action_raw = strtolower($e['inner_alert_action'] ?? '');
+    $action = ($action_raw === 'blocked') ? 'blocked' : 'alert';
+    $severity = 'medium';
+    if ($action === 'blocked') $severity = 'high';
+
+    return [
+        'timestamp'    => isset($e['time']) ? intval($e['time'] / 1000) : time(),
+        'src_ip'       => $e['src_ip'] ?? '',
+        'src_port'     => $e['src_port'] ?? '',
+        'dst_ip'       => $e['dst_ip'] ?? $e['dest_ip'] ?? '',
+        'dst_port'     => $e['dst_port'] ?? $e['dest_port'] ?? '',
+        'signature'    => $e['inner_alert_signature'] ?? $e['msg'] ?? 'Unknown',
+        'signature_id' => $e['inner_alert_signature_id'] ?? '',
+        'category'     => $e['inner_alert_category'] ?? $e['catname'] ?? '',
+        'risk'         => $severity,
+        'action'       => $action,
+        'direction'    => 'unknown',
+        'protocol'     => strtoupper($e['proto'] ?? ''),
+        'country_code' => strtolower($e['srcipCountry'] ?? 'un'),
+    ];
+}
+
 function get_unifi_security_settings() {
     global $config;
     
@@ -786,6 +1035,7 @@ function get_unifi_security_settings() {
     $ips_config = $ips_resp['data'][0] ?? [];
     $settings = [
         'ips_enabled' => isset($ips_config['ips_mode']) && $ips_config['ips_mode'] !== 'disabled',
+        'ips_mode' => $ips_config['ips_mode'] ?? 'disabled',
         'ad_blocking_enabled' => isset($ips_config['ad_blocking_enabled']) && $ips_config['ad_blocking_enabled'],
         'honeypot_enabled' => isset($ips_config['honeypot_enabled']) && $ips_config['honeypot_enabled'],
         'threat_detection_enabled' => (isset($ips_config['ips_mode']) && $ips_config['ips_mode'] !== 'disabled') || (isset($ips_config['ad_blocking_enabled']) && $ips_config['ad_blocking_enabled']),

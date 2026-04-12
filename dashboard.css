@@ -61,6 +61,30 @@ body {
 .stat-glow-pink {
   box-shadow: 0 0 35px -10px rgba(236, 72, 153, 0.3);
 }
+.stat-glow-orange {
+  box-shadow: 0 0 35px -10px rgba(249, 115, 22, 0.3);
+}
+.stat-glow-red {
+  box-shadow: 0 0 35px -10px rgba(239, 68, 68, 0.3);
+}
+.stat-glow-rose {
+  box-shadow: 0 0 35px -10px rgba(244, 63, 94, 0.3);
+}
+
+/* Pagination buttons */
+.page-size-btn {
+  color: #94a3b8;
+  background: transparent;
+}
+.page-size-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+.page-size-btn.active {
+  color: #ffffff;
+  background: #f97316;
+  box-shadow: 0 0 15px rgba(249, 115, 22, 0.3);
+}
 
 
 .resource-card {
