@@ -1,6 +1,6 @@
 <?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
-define('MINIDASH_VERSION', '2.1.1');
+define('MINIDASH_VERSION', '2.2.0');
 error_reporting(E_ALL & ~E_NOTICE);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
