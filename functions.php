@@ -3827,7 +3827,6 @@ $tradSite = get_trad_site_id($site_id_context);
     }
     </script>
 
-    <?php 
+    <?php
     // render_personal_modal() will be called by render_footer()
-    ?>
-<?php }
+}
