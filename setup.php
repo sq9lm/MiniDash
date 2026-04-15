@@ -191,6 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                        placeholder="default"
                                        value="<?= htmlspecialchars($_POST['site'] ?? 'default') ?>">
                             </div>
+                            <p class="text-[11px] text-slate-600 mt-1 px-1">Leave "default" for single-site setups</p>
                         </div>
                     </div>
 
