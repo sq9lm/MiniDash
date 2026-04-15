@@ -11,8 +11,9 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
 }
 
 // Default hosts
+$gateway_ip = parse_url($config['controller_url'] ?? '', PHP_URL_HOST) ?: '192.168.1.1';
 $default_hosts = [
-    ['name' => 'Gateway', 'host' => '10.0.0.1'],
+    ['name' => 'Gateway', 'host' => $gateway_ip],
     ['name' => 'Google DNS', 'host' => '8.8.8.8'],
     ['name' => 'Cloudflare', 'host' => '1.1.1.1'],
     ['name' => 'Onet.pl', 'host' => 'onet.pl'],

@@ -332,8 +332,9 @@ foreach ($db_tables as $t) {
                     
                     <div class="space-y-4" id="pingList">
                         <?php 
+                        $gateway_ip = parse_url($config['controller_url'] ?? '', PHP_URL_HOST) ?: '192.168.1.1';
                         $ping_hosts = $config['ping_hosts'] ?? [
-                            ['name' => 'Gateway', 'host' => '10.0.0.1'],
+                            ['name' => 'Gateway', 'host' => $gateway_ip],
                             ['name' => 'Google DNS', 'host' => '8.8.8.8'],
                             ['name' => 'Cloudflare', 'host' => '1.1.1.1'],
                             ['name' => 'Onet.pl', 'host' => 'onet.pl'],

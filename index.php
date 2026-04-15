@@ -1762,8 +1762,9 @@ try {
         }
 
         // Ping Logic
+        const gatewayIp = <?= json_encode(parse_url($config['controller_url'] ?? '', PHP_URL_HOST) ?: '192.168.1.1') ?>;
         let pingHosts = [
-            {name: 'Gateway', host: '10.0.0.1'},
+            {name: 'Gateway', host: gatewayIp},
             {name: 'Google DNS', host: '8.8.8.8'},
             {name: 'Cloudflare', host: '1.1.1.1'},
             {name: 'Onet.pl', host: 'onet.pl'},
@@ -1825,7 +1826,7 @@ try {
             grid.innerHTML = data.map(h => {
                 const isOnline = h.status === 'online';
                 const color = isOnline ? (h.latency < 50 ? 'emerald' : (h.latency < 100 ? 'amber' : 'red')) : 'red';
-                const isRemovable = !['8.8.8.8','1.1.1.1','onet.pl','10.0.0.1'].includes(h.host);
+                const isRemovable = !['8.8.8.8','1.1.1.1','onet.pl',gatewayIp].includes(h.host);
 
                 return `
                 <div class="p-4 rounded-xl bg-slate-900/60 border border-white/5 flex flex-col gap-1 transition hover:bg-white/5 group relative">
