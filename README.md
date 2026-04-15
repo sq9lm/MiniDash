@@ -72,76 +72,22 @@ Built with PHP 8.x, SQLite, Tailwind CSS and vanilla JavaScript. No frameworks, 
 
 ---
 
-## Installation
-
-### Manual (nginx + PHP-FPM)
-
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/your-repo/minidash.git /var/www/minidash
-   ```
-
-2. Copy and edit the environment file:
-   ```bash
-   cp .env.example .env
-   nano .env
-   ```
-
-3. Set permissions:
-   ```bash
-   chown -R www-data:www-data data/ logs/
-   chmod 600 .env data/.encryption_key
-   ```
-
-4. Configure nginx (see `docker/nginx.conf` for reference).
-
-5. Open in browser — first run creates the SQLite database automatically.
-
-### Docker
+## Quick Start (Docker)
 
 ```bash
-# Copy and edit env
-cp .env.example .env
-nano .env
-
-# Build and run
+git clone https://github.com/sq9lm/MiniDash.git
+cd MiniDash
 docker-compose up -d
 ```
 
-The dashboard will be available at `http://localhost:8080` (configurable via `MINIDASH_PORT`).
+Open `http://your-server:8080` — the **Setup Wizard** will guide you through the configuration.
 
-### Synology NAS (Web Station)
+### Other installation methods
 
-1. Upload files to a shared folder (e.g., `/web/minidash/`)
-2. Set up PHP 8.2 profile in Web Station with `pdo_sqlite`, `curl`, `sodium`
-3. Create `.env` with your UniFi credentials
-4. Point a virtual host or reverse proxy to the folder
-
----
-
-## Configuration
-
-### UniFi API Key
-
-Generate an API key in your UniFi Controller:
-1. Go to **Settings > Admins & Users > API Keys**
-2. Create a new key with **Read-Only** access
-3. Paste the key in `.env` as `UNIFI_API_KEY`
-
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `UNIFI_CONTROLLER_URL` | `https://192.168.1.1` | UniFi Controller URL |
-| `UNIFI_API_KEY` | — | API key (required) |
-| `UNIFI_SITE` | `default` | Site ID |
-| `ADMIN_USERNAME` | `admin` | Dashboard login |
-| `ADMIN_PASSWORD` | — | Dashboard password |
-| `ADMIN_FULL_NAME` | — | Display name |
-| `ADMIN_EMAIL` | — | Email address |
-| `DEBUG` | `false` | Enable debug mode |
-
-All other settings (notifications, triggers, retention, modules) are configured via the web UI and stored in `data/config.json` (encrypted where applicable).
+See [docs/INSTALL.md](docs/INSTALL.md) for:
+- Synology NAS (Container Manager or Web Station)
+- Linux server (nginx + PHP-FPM)
+- Apache
 
 ---
 
@@ -159,6 +105,7 @@ minidash/
   history.php          # Device history
   devices.php          # System settings
   login.php            # Authentication
+  setup.php            # First-run Setup Wizard
   config.php           # Configuration & i18n
   functions.php        # Core functions
   db.php               # SQLite layer + migrations

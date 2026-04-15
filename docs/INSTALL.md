@@ -27,52 +27,35 @@ git clone https://github.com/sq9lm/MiniDash.git
 cd MiniDash
 ```
 
-### Step 2: Configure environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your values:
-
-```env
-# UniFi Controller address (IP or hostname with https)
-UNIFI_CONTROLLER_URL=https://192.168.1.1
-
-# API key from UniFi Controller (see above)
-UNIFI_API_KEY=your-api-key-here
-
-# UniFi site ID (default for most setups)
-UNIFI_SITE=default
-
-# Dashboard login credentials (choose your own)
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your-secure-password
-
-# Your name and email (displayed in profile)
-ADMIN_FULL_NAME=Your Name
-ADMIN_EMAIL=admin@example.com
-
-# Set to true only for debugging
-DEBUG=false
-```
-
-### Step 3: Build and start
+### Step 2: Build and start
 
 ```bash
 docker-compose up -d
 ```
 
-### Step 4: Open in browser
+### Step 3: Setup Wizard
+
+Open in browser:
 
 ```
 http://your-server-ip:8080
 ```
 
-To change the port, set `MINIDASH_PORT` in `.env`:
+The **Setup Wizard** will appear automatically on first run. Fill in:
 
-```env
-MINIDASH_PORT=3000
+- **Controller URL** — your UniFi Controller address (e.g. `https://192.168.1.1`)
+- **API Key** — from UniFi Controller (see above)
+- **Site ID** — usually `default`
+- **Admin username & password** — your login credentials for MiniDash
+- **Name & email** — displayed in your profile
+
+Click **Save & Continue** — done!
+
+To change the port, create a `.env` file before starting:
+
+```bash
+echo "MINIDASH_PORT=3000" > .env
+docker-compose up -d
 ```
 
 ### Updating
@@ -83,36 +66,7 @@ git pull
 docker-compose up -d --build
 ```
 
-### Docker Compose reference
-
-```yaml
-version: '3.8'
-services:
-  minidash:
-    build: .
-    container_name: minidash
-    restart: unless-stopped
-    ports:
-      - "${MINIDASH_PORT:-8080}:80"
-    environment:
-      - UNIFI_CONTROLLER_URL=${UNIFI_CONTROLLER_URL:-https://192.168.1.1}
-      - UNIFI_API_KEY=${UNIFI_API_KEY}
-      - UNIFI_SITE=${UNIFI_SITE:-default}
-      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
-      - ADMIN_FULL_NAME=${ADMIN_FULL_NAME:-Admin}
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
-      - DEBUG=${DEBUG:-false}
-    volumes:
-      - minidash_data:/var/www/html/data
-      - minidash_logs:/var/www/html/logs
-
-volumes:
-  minidash_data:
-  minidash_logs:
-```
-
-Data and logs are stored in Docker volumes and persist across container restarts.
+Data and logs are stored in Docker volumes and persist across updates.
 
 ---
 
@@ -130,32 +84,7 @@ Copy the MiniDash folder to your Synology, e.g. via File Station or SCP:
 
 Make sure the folder contains `docker-compose.yml`, `Dockerfile`, and all project files.
 
-### Step 2: Configure environment
-
-Create a `.env` file in the project folder (next to `docker-compose.yml`):
-
-```bash
-# Via SSH:
-cd /volume1/docker/minidash
-cp .env.example .env
-nano .env
-```
-
-Fill in your values:
-
-```env
-UNIFI_CONTROLLER_URL=https://10.0.0.1
-UNIFI_API_KEY=your-api-key-here
-UNIFI_SITE=default
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your-secure-password
-ADMIN_FULL_NAME=Your Name
-ADMIN_EMAIL=admin@example.com
-DEBUG=false
-MINIDASH_PORT=8080
-```
-
-### Step 3: Create project in Container Manager
+### Step 2: Create project in Container Manager
 
 1. Open **Container Manager** on your Synology
 2. Go to **Project** → **Create**
@@ -166,26 +95,28 @@ MINIDASH_PORT=8080
 
 The container will build and start automatically.
 
-### Step 4: Open in browser
+### Step 3: Setup Wizard
+
+Open in browser:
 
 ```
 http://YOUR-NAS-IP:8080
 ```
 
-Log in with the credentials from your `.env` file.
+The **Setup Wizard** will guide you through the configuration — fill in your UniFi Controller URL, API key, and admin credentials.
 
 ### Updating
 
 1. Upload the new version of MiniDash to the same folder
 2. In Container Manager → **Project** → select `minidash`
-3. Click **Action** → **Build** (rebuild)
+3. Click **Action** → **Build** (Kompilacja)
 4. The container restarts with updated code; data in volumes is preserved
 
 ### Notes
 
 - Data (SQLite database, avatars) and logs are stored in Docker volumes — they survive container rebuilds
-- To change the port, edit `MINIDASH_PORT` in `.env` and rebuild
-- Container Manager reads `.env` automatically — no need to enter variables manually in the GUI
+- To change the port, create `.env` with `MINIDASH_PORT=3000` and rebuild
+- Container includes `bash` and `mc` (Midnight Commander) for terminal access
 
 ---
 
@@ -206,28 +137,14 @@ Log in with the credentials from your `.env` file.
    - Use File Station or SSH/SCP
    - Do NOT upload `node_modules/`, `_old/`, `.git/`
 
-### Step 3: Configure environment
-
-Create `.env` in the MiniDash root folder:
-
-```bash
-# Via SSH:
-cd /volume1/web/minidash
-cp .env.example .env
-nano .env
-# Fill in your UniFi controller URL, API key, and admin credentials
-```
-
-### Step 4: Set permissions
+### Step 3: Set permissions
 
 ```bash
 chown -R http:http /volume1/web/minidash/data
 chown -R http:http /volume1/web/minidash/logs
-chmod 600 /volume1/web/minidash/.env
-chmod 600 /volume1/web/minidash/data/.encryption_key
 ```
 
-### Step 5: Configure Web Station
+### Step 4: Configure Web Station
 
 **Option A: Virtual Host (recommended)**
 
@@ -245,10 +162,9 @@ chmod 600 /volume1/web/minidash/data/.encryption_key
    - Source: `https://yourdomain.com/minidash`
    - Destination: `http://localhost:80` (where Web Station serves the files)
 
-### Step 6: Open in browser
+### Step 5: Setup Wizard
 
-Navigate to your configured hostname or IP.
-First visit creates the SQLite database automatically — no manual setup needed.
+Navigate to your configured hostname or IP. The **Setup Wizard** will appear — fill in your configuration and you're ready to go.
 
 ---
 
@@ -267,19 +183,14 @@ apt install php8.2-fpm php8.2-sqlite3 php8.2-curl php8.2-sodium nginx git
 dnf install php82-php-fpm php82-php-pdo php82-php-sodium php82-php-curl nginx git
 ```
 
-### Step 2: Clone and configure
+### Step 2: Clone
 
 ```bash
 cd /var/www
 git clone https://github.com/sq9lm/MiniDash.git minidash
 cd minidash
 
-cp .env.example .env
-nano .env
-# Fill in your values
-
 chown -R www-data:www-data data/ logs/
-chmod 600 .env
 ```
 
 ### Step 3: Configure nginx
@@ -347,9 +258,9 @@ nginx -t
 systemctl restart nginx
 ```
 
-### Step 4: Open in browser
+### Step 4: Setup Wizard
 
-Navigate to `http://unifi.yourdomain.com` — the database will be created on first visit.
+Navigate to `http://unifi.yourdomain.com` — the Setup Wizard will guide you through the configuration.
 
 ---
 
@@ -362,18 +273,14 @@ apt install php8.2 libapache2-mod-php8.2 php8.2-sqlite3 php8.2-curl php8.2-sodiu
 a2enmod rewrite
 ```
 
-### Step 2: Clone and configure
+### Step 2: Clone
 
 ```bash
 cd /var/www
 git clone https://github.com/sq9lm/MiniDash.git minidash
 cd minidash
 
-cp .env.example .env
-nano .env
-
 chown -R www-data:www-data data/ logs/
-chmod 600 .env
 ```
 
 ### Step 3: Apache VirtualHost
@@ -415,13 +322,13 @@ a2ensite minidash
 systemctl restart apache2
 ```
 
+### Step 4: Setup Wizard
+
+Navigate to your server address — the Setup Wizard will appear on first visit.
+
 ---
 
 ## Post-Installation
-
-### First login
-
-Use the credentials you set in `.env` (`ADMIN_USERNAME` / `ADMIN_PASSWORD`).
 
 ### Configure notifications
 
@@ -488,8 +395,7 @@ If you get logged out frequently, check:
 
 1. **Use HTTPS** — set up Let's Encrypt or a reverse proxy with SSL
 2. **Restrict access** — use firewall rules to limit access to trusted IPs
-3. **Protect .env** — file permissions should be `600` (owner read/write only)
-4. **Keep updated** — `git pull && docker-compose up -d --build`
+3. **Keep updated** — `git pull && docker-compose up -d --build`
 
 ---
 
