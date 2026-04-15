@@ -20,6 +20,13 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
 $siteId = $_SESSION['site_id'] ?? $config['site'] ?? 'default';
 $devices_config = loadDevices();
 
+// Defaults in case API calls fail
+$clients = [];
+$trad_devices = [];
+$trad_dev_map = [];
+$wifi_stats = [];
+$error_msg = '';
+
 try {
     // 1. Fetch Clients
     $clients_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/clients?limit=1000");
@@ -290,8 +297,9 @@ try {
     }
     arsort($wifi_stats);
 
-} catch (Exception $e) {
-    if (!empty($config['debug'])) $error_msg = $e->getMessage();
+} catch (\Throwable $e) {
+    $error_msg = $e->getMessage();
+    error_log("MiniDash index.php: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
 }
 
 // formatBps is now in functions.php
