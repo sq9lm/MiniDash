@@ -184,14 +184,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 px-1">Site ID</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><i data-lucide="layout-grid" class="w-4 h-4"></i></span>
-                                <input type="text" name="site"
-                                       class="setup-input"
-                                       placeholder="default"
-                                       value="<?= htmlspecialchars($_POST['site'] ?? 'default') ?>">
+                            <div class="flex gap-2">
+                                <div class="relative flex-1">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><i data-lucide="layout-grid" class="w-4 h-4"></i></span>
+                                    <input type="text" name="site" id="siteIdField"
+                                           class="setup-input"
+                                           placeholder="default"
+                                           value="<?= htmlspecialchars($_POST['site'] ?? 'default') ?>">
+                                </div>
+                                <button type="button" onclick="detectSite()"
+                                        id="detectBtn"
+                                        style="padding: 0.65rem 1rem; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 0.75rem; color: #818cf8; font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;"
+                                        onmouseover="this.style.background='rgba(99, 102, 241, 0.25)'"
+                                        onmouseout="this.style.background='rgba(99, 102, 241, 0.15)'">
+                                    <i data-lucide="search" class="w-3.5 h-3.5" style="display:inline-block; vertical-align: middle; margin-right: 4px;"></i>
+                                    Detect
+                                </button>
                             </div>
-                            <p class="text-[11px] text-slate-600 mt-1 px-1">Leave "default" for single-site setups</p>
+                            <p id="siteHint" class="text-[11px] text-slate-600 mt-1 px-1">Fill Controller URL & API Key first, then click Detect</p>
                         </div>
                     </div>
 
@@ -265,6 +275,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </footer>
     </div>
 
-    <script>lucide.createIcons();</script>
+    <script>
+    lucide.createIcons();
+
+    function detectSite() {
+        const url = document.querySelector('input[name="controller_url"]').value.trim();
+        const key = document.querySelector('input[name="api_key"]').value.trim();
+        const hint = document.getElementById('siteHint');
+        const btn = document.getElementById('detectBtn');
+        const field = document.getElementById('siteIdField');
+
+        if (!url || !key) {
+            hint.textContent = 'Fill Controller URL & API Key first';
+            hint.style.color = '#ef4444';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        hint.textContent = 'Detecting...';
+        hint.style.color = '#818cf8';
+
+        const body = new FormData();
+        body.append('controller_url', url);
+        body.append('api_key', key);
+
+        fetch('api_detect_site.php', { method: 'POST', body })
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+
+                if (data.error && (!data.sites || data.sites.length === 0)) {
+                    hint.textContent = data.error;
+                    hint.style.color = '#ef4444';
+                    return;
+                }
+
+                if (data.sites && data.sites.length > 0) {
+                    const site = data.sites[0];
+                    field.value = site.id;
+                    hint.style.color = '#10b981';
+
+                    if (data.sites.length === 1) {
+                        hint.textContent = 'Found: ' + site.name + ' (' + site.id + ')';
+                    } else {
+                        hint.innerHTML = 'Found ' + data.sites.length + ' sites: ' +
+                            data.sites.map(s =>
+                                '<a href="#" style="color:#818cf8;text-decoration:underline" onclick="event.preventDefault();document.getElementById(\'siteIdField\').value=\'' + s.id + '\';this.parentElement.querySelector(\'.active\')?.classList.remove(\'active\');this.classList.add(\'active\')">' +
+                                s.name + '</a>'
+                            ).join(' | ');
+                    }
+                } else {
+                    field.value = 'default';
+                    hint.textContent = 'No sites found — using "default"';
+                    hint.style.color = '#f59e0b';
+                }
+            })
+            .catch(() => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                hint.textContent = 'Connection failed';
+                hint.style.color = '#ef4444';
+            });
+    }
+    </script>
 </body>
 </html>
