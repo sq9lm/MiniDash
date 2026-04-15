@@ -1,5 +1,30 @@
 # MiniDash — Release Notes
 
+## v2.3.1 (2026-04-15)
+
+Docker & stability fixes, update notifications, auto-detect Site ID.
+
+### Setup Wizard
+- Auto-detect Site ID — przycisk "Detect" odpytuje kontroler i wypelnia Site ID automatycznie
+- Wsparcie multi-site — pokazuje liste site'ow do wyboru
+- Hint pod polem Site ID
+
+### Update Notifications
+- Banner pod navbarem gdy dostepna jest nowsza wersja na GitHub
+- Sprawdzanie co 6h, cache w data/update_check.json
+- Dismissable (przycisk X)
+- version.json w repo jako zrodlo prawdy
+
+### Fixes
+- Fix: biala strona index.php — catch non-array clients z API kontrolera
+- Fix: stray output w functions.php psuacy header() na wszystkich stronach
+- Fix: session_write_close() w devices.php blokujacy zapis ustawien
+- Fix: hardcoded gateway 10.0.0.1 w pingach — teraz dynamiczny z Controller URL
+- Fix: usuniety obsolete version w docker-compose.yml
+- Footer: dynamiczna wersja z MINIDASH_VERSION zamiast hardcoded v1.5.0
+
+---
+
 ## v2.3.0 (2026-04-15)
 
 Docker fixes & Setup Wizard — rozwiązanie problemów z instalacją Docker i nowy kreator konfiguracji.

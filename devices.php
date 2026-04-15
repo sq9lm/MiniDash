@@ -13,7 +13,6 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
     header('Location: login.php');
     exit;
 }
-session_write_close();
 
 // Auto-detect UniFi Protect if not set
 if ($config['protect']['enabled'] === null) {
@@ -78,17 +77,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Akcja: Zapis Hostów Ping
     if (isset($_POST['action']) && $_POST['action'] === 'save_ping_hosts') {
         $currentConfig = $config;
-        
+
         $names = $_POST['ping_name'] ?? [];
         $hosts = $_POST['ping_host'] ?? [];
-        
+
         $newHosts = [];
         for ($i = 0; $i < count($names); $i++) {
             if (!empty($names[$i]) && !empty($hosts[$i])) {
                 $newHosts[] = ['name' => $names[$i], 'host' => $hosts[$i]];
             }
         }
-        
+
         $currentConfig['ping_hosts'] = $newHosts;
 
         if (!is_dir(__DIR__ . '/data')) mkdir(__DIR__ . '/data', 0777, true);
