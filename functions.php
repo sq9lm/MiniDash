@@ -4,6 +4,34 @@
 ini_set('memory_limit', '512M');
 ini_set('max_execution_time', 60);
 
+function check_for_update(): ?string {
+    $cache_file = __DIR__ . '/data/update_check.json';
+    $cache_ttl = 6 * 3600; // check every 6 hours
+
+    if (file_exists($cache_file)) {
+        $cache = json_decode(file_get_contents($cache_file), true);
+        if (($cache['checked_at'] ?? 0) > time() - $cache_ttl) {
+            $remote = $cache['remote_version'] ?? null;
+            return ($remote && version_compare($remote, MINIDASH_VERSION, '>')) ? $remote : null;
+        }
+    }
+
+    $ctx = stream_context_create(['http' => ['timeout' => 5, 'header' => "User-Agent: MiniDash\r\n"]]);
+    $json = @file_get_contents('https://raw.githubusercontent.com/sq9lm/MiniDash/master/version.json', false, $ctx);
+    $remote = null;
+    if ($json) {
+        $data = json_decode($json, true);
+        $remote = $data['version'] ?? null;
+    }
+
+    @file_put_contents($cache_file, json_encode([
+        'remote_version' => $remote,
+        'checked_at' => time()
+    ]));
+
+    return ($remote && version_compare($remote, MINIDASH_VERSION, '>')) ? $remote : null;
+}
+
 function loadDevices()
 {
     global $db;
@@ -2029,7 +2057,7 @@ function render_footer() {
             <div class="h-[1px] bg-white/5 w-full mb-8"></div>
             <footer class="text-center">
                 <div class="flex items-center justify-center gap-3 text-slate-500 text-[11px] uppercase tracking-[0.3em] font-black">
-                    MiniDASH v1.5.0 © 2026 
+                    MiniDASH v<?= MINIDASH_VERSION ?> © 2026 
                     <span class="text-slate-700">/</span>
                     <a href="https://www.lm-ads.com" target="_blank" class="text-slate-400 hover:text-blue-400 transition hover:tracking-[0.4em]">lm-network</a> 
                     <span class="text-slate-700">/</span>
@@ -2269,7 +2297,23 @@ function render_nav($title = "MiniDash", $stats = []) {
         </div>
     </div>
     </nav>
+    <?php $new_version = check_for_update(); if ($new_version): ?>
+    <div id="update-banner" class="fixed top-16 left-0 right-0 z-40 bg-gradient-to-r from-amber-600/90 to-orange-600/90 backdrop-blur-md border-b border-amber-400/20 px-4 py-2.5">
+        <div class="max-w-[1400px] mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3 text-white text-sm font-medium">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span><?= __('common.update_available') ?? 'Update available' ?>: <strong>v<?= htmlspecialchars($new_version) ?></strong> (current: v<?= MINIDASH_VERSION ?>)</span>
+                <a href="https://github.com/sq9lm/MiniDash" target="_blank" class="ml-2 underline underline-offset-2 hover:text-amber-200 transition">GitHub</a>
+            </div>
+            <button onclick="document.getElementById('update-banner').remove()" class="text-white/70 hover:text-white transition p-1">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+    <div class="h-16 mt-10"></div>
+    <?php else: ?>
     <div class="h-16"></div>
+    <?php endif; ?>
     <!-- Notification Panel (Slide-out) -->
     <div id="notif-overlay" onclick="toggleNotifications()" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[60] opacity-0 pointer-events-none transition-opacity duration-300"></div>
     <div id="notif-sidebar" class="fixed top-0 right-0 w-full max-w-sm h-screen bg-slate-900/95 backdrop-blur-xl border-l border-white/10 z-[70] translate-x-full transition-transform duration-500 ease-in-out shadow-2xl flex flex-col">

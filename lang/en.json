@@ -16,6 +16,7 @@
         "notification_settings": "Notification Settings"
     },
     "common": {
+        "update_available": "Update available",
         "save": "Save",
         "cancel": "Cancel",
         "close": "Close",
