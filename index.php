@@ -185,8 +185,9 @@ try {
     $vlan_stats = [];
     $vlan_clients = []; // Clients grouped by VLAN name for detail modal
     foreach ($clients as &$client) {
+        if (!is_array($client)) continue;
         $c_mac = normalize_mac($client['macAddress'] ?? $client['mac'] ?? '');
-        
+
         // Enrich from history if present
         if (isset($hist_clients[$c_mac])) {
             $hc = $hist_clients[$c_mac];
