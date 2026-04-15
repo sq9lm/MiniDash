@@ -3133,8 +3133,8 @@ function render_nav($title = "MiniDash", $stats = []) {
                                 </div>
                             </div>
 
-                            <!-- Trigger: VPN Connection (API event endpoint not available on UDR) -->
-                            <div class="p-6 bg-slate-900/20 rounded-3xl border border-white/5 space-y-6 opacity-50">
+                            <!-- Trigger: VPN Connection -->
+                            <div class="p-6 bg-slate-900/20 rounded-3xl border border-white/5 space-y-6">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-4">
                                         <div class="p-3 bg-purple-500/10 text-purple-500 rounded-2xl"><i data-lucide="shield" class="w-6 h-6"></i></div>

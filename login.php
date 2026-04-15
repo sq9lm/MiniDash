@@ -1,5 +1,12 @@
 <?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
+
+// First-run: redirect to setup wizard if not configured
+if (!file_exists(__DIR__ . '/data/.installed')) {
+    header('Location: setup.php');
+    exit;
+}
+
 require_once 'config.php';
 require_once 'db.php';
 

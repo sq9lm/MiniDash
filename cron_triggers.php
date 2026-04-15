@@ -190,9 +190,16 @@ try {
     }
 
     // === TRIGGER: VPN Connection Alert ===
-    if ($config['triggers']['vpn_alert_enabled'] ?? false) {
+    $vpn_debug = __DIR__ . '/logs/vpn_debug.log';
+    $vpn_enabled = $config['triggers']['vpn_alert_enabled'] ?? false;
+    @file_put_contents($vpn_debug, date('Y-m-d H:i:s') . " VPN trigger enabled: " . ($vpn_enabled ? 'YES' : 'NO') . "\n", FILE_APPEND);
+    if ($vpn_enabled) {
         if (check_cooldown('vpn', 30)) {
-            $vpn_resp = fetch_api('/proxy/network/api/s/default/rest/alarm?limit=10');
+            $vpn_resp = fetch_api("/proxy/network/api/s/$tradSite/stat/event?limit=20&_sort=-time");
+            $event_count = count($vpn_resp['data'] ?? []);
+            $event_keys = array_map(function($e) { return $e['key'] ?? '?'; }, $vpn_resp['data'] ?? []);
+            @file_put_contents($vpn_debug, date('Y-m-d H:i:s') . " Events: $event_count | Keys: " . implode(', ', $event_keys) . "\n", FILE_APPEND);
+
             $last_vpn_id_file = __DIR__ . '/data/last_vpn_event_id.txt';
             $last_vpn_id = file_exists($last_vpn_id_file) ? trim(file_get_contents($last_vpn_id_file)) : '';
 
@@ -200,17 +207,21 @@ try {
                 $evt_id = $evt['_id'] ?? '';
                 if ($evt_id === $last_vpn_id) break;
                 $key = $evt['key'] ?? '';
-                if (strpos($key, 'EVT_VPN') !== false || strpos($key, 'VPN_Client') !== false) {
+                if (strpos($key, 'EVT_VPN') !== false || stripos($key, 'vpn') !== false) {
                     $msg = $evt['msg'] ?? 'VPN event';
-                    $is_connect = strpos($key, 'Connected') !== false || strpos($msg, 'connected') !== false;
+                    $is_connect = stripos($key, 'connect') !== false && stripos($key, 'disconnect') === false;
                     $icon = $is_connect ? 'VPN Polaczono' : 'VPN Rozlaczono';
-                    sendAlert("$icon", $msg);
+                    $severity = $is_connect ? 'info' : 'warning';
+                    @file_put_contents($vpn_debug, date('Y-m-d H:i:s') . " MATCH! key=$key msg=$msg → $icon\n", FILE_APPEND);
+                    sendAlert("$icon", $msg, $severity);
                     break;
                 }
             }
             if (!empty($vpn_resp['data'][0]['_id'])) {
                 file_put_contents($last_vpn_id_file, $vpn_resp['data'][0]['_id']);
             }
+        } else {
+            @file_put_contents($vpn_debug, date('Y-m-d H:i:s') . " COOLDOWN active, skipping\n", FILE_APPEND);
         }
     }
 

@@ -4,11 +4,14 @@ FROM php:8.2-fpm-alpine
 RUN apk add --no-cache \
     nginx \
     curl \
+    curl-dev \
+    bash \
+    mc \
     sqlite \
     sqlite-dev \
     libsodium-dev \
-    && docker-php-ext-install pdo pdo_sqlite sodium \
-    && apk del sqlite-dev \
+    && docker-php-ext-install pdo pdo_sqlite sodium curl \
+    && apk del sqlite-dev curl-dev \
     && rm -rf /var/cache/apk/*
 
 # Nginx config

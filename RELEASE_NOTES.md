@@ -1,5 +1,34 @@
 # MiniDash — Release Notes
 
+## v2.3.0 (2026-04-15)
+
+Docker fixes & Setup Wizard — rozwiązanie problemów z instalacją Docker i nowy kreator konfiguracji.
+
+### Setup Wizard (new)
+- Kreator pierwszej konfiguracji — formularz zamiast ręcznej edycji .env
+- Automatyczne wykrywanie pierwszego uruchomienia (marker data/.installed)
+- Pola: Controller URL, API Key, Site ID, Admin login/hasło, imię, email
+- Walidacja wymaganych pól i minimalnej długości hasła
+- Zapis konfiguracji do .env z odpowiednimi uprawnieniami
+- Redirect z login.php i index.php na setup.php gdy brak konfiguracji
+- Istniejące instalacje (z poprawnym API key) automatycznie pomijają wizard
+
+### Docker
+- Fix: biała strona po instalacji — baza danych tworzona jako root, PHP-FPM (www-data) nie mógł pisać
+- Fix: dodany drugi chown w start.sh po migracji bazy danych
+- Fix: dodane brakujące PHP curl extension (wymagane przez requirements)
+- Dodany bash do Alpine — terminal w Synology Container Manager teraz działa
+- Dodany mc (Midnight Commander) — łatwiejsza nawigacja po kontenerze
+- config.php: wartości z .env nadpisują zmienne Docker (setup wizard ma priorytet)
+
+### VPN Triggers
+- Poprawiony endpoint API: stat/event zamiast rest/alarm (kompatybilność z UDR)
+- Ulepszone dopasowanie kluczy VPN (case-insensitive, connect/disconnect)
+- Severity w alertach VPN (info/warning)
+- Odblokowany trigger VPN w UI (usunięty opacity-50)
+
+---
+
 ## v2.2.0 (2026-04-12)
 
 Threat Watch — przebudowany moduł Security z zakładkami i live IDS/IPS monitoring.

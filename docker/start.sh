@@ -19,8 +19,20 @@ EOF
     chown www-data:www-data /var/www/html/.env
 fi
 
+# If .env was manually created (not by start.sh defaults), mark as installed
+if [ -f /var/www/html/.env ] && grep -q "UNIFI_API_KEY=" /var/www/html/.env; then
+    ENV_KEY=$(grep "UNIFI_API_KEY=" /var/www/html/.env | cut -d= -f2)
+    if [ "$ENV_KEY" != "your-api-key" ] && [ -n "$ENV_KEY" ]; then
+        touch /var/www/html/data/.installed
+        chown www-data:www-data /var/www/html/data/.installed
+    fi
+fi
+
 # Run migrations
 php /var/www/html/db.php 2>/dev/null || true
+
+# Fix ownership after migrations (db.php runs as root, creates files owned by root)
+chown -R www-data:www-data /var/www/html/data /var/www/html/logs
 
 # Start background trigger runner (every 60 seconds)
 (while true; do
