@@ -20,42 +20,6 @@ if ($action !== 'export') {
     header('Content-Type: application/json');
 }
 
-/**
- * Helper: POST to UniFi controller
- */
-function fetch_api_post(string $endpoint, array $payload): array
-{
-    global $config;
-    if (!function_exists('curl_init')) return ['data' => [], 'error' => 'cURL not installed'];
-
-    try {
-        $url    = rtrim($config['controller_url'], '/') . '/' . ltrim($endpoint, '/');
-        $apiKey = $config['api_key'];
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ["X-API-KEY: $apiKey", "Content-Type: application/json"]);
-
-        $output     = curl_exec($ch);
-        $curl_error = curl_error($ch);
-        curl_close($ch);
-
-        if ($output === false) return ['data' => [], 'error' => $curl_error];
-        $data = json_decode($output, true);
-        if (isset($data['data']) && is_array($data['data'])) return $data;
-        if (is_array($data)) return ['data' => $data];
-        return ['data' => [], 'original' => $data];
-    } catch (Throwable $e) { return ['data' => [], 'error' => $e->getMessage()]; }
-}
-
 function determine_band(string $radio, int $channel): string
 {
     if ($radio === '6e' || $channel > 177) return '6GHz';
