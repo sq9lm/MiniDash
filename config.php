@@ -249,7 +249,7 @@ function sendTelegramNotification($message, $severity = 'info') {
 
     if (empty($token) || empty($chatId)) return;
 
-    $icons = ['critical' => '🔴', 'warning' => '🟠', 'info' => '🟢'];
+    $icons = ['critical' => '🔴', 'warning' => '🟠', 'info' => '🟢', 'attack' => '❗❗❗'];
     $icon = $icons[$severity] ?? '🔔';
 
     $url = "https://api.telegram.org/bot$token/sendMessage";
@@ -259,15 +259,17 @@ function sendTelegramNotification($message, $severity = 'info') {
         'parse_mode' => 'Markdown'
     ];
 
-    $options = [
-        'http' => [
-            'method'  => 'POST',
-            'header'  => "Content-Type: application/x-www-form-urlencoded\r\n",
-            'content' => http_build_query($data)
-        ]
-    ];
-    $context  = stream_context_create($options);
-    @file_get_contents($url, false, $context);
+    // cURL (NOT file_get_contents): the cron runs under CLI php where allow_url_fopen
+    // is off, so file_get_contents(https://...) silently failed — Telegram alerts then
+    // went out only from the web SAPI. cURL works in both, like every other sender here.
+    if (!function_exists('curl_init')) return;
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+    @curl_exec($ch);
+    curl_close($ch);
 }
 
 function sendWhatsAppNotification($message) {

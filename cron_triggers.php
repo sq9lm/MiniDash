@@ -15,6 +15,33 @@ if (php_sapi_name() !== 'cli' && ($_SERVER['REMOTE_ADDR'] ?? '') !== '127.0.0.1'
 error_reporting(E_ALL & ~E_NOTICE);
 ini_set('display_errors', 0);
 
+// Fatal-error safety net: a try/catch(Exception) does NOT catch Error/parse/fatal,
+// nor anything thrown during the require_once bootstrap below. Without this, a fatal
+// (e.g. missing sodium extension in CLI php) kills the cron silently — no log, no alert.
+// Registered BEFORE the requires so it also captures bootstrap failures.
+register_shutdown_function(function () {
+    $e = error_get_last();
+    if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        @file_put_contents(
+            __DIR__ . '/logs/cron_errors.log',
+            date('Y-m-d H:i:s') . " CRON FATAL: {$e['message']} in {$e['file']}:{$e['line']}\n",
+            FILE_APPEND
+        );
+    }
+});
+
+// Guard: sodium is required to decrypt config credentials. In the web SAPI it is
+// loaded, but the CLI php used by cron may not have it — fail loudly, not silently.
+if (!function_exists('sodium_crypto_secretbox_open')) {
+    @file_put_contents(
+        __DIR__ . '/logs/cron_errors.log',
+        date('Y-m-d H:i:s') . " CRON FATAL: sodium extension not loaded in CLI php ("
+            . PHP_BINARY . ") — cannot decrypt config; enable extension=sodium for CLI.\n",
+        FILE_APPEND
+    );
+    exit(1);
+}
+
 // Minimal session-less bootstrap
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
@@ -38,23 +65,24 @@ try {
     $tradSite = get_trad_site_id($config['site']);
 
     // === Fetch clients (shared by multiple triggers) ===
-    $clients_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/clients?limit=1000");
-    $all_active_clients = $clients_resp['data'] ?? [];
-
-    // Enrich with traditional API data
+    // PRIMARY: Traditional stat/sta — zwraca WSZYSTKICH klientów ze WSZYSTKICH VLANów
+    // zawiera też: vlan, essid, is_wired, sw_mac, sw_port, ap_mac, ip, rx_rate, tx_rate
     $trad_sta = fetch_api("/proxy/network/api/s/$tradSite/stat/sta");
-    $trad_map = [];
-    foreach (($trad_sta['data'] ?? []) as $tc) {
-        $trad_map[normalize_mac($tc['mac'] ?? '')] = $tc;
+    $all_active_clients = $trad_sta['data'] ?? [];
+
+    // ENRICHMENT: Integration API v1 — dodaje rxRateBps/txRateBps gdy traditional rates = 0
+    $integ_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/clients?limit=1000");
+    $integ_map = [];
+    foreach (($integ_resp['data'] ?? []) as $ic) {
+        $imac = normalize_mac($ic['macAddress'] ?? $ic['mac'] ?? '');
+        if ($imac) $integ_map[$imac] = $ic;
     }
     foreach ($all_active_clients as &$c) {
-        $cmac = normalize_mac($c['macAddress'] ?? $c['mac'] ?? '');
-        if (isset($trad_map[$cmac])) {
-            $tc = $trad_map[$cmac];
-            $c['rx_bytes'] = $tc['rx_bytes'] ?? 0;
-            $c['tx_bytes'] = $tc['tx_bytes'] ?? 0;
-            $c['rx_rate'] = $tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? 0) * 8);
-            $c['tx_rate'] = $tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? 0) * 8);
+        $cmac = normalize_mac($c['mac'] ?? '');
+        if (isset($integ_map[$cmac])) {
+            $ic = $integ_map[$cmac];
+            if (empty($c['rx_rate'])) $c['rx_rate'] = $ic['rxRateBps'] ?? 0;
+            if (empty($c['tx_rate'])) $c['tx_rate'] = $ic['txRateBps'] ?? 0;
         }
     }
     unset($c);
@@ -115,11 +143,21 @@ try {
                 $network = $client['essid'] ?? $client['network'] ?? '';
                 $is_wired = !empty($client['is_wired']);
                 $known_macs[$mac] = ['name' => $name, 'first_seen' => date('Y-m-d H:i:s')];
+                $uplink_device = $client['sw_mac'] ?? $client['ap_mac'] ?? '';
+                $sw_port = $client['sw_port'] ?? 0;
                 if ($can_alert && $new_count < 3) {
-                    $type = $is_wired ? '🔌 Wired' : '📶 WiFi';
-                    $details = "📡 IP: $ip | $type";
-                    if ($network) $details .= ": $network";
-                    $details .= " | 🏷️ VLAN: $vlan_name";
+                    $details = "📡 IP: $ip | 🏷️ $vlan_name";
+                    if ($is_wired) {
+                        if ($uplink_device) {
+                            $uplink_name = get_infra_device_name_by_mac($uplink_device);
+                            $uplink_label = $uplink_name ?: strtoupper(substr($uplink_device, -8));
+                            $details .= " | 🔌 Uplink: $uplink_label" . ($sw_port ? ":$sw_port" : '');
+                        } else {
+                            $details .= " | 🔌 Ethernet";
+                        }
+                    } else {
+                        if ($network) $details .= " | 📶 $network";
+                    }
                     sendAlert(
                         "Nowe urzadzenie: $name",
                         "$details\nMAC: $mac",
@@ -156,8 +194,8 @@ try {
                     $cc = strtoupper($evt['srcipCountry'] ?? '??');
                     sendAlert(
                         "Zablokowano Atak!",
-                        "⚠️ $cat | 🌍 $cc | 🛡️ $sig\nZrodlo: **$src** → $dst" . ($port ? ":$port" : "") . " ($proto)",
-                        'critical'
+                        "❗ $cat | 🌍 $cc | 🛡️ $sig\nZrodlo: **$src** → $dst" . ($port ? ":$port" : "") . " ($proto)",
+                        'attack'
                     );
                     break;
                 }
@@ -189,40 +227,72 @@ try {
         }
     }
 
-    // === TRIGGER: VPN Connection Alert ===
+    // === TRIGGER: VPN Connection Alert (poll + diff) ===
+    // stat/event zwraca 404 na tym UDR, wiec zamiast feedu zdarzen pollujemy liste aktywnych
+    // sesji (stat/remoteuservpn) i wykrywamy roznice. Rozlaczenie ma 1-cyklowy grace, bo
+    // WireGuard (connectionless) potrafi chwilowo zniknac miedzy handshake'ami → falszywe alerty.
     $vpn_debug = __DIR__ . '/logs/vpn_debug.log';
-    $vpn_enabled = $config['triggers']['vpn_alert_enabled'] ?? false;
-    @file_put_contents($vpn_debug, date('Y-m-d H:i:s') . " VPN trigger enabled: " . ($vpn_enabled ? 'YES' : 'NO') . "\n", FILE_APPEND);
-    if ($vpn_enabled) {
-        if (check_cooldown('vpn', 30)) {
-            $vpn_resp = fetch_api("/proxy/network/api/s/$tradSite/stat/event?limit=20&_sort=-time");
-            $event_count = count($vpn_resp['data'] ?? []);
-            $event_keys = array_map(function($e) { return $e['key'] ?? '?'; }, $vpn_resp['data'] ?? []);
-            @file_put_contents($vpn_debug, date('Y-m-d H:i:s') . " Events: $event_count | Keys: " . implode(', ', $event_keys) . "\n", FILE_APPEND);
+    if ($config['triggers']['vpn_alert_enabled'] ?? false) {
+        $vpn_resp = fetch_api('/proxy/network/api/s/default/stat/remoteuservpn');
+        $vpn_labels = ['openvpn-server' => 'OpenVPN', 'wireguard-server' => 'WireGuard', 'l2tp-server' => 'L2TP'];
 
-            $last_vpn_id_file = __DIR__ . '/data/last_vpn_event_id.txt';
-            $last_vpn_id = file_exists($last_vpn_id_file) ? trim(file_get_contents($last_vpn_id_file)) : '';
+        // Mapa biezacych sesji, klucz = user|remote_ip|vpn_type
+        $current = [];
+        foreach (($vpn_resp['data'] ?? []) as $s) {
+            if (isset($s['up']) && !$s['up']) continue;
+            $key = ($s['user'] ?? '?') . '|' . ($s['remote_ip'] ?? '?') . '|' . ($s['vpn_type'] ?? '?');
+            $current[$key] = [
+                'user'       => $s['user'] ?? '?',
+                'remote_ip'  => $s['remote_ip'] ?? '?',
+                'tunnel_ip'  => $s['tunnel_ip'] ?? '',
+                'vpn_type'   => $s['vpn_type'] ?? '',
+                'assoc_time' => $s['assoc_time'] ?? time(),
+                'misses'     => 0,
+            ];
+        }
 
-            foreach (($vpn_resp['data'] ?? []) as $evt) {
-                $evt_id = $evt['_id'] ?? '';
-                if ($evt_id === $last_vpn_id) break;
-                $key = $evt['key'] ?? '';
-                if (strpos($key, 'EVT_VPN') !== false || stripos($key, 'vpn') !== false) {
-                    $msg = $evt['msg'] ?? 'VPN event';
-                    $is_connect = stripos($key, 'connect') !== false && stripos($key, 'disconnect') === false;
-                    $icon = $is_connect ? 'VPN Polaczono' : 'VPN Rozlaczono';
-                    $severity = $is_connect ? 'info' : 'warning';
-                    @file_put_contents($vpn_debug, date('Y-m-d H:i:s') . " MATCH! key=$key msg=$msg → $icon\n", FILE_APPEND);
-                    sendAlert("$icon", $msg, $severity);
-                    break;
+        $state_file = __DIR__ . '/data/vpn_sessions.json';
+        $prev = file_exists($state_file) ? json_decode(file_get_contents($state_file), true) : null;
+        $is_first_run = !is_array($prev);
+        if (!is_array($prev)) $prev = [];
+
+        @file_put_contents($vpn_debug, date('Y-m-d H:i:s') . " Sessions: " . count($current)
+            . " | " . implode(', ', array_keys($current)) . "\n", FILE_APPEND);
+
+        $next = $current; // stan do zapisania (current + sesje w grace)
+        if (!$is_first_run) {
+            // Nowe sesje → polaczono
+            foreach ($current as $key => $s) {
+                if (!isset($prev[$key])) {
+                    $label = $vpn_labels[$s['vpn_type']] ?? $s['vpn_type'];
+                    sendAlert(
+                        "VPN Połączono: {$s['user']}",
+                        "Użytkownik **{$s['user']}** połączył się ($label).\n🌍 Źródło: **{$s['remote_ip']}** | 📡 Tunel: {$s['tunnel_ip']}",
+                        'info'
+                    );
                 }
             }
-            if (!empty($vpn_resp['data'][0]['_id'])) {
-                file_put_contents($last_vpn_id_file, $vpn_resp['data'][0]['_id']);
+            // Zniknięte sesje → rozłączono (1-cyklowy grace dla WireGuard)
+            foreach ($prev as $key => $s) {
+                if (isset($current[$key])) continue;
+                $misses = ($s['misses'] ?? 0) + 1;
+                if ($misses >= 2) {
+                    $label = $vpn_labels[$s['vpn_type'] ?? ''] ?? ($s['vpn_type'] ?? '');
+                    $dur = isset($s['assoc_time']) ? formatDuration(time() - (int)$s['assoc_time']) : '';
+                    sendAlert(
+                        "VPN Rozłączono: {$s['user']}",
+                        "Użytkownik **{$s['user']}** rozłączył się ($label)." . ($dur ? "\n⏱️ Czas sesji: $dur" : ''),
+                        'warning'
+                    );
+                    // misses>=2 → nie trafia do $next, czyli usuniete ze stanu
+                } else {
+                    $s['misses'] = $misses;
+                    $next[$key] = $s; // grace: trzymamy w stanie, bez alertu
+                }
             }
-        } else {
-            @file_put_contents($vpn_debug, date('Y-m-d H:i:s') . " COOLDOWN active, skipping\n", FILE_APPEND);
         }
+
+        file_put_contents($state_file, json_encode($next));
     }
 
 } catch (Exception $e) {
