@@ -554,7 +554,10 @@
         "latency_alert_desc": "Alert gdy opóźnienie WAN przekroczy próg",
         "latency_threshold": "Próg (ms)",
         "vpn_alert": "Alert Połączenia VPN",
-        "vpn_alert_desc": "Alert o połączeniu/rozłączeniu VPN"
+        "vpn_alert_desc": "Alert o połączeniu/rozłączeniu VPN",
+        "offline_grace": "Tolerancja Offline (anti-flapping)",
+        "offline_grace_desc": "Ignoruj krótkie zniknięcia z sieci (roaming, uśpienie WiFi) przed alertem OFFLINE",
+        "offline_grace_label": "Próg karencji (s) — 0 = wyłączone"
     },
     "clients_modal": {
         "search_placeholder": "Szukaj...",

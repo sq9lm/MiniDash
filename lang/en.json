@@ -554,7 +554,10 @@
         "latency_alert_desc": "Alert when WAN latency exceeds threshold",
         "latency_threshold": "Threshold (ms)",
         "vpn_alert": "VPN Connection Alert",
-        "vpn_alert_desc": "Alert on VPN connect/disconnect events"
+        "vpn_alert_desc": "Alert on VPN connect/disconnect events",
+        "offline_grace": "Offline Tolerance (anti-flapping)",
+        "offline_grace_desc": "Ignore brief network dropouts (roaming, WiFi sleep) before sending an OFFLINE alert",
+        "offline_grace_label": "Grace threshold (s) — 0 = disabled"
     },
     "threats": {
         "page_title": "Threat Watch",

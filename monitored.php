@@ -22,30 +22,27 @@ $clients_resp = ['data' => []];
 $trad_resp = ['data' => []];
 
 try {
-    // 1. Pobieranie danych klientów (żeby wiedzieć co jest online)
-    $clients_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/clients?limit=1000");
-    
-    if (empty($clients_resp['data']) && $siteId !== 'default') {
-         $fallback_resp = fetch_api("/proxy/network/integration/v1/sites/default/clients?limit=1000");
-         if (!empty($fallback_resp['data'])) {
-             $clients_resp = $fallback_resp;
-             $siteId = 'default';
-         }
-    }
-    
-    $clients = $clients_resp['data'] ?? [];
-    
-    // 2. Fetch from Traditional API (Rich data for traffic/uptime)
+    // PRIMARY: Traditional stat/sta — zwraca WSZYSTKICH klientów ze WSZYSTKICH VLANów
     $tradSite = get_trad_site_id($siteId);
     $trad_resp = fetch_api("/proxy/network/api/s/$tradSite/stat/sta");
-    $trad_clients = [];
-    if (!empty($trad_resp['data'])) {
-        foreach ($trad_resp['data'] as $tc) {
-            $trad_clients[normalize_mac($tc['mac'])] = $tc;
+    $trad_clients_raw = $trad_resp['data'] ?? [];
+
+    // ENRICHMENT: Integration API v1
+    $clients_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/clients?limit=1000");
+    if (empty($clients_resp['data']) && $siteId !== 'default') {
+        $fallback_resp = fetch_api("/proxy/network/integration/v1/sites/default/clients?limit=1000");
+        if (!empty($fallback_resp['data'])) {
+            $clients_resp = $fallback_resp;
+            $siteId = 'default';
         }
     }
-    
-    // 3. Fetch Historical Stats (for Total counters)
+    $integ_map = [];
+    foreach (($clients_resp['data'] ?? []) as $ic) {
+        $imac = normalize_mac($ic['macAddress'] ?? $ic['mac'] ?? '');
+        if ($imac) $integ_map[$imac] = $ic;
+    }
+
+    // Historical Stats (for Total counters)
     $user_resp = fetch_api("/proxy/network/api/s/$tradSite/stat/user");
     $hist_clients = [];
     if (!empty($user_resp['data'])) {
@@ -54,55 +51,49 @@ try {
         }
     }
 
-    // Wstępna obróbka klientów i wzbogacenie o dane tradycyjne
-    foreach ($clients as &$client) {
-        $c_mac = normalize_mac($client['macAddress'] ?? $client['mac'] ?? '');
-        $vlan_id = $client['vlan'] ?? $client['network_id'] ?? null;
-        $ip = $client['ipAddress'] ?? $client['ip'] ?? '';
-        $vlan_id = detect_vlan_id($ip, $vlan_id);
-        
-        $client['mac'] = $c_mac;
-        $client['vlan'] = $vlan_id;
-        $client['is_vpn'] = ($vlan_id === 0);
-        
-        // Enrich with traffic if online
-        if (isset($trad_clients[$c_mac])) {
-            $tc = $trad_clients[$c_mac];
-            $client['rx_rate'] = $tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? $tc['wired-rx_bytes-r'] ?? 0) * 8);
-            $client['tx_rate'] = $tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? $tc['wired-tx_bytes-r'] ?? 0) * 8);
-            $client['rx_bytes'] = $tc['rx_bytes'] ?? $tc['wired-rx_bytes'] ?? 0;
-            $client['tx_bytes'] = $tc['tx_bytes'] ?? $tc['wired-tx_bytes'] ?? 0;
-            $client['uptime'] = $tc['uptime'] ?? 0;
+    // Buduj $clients z danych stat/sta jako bazy + enrichment
+    $clients = [];
+    foreach ($trad_clients_raw as $tc) {
+        $c_mac = normalize_mac($tc['mac'] ?? '');
+        if (!$c_mac) continue;
+
+        $ip      = $tc['ip'] ?? $tc['last_ip'] ?? '';
+        $vlan_id = detect_vlan_id($ip, $tc['vlan'] ?? null);
+
+        $client = [
+            'mac'        => $c_mac,
+            'macAddress' => $tc['mac'] ?? '',
+            'name'       => $tc['name'] ?? $tc['hostname'] ?? $c_mac,
+            'ipAddress'  => $ip,
+            'vlan'       => $vlan_id,
+            'is_vpn'     => ($vlan_id === 0),
+            'is_wired'   => !empty($tc['is_wired']),
+            'essid'      => $tc['essid'] ?? '',
+            'sw_mac'     => $tc['sw_mac'] ?? '',
+            'sw_port'    => $tc['sw_port'] ?? 0,
+            'ap_mac'     => $tc['ap_mac'] ?? '',
+            'rx_rate'    => $tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? $tc['wired-rx_bytes-r'] ?? 0) * 8),
+            'tx_rate'    => $tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? $tc['wired-tx_bytes-r'] ?? 0) * 8),
+            'rx_bytes'   => $tc['rx_bytes'] ?? $tc['wired-rx_bytes'] ?? 0,
+            'tx_bytes'   => $tc['tx_bytes'] ?? $tc['wired-tx_bytes'] ?? 0,
+            'uptime'     => $tc['uptime'] ?? 0,
+        ];
+
+        // Enrich with Integration API data
+        if (isset($integ_map[$c_mac])) {
+            $ic = $integ_map[$c_mac];
+            if (empty($client['rx_rate'])) $client['rx_rate'] = $ic['rxRateBps'] ?? 0;
+            if (empty($client['tx_rate'])) $client['tx_rate'] = $ic['txRateBps'] ?? 0;
         }
-        
-        // Ensure Total Bytes are from history if present
+
+        // Total bytes from history
         if (isset($hist_clients[$c_mac])) {
             $hc = $hist_clients[$c_mac];
-            $client['rx_bytes'] = max($client['rx_bytes'] ?? 0, $hc['rx_bytes'] ?? 0);
-            $client['tx_bytes'] = max($client['tx_bytes'] ?? 0, $hc['tx_bytes'] ?? 0);
+            $client['rx_bytes'] = max($client['rx_bytes'], $hc['rx_bytes'] ?? 0);
+            $client['tx_bytes'] = max($client['tx_bytes'], $hc['tx_bytes'] ?? 0);
         }
-    }
 
-    // Merge traditional clients into $clients if not already present (by MAC)
-    // This fixes detection for devices not in Integration API (e.g. randomized MAC phones)
-    $existing_macs = [];
-    foreach ($clients as $c) {
-        $existing_macs[] = normalize_mac($c['macAddress'] ?? $c['mac'] ?? '');
-    }
-    foreach ($trad_resp['data'] ?? [] as $tc) {
-        $tc_mac = normalize_mac($tc['mac'] ?? '');
-        if ($tc_mac && !in_array($tc_mac, $existing_macs)) {
-            $clients[] = [
-                'mac' => $tc_mac,
-                'macAddress' => $tc['mac'] ?? '',
-                'name' => $tc['name'] ?? $tc['hostname'] ?? $tc_mac,
-                'ipAddress' => $tc['ip'] ?? $tc['last_ip'] ?? '',
-                'vlan' => $tc['vlan'] ?? 0,
-                'rx_rate' => $tc['rx_rate'] ?? 0,
-                'tx_rate' => $tc['tx_rate'] ?? 0,
-                'uptime' => $tc['uptime'] ?? 0,
-            ];
-        }
+        $clients[] = $client;
     }
 
     // Grupowanie monitorowanych urządzeń

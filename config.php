@@ -84,7 +84,8 @@ $config = [
         'ips_alert_enabled' => false,
         'latency_alert_enabled' => false,
         'latency_threshold_ms' => 100,
-        'vpn_alert_enabled' => false
+        'vpn_alert_enabled' => false,
+        'offline_grace_sec' => 60
     ],
     'protect' => [
         'enabled' => null, // null = auto-detect

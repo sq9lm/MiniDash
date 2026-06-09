@@ -1085,8 +1085,27 @@ function get_unifi_security_settings() {
 // Pobierz sieci z API UniFi (cache w sesji na 5 min)
 function get_vlans_from_api() {
     global $config;
-    if (isset($_SESSION['network_vlans']) && isset($_SESSION['network_vlans_time']) && (time() - $_SESSION['network_vlans_time'] < 30) && !empty($_SESSION['network_subnets'])) {
+
+    // Session cache (web context, 30s)
+    if (isset($_SESSION['network_vlans'], $_SESSION['network_vlans_time'], $_SESSION['network_subnets'])
+        && (time() - $_SESSION['network_vlans_time'] < 30)
+        && !empty($_SESSION['network_subnets'])) {
         return $_SESSION['network_vlans'];
+    }
+
+    // File cache (shared with cron, 5 min)
+    $cache_file = __DIR__ . '/data/.network_vlans_cache.json';
+    $cache_ttl  = 300;
+    if (file_exists($cache_file) && (time() - filemtime($cache_file) < $cache_ttl)) {
+        $cached = json_decode(file_get_contents($cache_file), true);
+        if (!empty($cached['vlans']) && !empty($cached['subnets'])) {
+            if (isset($_SESSION)) {
+                $_SESSION['network_vlans']   = $cached['vlans'];
+                $_SESSION['network_subnets'] = $cached['subnets'];
+                $_SESSION['network_vlans_time'] = time();
+            }
+            return $cached['vlans'];
+        }
     }
 
     $site = $_SESSION['site_id'] ?? $config['site'] ?? 'default';
@@ -1134,9 +1153,15 @@ function get_vlans_from_api() {
     if (!isset($vlans[1])) $vlans[1] = 'Main';
     if (!isset($vlans[0])) $vlans[0] = 'VPN';
 
-    $_SESSION['network_vlans'] = $vlans;
-    $_SESSION['network_subnets'] = $subnets;
-    $_SESSION['network_vlans_time'] = time();
+    // Persist to session
+    if (isset($_SESSION)) {
+        $_SESSION['network_vlans']      = $vlans;
+        $_SESSION['network_subnets']    = $subnets;
+        $_SESSION['network_vlans_time'] = time();
+    }
+
+    // Persist to file (for cron context without session)
+    @file_put_contents($cache_file, json_encode(['vlans' => $vlans, 'subnets' => $subnets]));
 
     return $vlans;
 }
@@ -1152,7 +1177,10 @@ function detect_vlan_id($ip, $current_vlan = null) {
 
     if (empty($ip) || $ip === 'N/A' || $ip === 'Offline') return 0;
 
-    // Use cached subnet map from API
+    // Ensure VLAN/subnet map is loaded (works in both web and cron context)
+    get_vlans_from_api();
+
+    // Use subnet map from session (populated by get_vlans_from_api)
     $subnets = $_SESSION['network_subnets'] ?? [];
     foreach ($subnets as $subnet => $vlan_id) {
         if (ip_in_subnet($ip, $subnet)) {
@@ -1160,9 +1188,7 @@ function detect_vlan_id($ip, $current_vlan = null) {
         }
     }
 
-    // Fallback: unknown 10.x = VPN
-    if (strpos($ip, '10.') === 0) return 0;
-
+    // Unknown — return 0, do NOT assume 10.x = VPN (could be any private VLAN)
     return 0;
 }
 
@@ -1289,6 +1315,54 @@ function get_vlan_name($vlan)
     return $names[$vlan] ?? "VLAN $vlan";
 }
 
+/**
+ * Zwraca nazwę urządzenia infrastruktury (switch, AP) na podstawie MAC.
+ * Używa cache'u w pliku (5 min) aby nie duplikować zapytań API w cron/tle.
+ * @param string $mac  MAC switcha lub AP (z pól sw_mac / ap_mac)
+ * @return string  Nazwa urządzenia lub skrócony MAC jako fallback
+ */
+function get_infra_device_name_by_mac(string $mac): string
+{
+    if (empty($mac)) return '';
+    $norm = normalize_mac($mac);
+
+    // 1. Try session cache (web context)
+    if (!empty($_SESSION['infra_device_map'][$norm])) {
+        return $_SESSION['infra_device_map'][$norm];
+    }
+
+    // 2. Try file cache (cron context, shared)
+    $cache_file = __DIR__ . '/data/.infra_device_map.json';
+    $cache_ttl  = 300; // 5 minutes
+    if (file_exists($cache_file) && (time() - filemtime($cache_file) < $cache_ttl)) {
+        $map = json_decode(file_get_contents($cache_file), true) ?? [];
+        if (isset($map[$norm])) return $map[$norm];
+    } else {
+        $map = [];
+    }
+
+    // 3. Fetch from API and build map
+    global $config;
+    $site     = $_SESSION['site_id'] ?? $config['site'] ?? 'default';
+    $tradSite = get_trad_site_id($site);
+    $resp     = fetch_api("/proxy/network/api/s/$tradSite/stat/device");
+    foreach (($resp['data'] ?? []) as $d) {
+        $dmac  = normalize_mac($d['mac'] ?? '');
+        $dname = $d['name'] ?? $d['hostname'] ?? '';
+        if ($dmac && $dname) {
+            $map[$dmac] = $dname;
+        }
+    }
+
+    // Persist cache
+    @file_put_contents($cache_file, json_encode($map));
+    if (isset($_SESSION)) {
+        $_SESSION['infra_device_map'] = $map;
+    }
+
+    return $map[$norm] ?? '';
+}
+
 function detect_known_devices(array $clients, array $devices): array
 {
     $status = [];
@@ -1413,6 +1487,7 @@ function deleteDeviceCompletely($mac) {
             'device_monitors',
             'client_history',
             'device_status_history',
+            'device_offline_pending',
             'stalker_sessions',
             'stalker_roaming',
             'stalker_watchlist'
@@ -1486,7 +1561,7 @@ function format_bytes($bytes, $decimals = 2) {
 // Funkcja zapisująca historię ZMIAN statusu
 function saveDeviceHistory($mac, $status)
 {
-    global $db;
+    global $db, $config;
     $norm      = normalize_mac($mac);
     $timestamp = date('Y-m-d H:i:s');
 
@@ -1539,6 +1614,52 @@ function saveDeviceHistory($mac, $status)
     $lastStmt->execute([':mac' => $norm]);
     $last = $lastStmt->fetch(PDO::FETCH_ASSOC);
 
+    // ── Anti-flapping grace window ──────────────────────────────────────────────
+    // Pojedyncze pudło pollingu (roaming między AP, WiFi power-save, handoff)
+    // sprawia, że urządzenie znika z `stat/sta` na jeden cykl crona i wraca po
+    // chwili — bez tego mechanizmu generowałoby to fałszywe alerty OFFLINE→ONLINE.
+    // Urządzenie musi być nieobecne dłużej niż $grace sekund, zanim uznamy je za
+    // OFFLINE. Moment realnego zniknięcia trzymamy w device_offline_pending, dzięki
+    // czemu próg jest oparty o CZAS, a nie o liczbę wywołań — odporny na to, że
+    // funkcję woła co minutę zarówno cron_triggers.php, jak i update_wan.php.
+    $grace = (int)($config['triggers']['offline_grace_sec'] ?? 60);
+    if ($grace > 0) {
+        $db->exec("CREATE TABLE IF NOT EXISTS device_offline_pending (
+            mac TEXT PRIMARY KEY,
+            missing_since TEXT NOT NULL
+        )");
+
+        if ($status === 'on') {
+            // Urządzenie znów obecne — blip się skończył, kasujemy zegar karencji.
+            $db->prepare("DELETE FROM device_offline_pending WHERE mac = :mac")
+               ->execute([':mac' => $norm]);
+        } elseif ($status === 'off' && $last && $last['status'] === 'on') {
+            // Kandydat na przejście online→offline: uruchom lub sprawdź okno karencji.
+            $p = $db->prepare("SELECT missing_since FROM device_offline_pending WHERE mac = :mac");
+            $p->execute([':mac' => $norm]);
+            $since = $p->fetchColumn();
+
+            if ($since === false) {
+                // Pierwsze pudło — startujemy zegar, NIE alertujemy i NIE zmieniamy statusu.
+                $db->prepare("INSERT INTO device_offline_pending (mac, missing_since) VALUES (:mac, :ts)")
+                   ->execute([':mac' => $norm, ':ts' => $timestamp]);
+                return;
+            }
+
+            if (strtotime($timestamp) - strtotime($since) < $grace) {
+                // Wciąż w oknie karencji — traktuj jako wciąż online, nie alertuj.
+                return;
+            }
+
+            // Karencja minęła — zatwierdzamy OFFLINE z momentem realnego zniknięcia,
+            // aby czas „był online przez …" nie był zawyżony o okno karencji.
+            $timestamp = $since;
+            $db->prepare("DELETE FROM device_offline_pending WHERE mac = :mac")
+               ->execute([':mac' => $norm]);
+        }
+    }
+    // ────────────────────────────────────────────────────────────────────────────
+
     // Do nothing if status unchanged
     if ($last && $last['status'] === $status) {
         return;
@@ -1560,17 +1681,36 @@ function saveDeviceHistory($mac, $status)
 
         if ($status === 'on') {
             // Try to get IP and network info for online device
-            $ip = ''; $network = '';
-            $sta = fetch_api('/proxy/network/api/s/default/stat/sta');
+            $ip = ''; $network = ''; $is_wired = false; $uplink_device = ''; $sw_port = 0; $vlan_id = null;
+            $site_ctx  = $_SESSION['site_id'] ?? $config['site'] ?? 'default';
+            $trad_ctx  = get_trad_site_id($site_ctx);
+            $sta = fetch_api("/proxy/network/api/s/$trad_ctx/stat/sta");
             foreach (($sta['data'] ?? []) as $c) {
                 if (normalize_mac($c['mac'] ?? '') === $norm) {
                     $ip = $c['ip'] ?? $c['last_ip'] ?? '';
                     $network = $c['essid'] ?? $c['network'] ?? '';
+                    $is_wired = !empty($c['is_wired']);
+                    $uplink_device = $c['sw_mac'] ?? $c['ap_mac'] ?? '';
+                    $sw_port = $c['sw_port'] ?? 0;
+                    $vlan_id = $c['vlan'] ?? null;
                     break;
                 }
             }
-            $details = "📡 IP: $ip";
-            if ($network) $details .= " | 📶 $network";
+            $vlan_name = get_vlan_name(detect_vlan_id($ip, $vlan_id));
+            $details = "📡 IP: $ip | 🏷️ $vlan_name";
+            if ($is_wired) {
+                // Ethernet: show uplink switch/port
+                if ($uplink_device) {
+                    $uplink_name = get_infra_device_name_by_mac($uplink_device);
+                    $uplink_label = $uplink_name ?: strtoupper(substr($uplink_device, -8)); // fallback: last 8 chars of MAC
+                    $details .= " | 🔌 Uplink: $uplink_label" . ($sw_port ? ":$sw_port" : '');
+                } else {
+                    $details .= " | 🔌 Ethernet";
+                }
+            } else {
+                // WiFi: show SSID
+                if ($network) $details .= " | 📶 $network";
+            }
             $details .= " | ⏱️ Offline: $durationStr";
             sendAlert("$deviceName — ONLINE", $details, 'info');
         } else {
@@ -3091,6 +3231,26 @@ function render_nav($title = "MiniDash", $stats = []) {
                             </div>
                         </div>
                         <div class="space-y-4">
+                            <!-- Trigger: Offline Tolerance (anti-flapping) -->
+                            <div class="p-6 bg-slate-900/40 rounded-3xl border border-white/5 space-y-6">
+                                <div class="flex items-center gap-4">
+                                    <div class="p-3 bg-sky-500/10 text-sky-400 rounded-2xl"><i data-lucide="timer-reset" class="w-6 h-6"></i></div>
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-200"><?= __('triggers.offline_grace') ?></p>
+                                        <p class="text-[12px] text-slate-500 uppercase tracking-widest"><?= __('triggers.offline_grace_desc') ?></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-6 pl-12">
+                                    <div class="w-full">
+                                        <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-3"><?= __('triggers.offline_grace_label') ?></label>
+                                        <div class="flex items-center gap-4">
+                                            <input type="range" name="offline_grace_sec" min="0" max="600" step="30" value="<?= htmlspecialchars($config['triggers']['offline_grace_sec'] ?? 60) ?>" class="flex-grow accent-sky-500" oninput="this.nextElementSibling.value = (this.value == 0 ? '0 s' : this.value + ' s')">
+                                            <output class="text-xs font-mono text-sky-400 bg-sky-500/10 px-3 py-2 rounded-lg border border-sky-500/20 min-w-[80px] text-center"><?= htmlspecialchars($config['triggers']['offline_grace_sec'] ?? 60) ?> s</output>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Existing: Speed Alert -->
                             <div class="p-6 bg-slate-900/40 rounded-3xl border border-white/5 space-y-6">
                                 <div class="flex items-center justify-between">

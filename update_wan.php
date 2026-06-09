@@ -91,25 +91,26 @@ try {
     // 4. Update Monitored Devices Status History
     $monitored_config = loadDevices();
     if (!empty($monitored_config)) {
-        $clients_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/clients?limit=1000");
-        $all_active_clients = $clients_resp['data'] ?? [];
-
-        // Enrich with traditional API data (rx_bytes, tx_bytes, rx_rate)
+        // PRIMARY: Traditional stat/sta — zwraca WSZYSTKICH klientów ze WSZYSTKICH VLANów
         $trad_sta = fetch_api("/proxy/network/api/s/$tradSite/stat/sta");
-        $trad_map = [];
-        foreach (($trad_sta['data'] ?? []) as $tc) {
-            $trad_map[normalize_mac($tc['mac'] ?? '')] = $tc;
+        $all_active_clients = $trad_sta['data'] ?? [];
+
+        // ENRICHMENT: Integration API v1 — dodaje rxRateBps/txRateBps gdy traditional rates = 0
+        $integ_resp = fetch_api("/proxy/network/integration/v1/sites/$siteId/clients?limit=1000");
+        $integ_map = [];
+        foreach (($integ_resp['data'] ?? []) as $ic) {
+            $imac = normalize_mac($ic['macAddress'] ?? $ic['mac'] ?? '');
+            if ($imac) $integ_map[$imac] = $ic;
         }
         foreach ($all_active_clients as &$c) {
-            $cmac = normalize_mac($c['macAddress'] ?? $c['mac'] ?? '');
-            if (isset($trad_map[$cmac])) {
-                $tc = $trad_map[$cmac];
-                $c['rx_bytes'] = $tc['rx_bytes'] ?? 0;
-                $c['tx_bytes'] = $tc['tx_bytes'] ?? 0;
-                $c['rx_rate'] = $tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? 0) * 8);
-                $c['tx_rate'] = $tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? 0) * 8);
+            $cmac = normalize_mac($c['mac'] ?? '');
+            if (isset($integ_map[$cmac])) {
+                $ic = $integ_map[$cmac];
+                if (empty($c['rx_rate'])) $c['rx_rate'] = $ic['rxRateBps'] ?? 0;
+                if (empty($c['tx_rate'])) $c['tx_rate'] = $ic['txRateBps'] ?? 0;
             }
         }
+        unset($c);
 
         $statuses = detect_known_devices($all_active_clients, $monitored_config);
         $last_speeds_file = __DIR__ . '/data/last_speeds.json';
@@ -178,11 +179,21 @@ try {
                 $network = $client['essid'] ?? $client['network'] ?? '';
                 $is_wired = !empty($client['is_wired']);
                 $known_macs[$mac] = ['name' => $name, 'first_seen' => date('Y-m-d H:i:s')];
+                $uplink_device = $client['sw_mac'] ?? $client['ap_mac'] ?? '';
+                $sw_port = $client['sw_port'] ?? 0;
                 if ($can_alert && $new_count < 3) {
-                    $type = $is_wired ? '🔌 Wired' : '📶 WiFi';
-                    $details = "📡 IP: $ip | $type";
-                    if ($network) $details .= ": $network";
-                    $details .= " | 🏷️ VLAN: $vlan_name";
+                    $details = "📡 IP: $ip | 🏷️ $vlan_name";
+                    if ($is_wired) {
+                        if ($uplink_device) {
+                            $uplink_name = get_infra_device_name_by_mac($uplink_device);
+                            $uplink_label = $uplink_name ?: strtoupper(substr($uplink_device, -8));
+                            $details .= " | 🔌 Uplink: $uplink_label" . ($sw_port ? ":$sw_port" : '');
+                        } else {
+                            $details .= " | 🔌 Ethernet";
+                        }
+                    } else {
+                        if ($network) $details .= " | 📶 $network";
+                    }
                     sendAlert(
                         "Nowe urzadzenie: $name",
                         "$details\nMAC: $mac",
