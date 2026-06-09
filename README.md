@@ -157,4 +157,4 @@ MIT License - see [LICENSE](LICENSE)
 
 ---
 
-Created by Lukasz Misiura | [LM-Networks](https://www.lm-ads.com) | [dev.lm-ads.com](https://dev.lm-ads.com)
+Created by Lukasz Misiura | [LM-Networks](https://www.lm-networks.pl) | [dev.lm-ads.com](https://dev.lm-ads.com)

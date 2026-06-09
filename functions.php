@@ -2199,7 +2199,7 @@ function render_footer() {
                 <div class="flex items-center justify-center gap-3 text-slate-500 text-[11px] uppercase tracking-[0.3em] font-black">
                     MiniDASH v<?= MINIDASH_VERSION ?> © 2026 
                     <span class="text-slate-700">/</span>
-                    <a href="https://www.lm-ads.com" target="_blank" class="text-slate-400 hover:text-blue-400 transition hover:tracking-[0.4em]">lm-network</a> 
+                    <a href="https://www.lm-networks.pl" target="_blank" class="text-slate-400 hover:text-blue-400 transition hover:tracking-[0.4em]">lm-network</a> 
                     <span class="text-slate-700">/</span>
                     Łukasz Misiura
                 </div>

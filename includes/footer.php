@@ -24,7 +24,7 @@ if (file_exists($release_file)) {
 <footer class="mt-12 border-t border-white/5">
     <div class="max-w-7xl mx-auto px-6 py-6 flex items-end justify-between">
         <div>
-            <div class="text-xs text-slate-500"><a href="https://www.lm-ads.com" target="_blank" class="hover:text-slate-300 transition">LM-Networks</a> &copy; 2025-2026 &middot; <?= __('footer.rights') ?></div>
+            <div class="text-xs text-slate-500"><a href="https://www.lm-networks.pl" target="_blank" class="hover:text-slate-300 transition">LM-Networks</a> &copy; 2025-2026 &middot; <?= __('footer.rights') ?></div>
             <div class="text-[10px] text-slate-600 mt-1"><?= __('footer.ecosystem') ?> <a href="https://dev.lm-ads.com" target="_blank" class="hover:text-slate-400 transition"><?= __('footer.dev_tools') ?></a></div>
         </div>
         <div class="text-right">

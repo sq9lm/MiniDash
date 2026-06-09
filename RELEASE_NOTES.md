@@ -1,5 +1,25 @@
 # MiniDash — Release Notes
 
+## v2.3.2 (2026-06-09)
+
+Anti-flapping alertów statusu, pewniejsze wykrywanie klientów i rebranding domeny.
+
+### Device Status / Anti-flapping
+- Okno karencji przed alertem OFFLINE (`triggers.offline_grace_sec`, domyślnie 60s, suwak w ustawieniach wyzwalaczy, 0 = wyłączone)
+- Pojedyncze pudło pollingu (roaming między AP, WiFi power-save, handoff) nie generuje już fałszywych alertów OFFLINE→ONLINE
+- Stan trzymany w tabeli `device_offline_pending` — próg oparty o czas, odporny na to, że funkcję wołają co minutę dwa crony (cron_triggers.php + update_wan.php)
+- Czas „był online przez…" liczony od momentu realnego zniknięcia, nie zawyżony o karencję
+- Nowa migracja: `migrations/003_device_offline_pending.sql`
+
+### Wykrywanie klientów
+- Traditional `stat/sta` jako PRIMARY (wszystkie VLAN-y + telefony z losowym MAC), Integration API v1 jako enrichment — `monitored.php`, `update_wan.php`
+- Wzbogacone alerty OFFLINE/ONLINE/nowe-urządzenie o uplink (switch:port) i SSID
+
+### Branding
+- Linki `www.lm-ads.com` / `lm-ads.com` → `lm-networks.pl` (komentarze deweloperskie `dev.lm-ads.com` bez zmian)
+
+---
+
 ## v2.3.1 (2026-04-15)
 
 Docker & stability fixes, update notifications, auto-detect Site ID.
@@ -234,7 +254,7 @@ Major update: SQLite migration, Wi-Fi Stalker, enhanced Threat Watch, new notifi
 
 ### Footer
 - App version + git hash (clickable changelog)
-- LM-Networks branding with links (lm-ads.com, dev.lm-ads.com)
+- LM-Networks branding with links (lm-networks.pl, dev.lm-ads.com)
 - Copyright 2025-2026
 
 ### Favicon

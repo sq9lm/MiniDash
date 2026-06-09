@@ -163,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <footer class="mt-12 text-center text-slate-500 text-[11px] uppercase tracking-[0.3em] font-medium">
-            <a href="https://www.lm-ads.com" target="_blank" class="hover:text-slate-300 transition">LM-Networks</a> &copy; 2025-2026
+            <a href="https://www.lm-networks.pl" target="_blank" class="hover:text-slate-300 transition">LM-Networks</a> &copy; 2025-2026
         </footer>
     </div>
 
