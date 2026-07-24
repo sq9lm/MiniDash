@@ -55,8 +55,8 @@ try {
             if (isset($trad_map[$c_mac])) {
                 $tc = $trad_map[$c_mac];
                 $c['essid'] = $tc['essid'] ?? $c['essid'] ?? '';
-                $c['rx_rate'] = (float)($tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? 0) * 8));
-                $c['tx_rate'] = (float)($tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? 0) * 8));
+                $c['rx_rate'] = client_rate_bps($tc, 'rx');
+                $c['tx_rate'] = client_rate_bps($tc, 'tx');
                 $c['rx_bytes'] = (float)($tc['rx_bytes'] ?? 0);
                 $c['tx_bytes'] = (float)($tc['tx_bytes'] ?? 0);
                 $c['signal'] = $tc['signal'] ?? $tc['rssi'] ?? 0;
@@ -64,6 +64,10 @@ try {
                 $c['vlan'] = $c['vlan'] ?? $tc['vlan'] ?? 0;
             }
         }
+        // Bez tego $c dalej wskazuje na OSTATNI element $clients. Kazda pozniejsza petla
+        // uzywajaca tej samej nazwy zmiennej nie tworzy nowej zmiennej, tylko nadpisuje
+        // ten element — ostatni klient na liscie stawal sie kopia przedostatniego.
+        unset($c);
 
         // Add clients from traditional API not in Integration API (e.g. VPN clients)
         foreach ($trad_clients as $tc) {
@@ -75,8 +79,8 @@ try {
                     'name' => $tc['name'] ?? $tc['hostname'] ?? $t_mac,
                     'ipAddress' => $tc['ip'] ?? $tc['last_ip'] ?? '',
                     'essid' => $tc['essid'] ?? '',
-                    'rx_rate' => (float)($tc['rx_rate'] ?? (($tc['rx_bytes-r'] ?? 0) * 8)),
-                    'tx_rate' => (float)($tc['tx_rate'] ?? (($tc['tx_bytes-r'] ?? 0) * 8)),
+                    'rx_rate' => client_rate_bps($tc, 'rx'),
+                    'tx_rate' => client_rate_bps($tc, 'tx'),
                     'rx_bytes' => (float)($tc['rx_bytes'] ?? 0),
                     'tx_bytes' => (float)($tc['tx_bytes'] ?? 0),
                     'signal' => $tc['signal'] ?? 0,
@@ -213,8 +217,8 @@ try {
             || !empty($client['is_vpn']));
 
         $vlan_name = get_vlan_name($vlan_id);
-        $c_rx = $client['rx_rate'] ?? $client['rx_bytes-r'] ?? 0;
-        $c_tx = $client['tx_rate'] ?? $client['tx_bytes-r'] ?? 0;
+        $c_rx = isset($client['rx_rate']) ? (float)$client['rx_rate'] : client_rate_bps($client, 'rx');
+        $c_tx = isset($client['tx_rate']) ? (float)$client['tx_rate'] : client_rate_bps($client, 'tx');
         $c_rx_total = $client['rx_bytes'] ?? 0;
         $c_tx_total = $client['tx_bytes'] ?? 0;
 
@@ -238,6 +242,10 @@ try {
             'is_wired' => $client['is_wired'] ?? false,
         ];
     }
+    // Ta sama pulapka co przy $c powyzej: petla renderujaca tabele klientow uzywa
+    // nazwy $client, wiec bez zwolnienia referencji nadpisywalaby ostatni wiersz.
+    unset($client);
+
     // Find Top Consumers (Bandwidth Hogs)
     $top_downloader = null;
     $top_uploader = null;
@@ -264,19 +272,10 @@ try {
         }
     }
 
-    // Speed Alert Trigger
-    if (($config['triggers']['speed_alert_enabled'] ?? false) && $top_downloader) {
-        $threshold_bps = ($config['triggers']['speed_threshold_mbps'] ?? 100) * 1000 * 1000;
-        if ($max_rx_rate > $threshold_bps) {
-            $last_alert = $_SESSION['last_speed_alert'] ?? 0;
-            if (time() - $last_alert > 300) { // 5 min cooldown
-                $devName = $top_downloader['name'] ?? $top_downloader['hostname'] ?? __('common.unknown');
-                $formattedSpeed = formatBps($max_rx_rate);
-                sendAlert(__('alerts.speed_spike_title') . $devName, str_replace(['{name}', '{speed}', '{threshold}'], [$devName, $formattedSpeed, $config['triggers']['speed_threshold_mbps']], __('alerts.speed_spike_body')));
-                $_SESSION['last_speed_alert'] = time();
-            }
-        }
-    }
+    // Alert o wzroscie transferu zyje wylacznie w cron_triggers.php. Wczesniejsza kopia
+    // stala tutaj, ale patrzyla tylko na download, obejmowala wszystkich klientow zamiast
+    // monitorowanych i odpalala sie jedynie przy otwartym dashboardzie (cooldown trzymala
+    // w $_SESSION, ktorej cron nie ma). Zmienne ponizej sluza juz tylko widokowi.
 
     // Known Devices
 
@@ -790,8 +789,10 @@ try {
                             
                             $type_label = $is_vpn ? 'vpn' : ($is_wired ? 'wired' : 'wifi');
                             
-                            $rx = ($client['rx_rate'] ?? $client['rx_bytes-r'] ?? 0) * 8;
-                            $tx = ($client['tx_rate'] ?? $client['tx_bytes-r'] ?? 0) * 8;
+                            // rx_rate/tx_rate sa juz w bitach/s (ustawia je client_rate_bps
+                            // przy scalaniu powyzej) — mnozenie przez 8 zawyzalo odczyt osmiokrotnie.
+                            $rx = isset($client['rx_rate']) ? (float)$client['rx_rate'] : client_rate_bps($client, 'rx');
+                            $tx = isset($client['tx_rate']) ? (float)$client['tx_rate'] : client_rate_bps($client, 'tx');
 
                             $speed_str = ($rx > 0 || $tx > 0) ? formatBps($rx) . " / " . formatBps($tx) : __('common.no_traffic');
                         ?>

@@ -81,43 +81,60 @@ try {
         $cmac = normalize_mac($c['mac'] ?? '');
         if (isset($integ_map[$cmac])) {
             $ic = $integ_map[$cmac];
-            if (empty($c['rx_rate'])) $c['rx_rate'] = $ic['rxRateBps'] ?? 0;
-            if (empty($c['tx_rate'])) $c['tx_rate'] = $ic['txRateBps'] ?? 0;
+            // Przenosimy pod oryginalnymi nazwami, bo client_rate_bps() rozpoznaje
+            // rxRateBps/txRateBps jako bity/s. Wpisanie ich do rx_rate/tx_rate mieszaloby
+            // je z predkoscia linku Wi-Fi, ktora stat/sta trzyma pod tymi samymi kluczami.
+            if (!isset($c['rxRateBps']) && isset($ic['rxRateBps'])) $c['rxRateBps'] = $ic['rxRateBps'];
+            if (!isset($c['txRateBps']) && isset($ic['txRateBps'])) $c['txRateBps'] = $ic['txRateBps'];
         }
     }
     unset($c);
 
-    // === TRIGGER: Monitored Device Status + Speed Spikes ===
+    // === TRIGGER: Monitored Device Status ===
     $monitored_config = loadDevices();
     if (!empty($monitored_config)) {
         $statuses = detect_known_devices($all_active_clients, $monitored_config);
+        foreach ($statuses as $mac => $info) {
+            saveDeviceHistory($mac, $info['status']);
+        }
+    }
+
+    // === TRIGGER: Speed Spikes (wszyscy aktywni klienci) ===
+    // Alert obejmuje cala siec, nie tylko liste monitorowanych: urzadzenie zapychajace
+    // lacze zwykle nie jest tym, ktore ktos wczesniej dodal do obserwowanych.
+    if ($config['triggers']['speed_alert_enabled'] ?? false) {
+        $threshold_bps = ($config['triggers']['speed_threshold_mbps'] ?? 100) * 1000 * 1000;
         $last_speeds_file = __DIR__ . '/data/last_speeds.json';
         $last_speeds = file_exists($last_speeds_file) ? json_decode(file_get_contents($last_speeds_file), true) : [];
         if (!is_array($last_speeds)) $last_speeds = [];
 
-        $threshold_bps = ($config['triggers']['speed_threshold_mbps'] ?? 100) * 1000 * 1000;
-        $speed_alert_enabled = $config['triggers']['speed_alert_enabled'] ?? false;
+        $biezace_predkosci = [];
+        foreach ($all_active_clients as $klient) {
+            $mac = normalize_mac($klient['mac'] ?? '');
+            if (!$mac) continue;
 
-        foreach ($statuses as $mac => $info) {
-            saveDeviceHistory($mac, $info['status']);
+            $rx = client_rate_bps($klient, 'rx');
+            $tx = client_rate_bps($klient, 'tx');
+            $predkosc = max($rx, $tx);
+            $biezace_predkosci[$mac] = $predkosc;
 
-            if ($speed_alert_enabled && $info['status'] === 'on') {
-                $current_speed = max($info['rx_rate'] ?? 0, $info['tx_rate'] ?? 0);
-                $last_speed = $last_speeds[$mac] ?? 0;
-
-                if ($current_speed > $threshold_bps && $last_speed <= $threshold_bps) {
-                    $mbps = round($current_speed / 1000000, 1);
-                    $name = $info['name'] ?? $mac;
-                    sendAlert(
-                        "Wzrost transferu: $name",
-                        "Urządzenie **$name** ($mac) generuje duzy ruch: **$mbps Mbps**.",
-                        'warning'
-                    );
-                }
-                $last_speeds[$mac] = $current_speed;
+            // Zbocze narastajace: alert leci raz, w momencie przekroczenia progu, a nie
+            // co minute przez caly czas trwania transferu.
+            if ($predkosc > $threshold_bps && ($last_speeds[$mac] ?? 0) <= $threshold_bps) {
+                $nazwa = $klient['name'] ?? $klient['hostname'] ?? $mac;
+                $mbps = round($predkosc / 1000000, 1);
+                $kierunek = $tx > $rx ? 'wysylanie' : 'pobieranie';
+                sendAlert(
+                    "Wzrost transferu: $nazwa",
+                    "Urządzenie **$nazwa** ($mac) generuje duzy ruch: **$mbps Mbps** ($kierunek).",
+                    'warning'
+                );
             }
         }
-        file_put_contents($last_speeds_file, json_encode($last_speeds));
+
+        // Zapisujemy wylacznie klientow widzianych w tym cyklu — inaczej plik rosl by
+        // w nieskonczonosc o MAC-i urzadzen, ktore dawno zniknely z sieci.
+        file_put_contents($last_speeds_file, json_encode($biezace_predkosci));
     }
 
     // === TRIGGER: New Device Detection ===

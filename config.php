@@ -1,6 +1,6 @@
 <?php
 /** Created by Łukasz Misiura (c) 2025 | dev.lm-ads.com **/
-define('MINIDASH_VERSION', '2.3.2');
+define('MINIDASH_VERSION', '2.3.3');
 error_reporting(E_ALL & ~E_NOTICE);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -45,7 +45,11 @@ $config = [
     'telegram_notifications' => [
         'enabled' => false,
         'bot_token' => '',
-        'chat_id' => ''
+        'chat_id' => '',
+        // ID topikow (message_thread_id) w grupie z watkami. Puste = wysylka do General.
+        'thread_critical' => '',
+        'thread_warning' => '',
+        'thread_info' => ''
     ],
     'whatsapp_notifications' => [
         'enabled' => false,
@@ -243,6 +247,34 @@ function sendEmailNotification($subject, $message) {
     );
 }
 
+/**
+ * Mapuje severity na ID topiku (message_thread_id) w grupie Telegrama.
+ *
+ * W kodzie krąży siedem nazw severity (info, warning, critical, attack, alert,
+ * medium, high) — sendAlert() dokumentuje trzy, reszta pochodzi z detekcji
+ * zagrożeń w functions.php. Routing sprowadza je do trzech topików; nieznane
+ * wartości lądują w Info, żeby nowy severity nigdy nie zgubił powiadomienia.
+ *
+ * Puste ID = brak message_thread_id = wysyłka do General (zachowanie sprzed zmiany).
+ */
+function telegramThreadForSeverity($severity) {
+    global $config;
+    $tg = $config['telegram_notifications'];
+
+    switch ($severity) {
+        case 'critical':
+        case 'attack':
+        case 'alert':
+        case 'high':
+            return trim($tg['thread_critical'] ?? '');
+        case 'warning':
+        case 'medium':
+            return trim($tg['thread_warning'] ?? '');
+        default:
+            return trim($tg['thread_info'] ?? '');
+    }
+}
+
 function sendTelegramNotification($message, $severity = 'info') {
     global $config;
     $token = $config['telegram_notifications']['bot_token'];
@@ -260,6 +292,13 @@ function sendTelegramNotification($message, $severity = 'info') {
         'parse_mode' => 'Markdown'
     ];
 
+    // Topiki dzialaja tylko w grupach z watkami; w czacie prywatnym Telegram
+    // odrzucilby message_thread_id, wiec pole dokladamy wylacznie gdy ustawione.
+    $thread = telegramThreadForSeverity($severity);
+    if ($thread !== '') {
+        $data['message_thread_id'] = $thread;
+    }
+
     // cURL (NOT file_get_contents): the cron runs under CLI php where allow_url_fopen
     // is off, so file_get_contents(https://...) silently failed — Telegram alerts then
     // went out only from the web SAPI. cURL works in both, like every other sender here.
@@ -269,8 +308,26 @@ function sendTelegramNotification($message, $severity = 'info') {
     curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 8);
-    @curl_exec($ch);
+    $response = @curl_exec($ch);
+    $curlError = curl_error($ch);
+    $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+
+    // Nieudana wysylka objawiala sie wylacznie cisza: zly chat_id, bot wyrzucony z grupy
+    // albo skasowany topik nie zostawialy zadnego sladu. Odpowiedz Telegrama trafia do
+    // logs/php_errors.log; sama tresc powiadomienia nie jest logowana.
+    if ($response === false || $httpCode !== 200) {
+        $powod = $curlError !== ''
+            ? $curlError
+            : (json_decode((string)$response, true)['description'] ?? 'brak opisu bledu');
+        error_log(sprintf(
+            'MiniDash Telegram: wysylka nieudana (HTTP %d, chat %s%s): %s',
+            $httpCode,
+            $chatId,
+            $thread !== '' ? ", watek $thread" : '',
+            $powod
+        ));
+    }
 }
 
 function sendWhatsAppNotification($message) {

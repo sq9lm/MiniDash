@@ -1,5 +1,35 @@
 # MiniDash — Release Notes
 
+## v2.3.3 (2026-07-24)
+
+Powiadomienia Telegrama do topików grupy, naprawa jednostek transferu i alertu prędkości.
+
+### Telegram — topiki
+- Routing powiadomień do wątków grupy wg severity: `thread_critical` / `thread_warning` / `thread_info` w ustawieniach
+- Normalizacja siedmiu nazw severity krążących po kodzie (`info`, `warning`, `critical`, `attack`, `alert`, `medium`, `high`) do trzech topików; nieznana wartość trafia do Info, żeby nowy poziom nie zgubił powiadomienia
+- Puste ID topiku = brak `message_thread_id` = zachowanie sprzed zmiany, więc instalacja pisząca na czat prywatny działa bez zmian w konfiguracji
+- Składnia komunikatów bez zmian — dokładany jest wyłącznie `message_thread_id`
+- Nieudana wysyłka trafia do `logs/php_errors.log` (kod HTTP, `chat_id`, wątek, opis błędu od Telegrama). Wcześniej `@curl_exec` połykał wszystko i zły `chat_id` objawiał się wyłącznie ciszą
+- Pole Bot Token jako `type="password"` z przyciskiem podglądu
+
+### Transfer klientów — jednostki
+- Nowa funkcja `client_rate_bps($klient, 'rx'|'tx')` jako jedyne źródło prawdy: `rxRateBps`/`txRateBps` brane wprost (bity/s), `rx_bytes-r` i warianty `wired-` mnożone przez 8 (bajty/s)
+- **Usunięte poleganie na `rx_rate`/`tx_rate` ze `stat/sta`** — to wynegocjowana prędkość linku Wi-Fi w Kbps, nie transfer. Klient z linkiem 72 Mbps i ruchem 366 B/s raportował 72 000
+- Ten sam błędny łańcuch fallbacków był powielony w `functions.php`, `index.php` (2×) i `monitored.php` — wszystkie wołają teraz helper
+- Wzbogacanie z Integration API w `cron_triggers.php` przenosi wartości pod `rxRateBps`/`txRateBps` zamiast mieszać je z prędkością linku pod `rx_rate`
+- Fix: podwójne mnożenie przez 8 w tabeli klientów zawyżało odczyt ośmiokrotnie
+
+### Alert prędkości
+- Obejmuje wszystkich aktywnych klientów, nie tylko listę monitorowanych
+- Próg porównywany z `max(rx, tx)`, treść alertu podaje kierunek (pobieranie / wysyłanie)
+- Usunięta druga kopia triggera z `index.php`: patrzyła tylko na download i odpalała się jedynie przy otwartym dashboardzie, bo cooldown trzymała w `$_SESSION`, niedostępnej dla crona
+- `last_speeds.json` zapisuje tylko klientów widzianych w danym cyklu, więc plik nie puchnie o MAC-i urządzeń nieobecnych w sieci
+
+### Fixes
+- Fix: duplikat na liście klientów — `foreach ($clients as &$c)` bez `unset()` powodował, że kolejna pętla o tej samej nazwie zmiennej nadpisywała ostatni element tablicy. Ostatni klient był wyświetlany jako kopia przedostatniego i **znikał z listy**
+
+---
+
 ## v2.3.2 (2026-06-09)
 
 Anti-flapping alertów statusu, pewniejsze wykrywanie klientów i rebranding domeny.

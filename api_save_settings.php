@@ -43,7 +43,10 @@ $newConfig = [
     'telegram_notifications' => [
         'enabled' => isset($_POST['tg_enabled']) && ($_POST['tg_enabled'] === 'true' || $_POST['tg_enabled'] === 'on'),
         'bot_token' => $_POST['tg_token'] ?? '',
-        'chat_id' => $_POST['tg_chatid'] ?? ''
+        'chat_id' => $_POST['tg_chatid'] ?? '',
+        'thread_critical' => $_POST['tg_thread_critical'] ?? '',
+        'thread_warning' => $_POST['tg_thread_warning'] ?? '',
+        'thread_info' => $_POST['tg_thread_info'] ?? ''
     ],
     'whatsapp_notifications' => [
         'enabled' => isset($_POST['wa_enabled']) && ($_POST['wa_enabled'] === 'true' || $_POST['wa_enabled'] === 'on'),

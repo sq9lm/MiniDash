@@ -1363,6 +1363,32 @@ function get_infra_device_name_by_mac(string $mac): string
     return $map[$norm] ?? '';
 }
 
+/**
+ * Realny transfer klienta w bitach na sekunde.
+ *
+ * Kontroler potrafi zwrocic te sama informacje pod trzema nazwami i w dwoch
+ * jednostkach, wiec normalizacja siedzi w jednym miejscu zamiast w czterech kopiach
+ * lancucha fallbackow:
+ *   - rxRateBps / txRateBps  (Integration API v1) — juz w bitach/s,
+ *   - rx_bytes-r / tx_bytes-r i warianty wired-  (traditional API) — BAJTY/s, stad *8.
+ *
+ * Swiadomie NIE uzywamy pol rx_rate / tx_rate ze stat/sta: to wynegocjowana predkosc
+ * linku Wi-Fi w Kbps, a nie ruch. Klient z linkiem 72 Mbps i faktycznym transferem
+ * 366 B/s raportowal przez nie 72 000, co zawyzalo statystyki i psulo progi alertow.
+ *
+ * @param string $kierunek 'rx' (pobieranie) albo 'tx' (wysylanie)
+ */
+function client_rate_bps(array $client, string $kierunek = 'rx'): float
+{
+    if ($kierunek === 'tx') {
+        if (isset($client['txRateBps'])) return (float)$client['txRateBps'];
+        return (float)(($client['tx_bytes-r'] ?? $client['wired-tx_bytes-r'] ?? 0) * 8);
+    }
+
+    if (isset($client['rxRateBps'])) return (float)$client['rxRateBps'];
+    return (float)(($client['rx_bytes-r'] ?? $client['wired-rx_bytes-r'] ?? 0) * 8);
+}
+
 function detect_known_devices(array $clients, array $devices): array
 {
     $status = [];
@@ -1374,8 +1400,8 @@ function detect_known_devices(array $clients, array $devices): array
             $client_data[$mac] = [
                 'ip' => $ip,
                 'vlan' => $c['vlan'] ?? null,
-                'rx_rate' => $c['rxRateBps'] ?? $c['rx_bytes-r'] ?? $c['wired-rx_bytes-r'] ?? $c['rx_rate'] ?? 0,
-                'tx_rate' => $c['txRateBps'] ?? $c['tx_bytes-r'] ?? $c['wired-tx_bytes-r'] ?? $c['tx_rate'] ?? 0,
+                'rx_rate' => client_rate_bps($c, 'rx'),
+                'tx_rate' => client_rate_bps($c, 'tx'),
                 'rx_bytes' => $c['rx_bytes'] ?? 0,
                 'tx_bytes' => $c['tx_bytes'] ?? 0,
                 'uptime' => $c['uptime'] ?? 0
@@ -2703,6 +2729,18 @@ function render_nav($title = "MiniDash", $stats = []) {
             document.body.style.overflow = '';
         }
 
+        // Przelacza widocznosc pola z sekretem. Ikone odtwarzamy przez innerHTML, bo
+        // lucide.createIcons() podmienia <i data-lucide> na <svg> — po pierwszym renderze
+        // querySelector('i') juz niczego nie znajdzie.
+        function toggleSecretVisibility(btn) {
+            const input = btn.parentElement.querySelector('input');
+            if (!input) return;
+            const pokaz = input.type === 'password';
+            input.type = pokaz ? 'text' : 'password';
+            btn.innerHTML = '<i data-lucide="' + (pokaz ? 'eye-off' : 'eye') + '" class="w-4 h-4"></i>';
+            lucide.createIcons();
+        }
+
         async function saveNotifSettings(form) {
             const btn = form.querySelector('button[type="submit"]');
             const originalText = btn.innerHTML;
@@ -3085,11 +3123,24 @@ function render_nav($title = "MiniDash", $stats = []) {
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="md:col-span-2">
                                     <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Bot Token</label>
-                                    <input type="text" name="tg_token" value="<?= htmlspecialchars($config['telegram_notifications']['bot_token'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50" placeholder="123456789:ABCDEF...">
+                                    <div class="relative">
+                                        <input type="password" name="tg_token" value="<?= htmlspecialchars($config['telegram_notifications']['bot_token'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50" placeholder="123456789:ABCDEF..." autocomplete="off" spellcheck="false">
+                                        <button type="button" onclick="toggleSecretVisibility(this)" title="Pokaż / ukryj token" aria-label="Pokaż lub ukryj token" class="absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 hover:text-slate-300 transition-colors">
+                                            <i data-lucide="eye" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Chat ID</label>
                                     <input type="text" name="tg_chatid" value="<?= htmlspecialchars($config['telegram_notifications']['chat_id'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Topiki grupy <span class="text-slate-600 normal-case tracking-normal font-medium">— zostaw puste, jeśli Chat ID to czat prywatny</span></label>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <input type="text" name="tg_thread_critical" value="<?= htmlspecialchars($config['telegram_notifications']['thread_critical'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50" placeholder="🔴 Krytyczne">
+                                        <input type="text" name="tg_thread_warning" value="<?= htmlspecialchars($config['telegram_notifications']['thread_warning'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50" placeholder="🟠 Ostrzeżenia">
+                                        <input type="text" name="tg_thread_info" value="<?= htmlspecialchars($config['telegram_notifications']['thread_info'] ?? '') ?>" class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500/50" placeholder="🟢 Info">
+                                    </div>
                                 </div>
                             </div>
                         </div>
